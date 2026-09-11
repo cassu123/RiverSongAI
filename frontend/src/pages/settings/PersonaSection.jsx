@@ -10,15 +10,15 @@ import { Section } from './shared.jsx'
 export default function PersonaSection({ personaSettings, setPersonaSettings, savePersona, resetPersona }) {
   return (
     <Section title="PERSONALITY">
-          <div style={{ marginBottom: 12, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="rs-mb-3 rs-flex rs-items-center rs-gap-2" style={{ padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)' }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
             <span style={{ color: 'var(--rs-status-warning)', fontSize: 'var(--rs-fs-tiny)' }}>Advanced — Keep "River Song" references intact or she will lose her identity.</span>
           </div>
           
           <div style={{ position: 'relative' }}>
             <textarea
-              className="persona-textarea rs-card"
-              style={{ width: '100%', minHeight: 300, background: 'var(--md-surface-container-low)' }}
+              className="persona-textarea rs-card rs-w-full"
+              style={{ minHeight: 300, background: 'var(--md-surface-container-low)' }}
               value={personaSettings.system_prompt}
               onChange={e => setPersonaSettings({ system_prompt: e.target.value })}
               placeholder="River Song system prompt..."

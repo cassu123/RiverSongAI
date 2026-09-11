@@ -85,12 +85,12 @@ export default function ReadingPage({ setAction }) {
     setAction(
       <div className="rs-chat-input-controls rs-w-full">
         <div className="rs-flex rs-gap-3 rs-items-center rs-w-full">
-          <div className="rs-chat-input-container" style={{ flex: 1, padding: '8px 16px', background: 'color-mix(in srgb, var(--md-surface-container-low) 60%, transparent)' }}>
+          <div className="rs-chat-input-container rs-grow" style={{ padding: '8px 16px', background: 'color-mix(in srgb, var(--md-surface-container-low) 60%, transparent)' }}>
             <div className="rs-flex rs-items-center rs-gap-3">
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
-                style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }} 
+                className="rs-w-full" style={{ all: 'unset', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }} 
                 placeholder="SEARCH ARCHIVES..." 
                 value={search} 
                 onChange={e => setSearch(e.target.value)} 
@@ -125,7 +125,7 @@ export default function ReadingPage({ setAction }) {
       <div className="rs-card-flow rs-mb-6">
         <div className="rs-card is-wide is-elev">
            <div className="rs-card-inner">
-             <div style={{ display: 'flex', gap: 64, flexWrap: 'wrap' }}>
+             <div className="rs-flex rs-flex-wrap" style={{ gap: 64 }}>
                <div>
                  <div className="rs-card-label">TOTAL VOLUMES</div>
                  <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)' }}>{stats.total}</div>
@@ -138,7 +138,7 @@ export default function ReadingPage({ setAction }) {
                  <div className="rs-card-label" style={{ color: 'var(--warn)' }}>QUEUE DEPTH</div>
                  <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: 'var(--warn)' }}>{stats.queue}</div>
                </div>
-               <div style={{ flex: 1, minWidth: 200, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+               <div className="rs-grow rs-flex rs-items-center" style={{ minWidth: 200, justifyContent: 'flex-end' }}>
                   <div className="rs-status-strip">
                     <span className="rs-status-dot" style={{ background: '#4ade80' }} />
                     <span>ARCHIVES NOMINAL</span>
@@ -151,10 +151,10 @@ export default function ReadingPage({ setAction }) {
 
       <div className="rs-card-flow" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))' }}>
         {loading ? (
-          <div className="rs-card-meta" style={{ gridColumn: '1/-1', padding: 48, textAlign: 'center' }}>ACCESSING ARCHIVE SECTOR...</div>
+          <div className="rs-card-meta rs-p-7 rs-text-center" style={{ gridColumn: '1/-1' }}>ACCESSING ARCHIVE SECTOR...</div>
         ) : filtered.length === 0 ? (
-          <div className="rs-card is-wide" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '64px 24px' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.1, marginBottom: 16 }}>auto_stories</span>
+          <div className="rs-card is-wide rs-text-center" style={{ gridColumn: '1/-1', padding: '64px 24px' }}>
+            <span className="material-symbols-rounded rs-mb-4" style={{ fontSize: '3rem', opacity: 0.1 }}>auto_stories</span>
             <div className="rs-card-value">Sector clear</div>
             <div className="rs-card-meta">No records identified with current filters.</div>
           </div>
@@ -164,9 +164,9 @@ export default function ReadingPage({ setAction }) {
               <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
                 <div style={{ position: 'relative', aspectRatio: '2/3', background: 'var(--md-surface-container-highest)' }}>
                   {book.cover_url ? (
-                    <img src={book.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={book.cover_url} alt="" className="rs-w-full" style={{ height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.1 }}>
+                    <div className="rs-w-full rs-flex rs-items-center rs-justify-center" style={{ height: '100%', opacity: 0.1 }}>
                       <span className="material-symbols-rounded" style={{ fontSize: '3rem' }}>menu_book</span>
                     </div>
                   )}
@@ -180,8 +180,8 @@ export default function ReadingPage({ setAction }) {
                   )}
                 </div>
                 <div className="rs-p-4">
-                  <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-small)', marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>{book.title}</div>
-                  <div className="rs-card-meta" style={{ marginTop: 6, fontSize: 'var(--rs-fs-nano)' }}>{book.author}</div>
+                  <div className="rs-mb-1" style={{ fontWeight: 700, fontSize: 'var(--rs-fs-small)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>{book.title}</div>
+                  <div className="rs-card-meta rs-mt-2" style={{ fontSize: 'var(--rs-fs-nano)' }}>{book.author}</div>
                   <div className="rs-mt-4 rs-flex rs-justify-between rs-items-center">
                      <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{book.status.toUpperCase()}</span>
                      <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.3 }}>edit_note</span>
@@ -212,7 +212,7 @@ export default function ReadingPage({ setAction }) {
                      localStorage.setItem(`rs-reading-services:${userId}`, JSON.stringify(next))
                   }}>
                     <div className="rs-card-inner" style={{ background: active ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'transparent', border: active ? '1px solid var(--primary)' : '1px solid transparent' }}>
-                      <span className="material-symbols-rounded" style={{ fontSize: '1.8rem', color: s.color, marginBottom: 8 }}>{s.icon}</span>
+                      <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '1.8rem', color: s.color }}>{s.icon}</span>
                       <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)' }}>{s.label.toUpperCase()}</div>
                     </div>
                   </button>

@@ -118,8 +118,7 @@ export default function DaemonHealthWidget({ token }) {
         )
       })}
       <div
-        style={{
-          marginTop: 10,
+        className="rs-mt-3" style={{
           paddingTop: 8,
           borderTop: `1px solid ${C.divider}`,
           fontFamily: 'var(--font-mono)',
@@ -141,10 +140,7 @@ function DaemonRow({ name, alive, port, status, age, first }) {
     <div
       role="group"
       aria-label={`${name.replace(/_/g, ' ')}: ${alive ? 'alive' : 'no heartbeat'}`}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
+      className="rs-flex rs-items-center rs-gap-2" style={{
         padding: '9px 0',
         borderTop: first ? 'none' : `1px solid ${C.divider}`,
         minWidth: 0,
@@ -162,13 +158,12 @@ function DaemonRow({ name, alive, port, status, age, first }) {
         }}
       />
       <span
-        style={{
+        className="rs-grow" style={{
           fontSize: 'var(--rs-fs-nano)',
           fontWeight: 800,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: alive ? C.text : C.dim,
-          flex: 1,
           minWidth: 0,
           overflow: 'hidden',
           textOverflow: 'ellipsis',

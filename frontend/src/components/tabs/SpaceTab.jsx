@@ -23,26 +23,26 @@ export default function SpaceTab({ token, active }) {
   }, [token, active])
 
   if (loading) return (
-    <div style={{ padding: 40, textAlign: 'center', opacity: 0.5 }}>
+    <div className="rs-p-7 rs-text-center" style={{ opacity: 0.5 }}>
       <span className="material-symbols-rounded" style={{ fontSize: '2rem', animation: 'spin 2s linear infinite' }}>rocket</span>
     </div>
   )
   
   if (error === 'location') return (
-    <div style={{ padding: '40px 0', textAlign: 'center' }}>
-      <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>location_off</span>
+    <div className="rs-text-center" style={{ padding: '40px 0' }}>
+      <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '3rem', opacity: 0.2, display: 'block' }}>location_off</span>
       <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
       <div className="rs-card-meta rs-mb-5">Please set your location in Weather settings first.</div>
     </div>
   )
   
-  if (error) return <div style={{ padding: 20, color: 'var(--rs-status-critical)' }}>Error: {error}</div>
+  if (error) return <div className="rs-p-5" style={{ color: 'var(--rs-status-critical)' }}>Error: {error}</div>
   if (!data) return null
 
   const { solar, aurora, launches } = data
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' }}>
+    <div className="rs-gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'start' }}>
       
       {/* Solar Activity */}
       <div className="rs-card" style={{ padding: '20px' }}>
@@ -61,25 +61,25 @@ export default function SpaceTab({ token, active }) {
               </div>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+            <div className="rs-gap-3 rs-mb-5" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
               <div style={{ background: 'var(--md-surface-container-high)', padding: '10px 12px', borderRadius: 8 }}>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>SOLAR WIND</div>
+                <div className="rs-card-meta rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>SOLAR WIND</div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-small)', fontWeight: 700 }}>
                   {solar.solar_wind_speed_kms != null ? `${solar.solar_wind_speed_kms} km/s` : '—'}
                 </div>
               </div>
               <div style={{ background: 'var(--md-surface-container-high)', padding: '10px 12px', borderRadius: 8 }}>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>MAGNETIC FIELD</div>
+                <div className="rs-card-meta rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>MAGNETIC FIELD</div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-small)', fontWeight: 700 }}>
                   {solar.bz_nt != null ? `${solar.bz_nt} nT` : '—'}
                 </div>
               </div>
             </div>
 
-            <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 8 }}>FLARES (24H)</div>
+            <div className="rs-card-label rs-mb-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>FLARES (24H)</div>
             {solar.flares_24h?.length > 0 ? (
               solar.flares_24h.map((f, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < solar.flares_24h.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
+                <div key={i} className="rs-flex rs-justify-between" style={{ padding: '6px 0', borderBottom: i < solar.flares_24h.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
                   <span style={{ color: '#ff8800', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>{f.class}</span>
                   <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>{f.region || 'Unknown Region'}</span>
                 </div>
@@ -97,11 +97,11 @@ export default function SpaceTab({ token, active }) {
         {aurora && (
           <div>
             {aurora.ovation_img && (
-              <div style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--md-outline-variant)' }}>
-                <img src={aurora.ovation_img} alt="Ovation Aurora Forecast" style={{ width: '100%', display: 'block' }} />
+              <div className="rs-mb-4" style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--md-outline-variant)' }}>
+                <img src={aurora.ovation_img} alt="Ovation Aurora Forecast" className="rs-w-full" style={{ display: 'block' }} />
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container-high)', padding: '12px 16px', borderRadius: 8 }}>
+            <div className="rs-flex rs-justify-between rs-items-center" style={{ background: 'var(--md-surface-container-high)', padding: '12px 16px', borderRadius: 8 }}>
               <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>Visibility at your location:</span>
               <span style={{ 
                 fontSize: 'var(--rs-fs-micro)', fontWeight: 700,
@@ -122,15 +122,15 @@ export default function SpaceTab({ token, active }) {
             {l.image_url ? (
               <img src={l.image_url} alt={l.name} style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
             ) : (
-              <div style={{ width: 56, height: 56, borderRadius: 8, background: 'var(--md-surface-container-high)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="rs-flex rs-items-center rs-justify-center" style={{ width: 56, height: 56, borderRadius: 8, background: 'var(--md-surface-container-high)', flexShrink: 0 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.5rem', opacity: 0.3 }}>rocket</span>
               </div>
             )}
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 4, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div className="rs-mb-1" style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {l.name}
               </div>
-              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div className="rs-card-meta rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {l.provider} · {l.pad}
               </div>
               <div style={{ 

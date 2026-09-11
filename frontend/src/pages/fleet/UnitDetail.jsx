@@ -146,7 +146,7 @@ export default function UnitDetail() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 20, borderBottom: '1px solid rgba(255,255,255,0.1)', margin: '20px 0', paddingBottom: 10 }}>
+      <div className="rs-flex rs-gap-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', margin: '20px 0', paddingBottom: 10 }}>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'live' ? 'bold' : 'normal' }} onClick={() => setTab('live')}>Live</button>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'history' ? 'bold' : 'normal' }} onClick={() => setTab('history')}>History</button>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'settings' ? 'bold' : 'normal' }} onClick={() => setTab('settings')}>Settings</button>
@@ -169,7 +169,7 @@ export default function UnitDetail() {
 
             {/* Map */}
             <div className="rs-map">
-              <MapContainer center={[latestT.lat || 0, latestT.lng || 0]} zoom={18} style={{ height: '100%', width: '100%' }}>
+              <MapContainer center={[latestT.lat || 0, latestT.lng || 0]} zoom={18} className="rs-w-full" style={{ height: '100%' }}>
                 <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={20} />
                 {latestT.lat && <Marker position={[latestT.lat, latestT.lng]} />}
               </MapContainer>
@@ -180,7 +180,7 @@ export default function UnitDetail() {
               <h3>Recent Alerts</h3>
               {alerts.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No alerts.</p>}
               {alerts.map(a => (
-                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 10, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div key={a.id} className="rs-flex rs-justify-between rs-p-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <div>
                     <strong style={{ color: a.level === 'critical' ? 'var(--danger)' : 'white' }}>{a.title}</strong>
                     <div style={{ fontSize: '0.85em', color: 'var(--text-muted)' }}>{new Date(a.timestamp + 'Z').toLocaleString()}</div>
@@ -219,12 +219,12 @@ export default function UnitDetail() {
             </div>
 
             <div className="rs-card">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'bold' }}>
+              <label className="rs-flex rs-items-center rs-gap-3" style={{ fontWeight: 'bold' }}>
                 <input type="checkbox" checked={manualMode} onChange={e => setManualMode(e.target.checked)} />
                 Enable Manual Mode
               </label>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" style={{ marginTop: 20, opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 rs-mt-5" style={{ opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
                 <div />
                 <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'forward', throttle: 0.3, duration_ms: 500 })}>&#8593;</button>
                 <div />
@@ -236,7 +236,7 @@ export default function UnitDetail() {
                 <div />
               </div>
               <div className="rs-mt-5">
-                <button className="rs-btn-primary" style={{ width: '100%', opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }} {...bindManualKey('manual.blades', { engage: true })}>Engage Blades</button>
+                <button className="rs-btn-primary rs-w-full" style={{ opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }} {...bindManualKey('manual.blades', { engage: true })}>Engage Blades</button>
               </div>
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function UnitDetail() {
       {tab === 'history' && (
         <div className="rs-card">
           <div className="rs-table-wrap">
-            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+            <table className="rs-w-full" style={{ textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                   <th className="rs-p-3">Started At</th>
@@ -275,7 +275,7 @@ export default function UnitDetail() {
             Re-run Setup Wizard
           </button>
           
-          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="rs-mt-5" style={{ paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <h3>Danger Zone</h3>
             <button className="rs-btn-danger" onClick={async () => {
               if (confirm('Delete this unit? This cannot be undone.')) {

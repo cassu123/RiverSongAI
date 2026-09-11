@@ -34,7 +34,7 @@ function Section({ title, status, message, children }) {
         <StatusPill status={status} />
       </div>
       {message && (
-        <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>{message}</div>
+        <div className="rs-mb-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>{message}</div>
       )}
       {children}
     </div>
@@ -125,7 +125,7 @@ export default function SlaePage({ setAction }) {
 
       <Section title="LANGFUSE TRACING" status={langfuse.status} message={langfuse.message}>
         {langfuse.dashboard_url && (
-          <div style={{ fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>
+          <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)' }}>
             <a href={langfuse.dashboard_url} target="_blank" rel="noreferrer" style={{ color: 'var(--md-secondary)' }}>
               OPEN DASHBOARD →
             </a>
@@ -139,7 +139,7 @@ export default function SlaePage({ setAction }) {
       </Section>
 
       <Section title="GRAPHITI KNOWLEDGE GRAPH" status={graphiti.status} message={graphiti.message}>
-        <div style={{ display: 'flex', gap: 16, fontSize: 'var(--rs-fs-micro)', opacity: 0.8, marginBottom: 8 }}>
+        <div className="rs-flex rs-gap-4 rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.8 }}>
           <div>NODES: <strong>{graphiti.node_count ?? 0}</strong></div>
           <div>EDGES: <strong>{graphiti.edge_count ?? 0}</strong></div>
         </div>

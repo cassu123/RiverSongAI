@@ -191,9 +191,9 @@ export default function DocumentsPage({ setAction }) {
   }
 
   return (
-    <div className="rs-foyer animate-fade-in" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'minmax(220px, 280px) 1fr', gap: 16, alignItems: 'stretch' }}>
+    <div className="rs-foyer animate-fade-in rs-gap-4" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'minmax(220px, 280px) 1fr', alignItems: 'stretch' }}>
       {/* Left rail — document list */}
-      <div className="rs-card" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }}>
+      <div className="rs-card rs-p-3 rs-flex rs-flex-col rs-gap-2" style={{ maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }}>
         <div className="rs-card-label rs-mb-2">DOCUMENTS · {docs.length}</div>
         {docs.length === 0 && <div className="rs-card-meta rs-p-3">Nothing yet. Tap + NEW.</div>}
         {docs.map(d => (
@@ -205,7 +205,7 @@ export default function DocumentsPage({ setAction }) {
           >
             <div className="rs-flex rs-items-center rs-gap-2 rs-w-full">
               {d.pinned && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>★</span>}
-              <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="rs-grow" style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {d.title || 'Untitled'}
               </span>
               <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{d.kind?.toUpperCase()}</span>
@@ -226,8 +226,7 @@ export default function DocumentsPage({ setAction }) {
                 value={activeDoc.title}
                 onChange={onChangeTitle}
                 placeholder="Title"
-                style={{
-                  flex: 1,
+                className="rs-grow" style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 8,
@@ -268,13 +267,11 @@ export default function DocumentsPage({ setAction }) {
               onChange={onChangeBody}
               placeholder="Type here. Auto-saves."
               spellCheck={true}
-              style={{
-                flex: 1,
+              className="rs-grow rs-p-4" style={{
                 minHeight: 'calc(100dvh - 300px)',
                 background: 'rgba(0,0,0,0.18)',
                 border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: 8,
-                padding: 14,
                 color: 'var(--md-on-surface)',
                 fontFamily: activeDoc.kind === 'markdown' || activeDoc.kind === 'csv' || activeDoc.kind === 'html'
                   ? 'ui-monospace, SFMono-Regular, Menlo, monospace'

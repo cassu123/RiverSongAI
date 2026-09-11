@@ -51,8 +51,8 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
         </div>
         <p className="chat-empty-sub">Type below or press the mic to speak</p>
 
-        <div style={{
-          display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 500
+        <div className="rs-flex rs-gap-3 rs-mt-6 rs-flex-wrap rs-justify-center" style={{
+          maxWidth: 500,
         }}>
           {[
             'Design a 3D mounting bracket',
@@ -110,12 +110,12 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                 </div>
               )}
               {msg.meta && msg.meta.receipts && msg.meta.receipts.length > 0 && (
-                <div style={{ marginTop: 12, padding: 12, background: 'var(--bg-elev)', borderRadius: 8, border: '1px solid var(--md-outline-variant)' }}>
-                  <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--primary)', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase' }}>
+                <div className="rs-mt-3 rs-p-3" style={{ background: 'var(--bg-elev)', borderRadius: 8, border: '1px solid var(--md-outline-variant)' }}>
+                  <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>
                     Agent Tasks Completed
                   </div>
                   {msg.meta.receipts.map((rcpt, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: i < msg.meta.receipts.length - 1 ? 6 : 0 }}>
+                    <div key={i} className="rs-flex rs-items-start rs-gap-2" style={{ marginBottom: i < msg.meta.receipts.length - 1 ? 6 : 0 }}>
                       <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: rcpt.ok ? '#4CAF50' : '#dc3c3c' }}>
                         {rcpt.ok ? 'check_circle' : 'error'}
                       </span>
@@ -128,7 +128,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                 </div>
               )}
               {msg.chunks && msg.chunks.length > 0 && (
-                <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6, borderTop: '1px solid var(--md-outline-variant)', paddingTop: 8 }}>
+                <div className="rs-mt-3 rs-flex rs-flex-wrap rs-gap-2" style={{ borderTop: '1px solid var(--md-outline-variant)', paddingTop: 8 }}>
                   {msg.chunks.map((chunk, i) => (
                     <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', opacity: 0.8 }} title={chunk.text}>
                       SOURCE: {chunk.source?.toUpperCase() || 'DOCUMENT'}

@@ -78,17 +78,13 @@ export default function PulseWidget({ token }) {
           badge={newsItems.length > 1 ? `${newsIdx + 1}/${newsItems.length}` : null}
         >
           <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
+            className="rs-flex rs-items-center rs-gap-3" style={{
               minWidth: 0,
               opacity: visible ? 1 : 0,
               transition: `opacity ${FADE_DURATION}ms ease`,
             }}
           >
-            <span style={{
-              flex: 1,
+            <span className="rs-grow" style={{
               fontSize: 'var(--rs-fs-tiny)',
               fontWeight: 550,
               color: C.text,
@@ -134,7 +130,7 @@ export default function PulseWidget({ token }) {
                 No data
               </span>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <div className="rs-flex rs-gap-3" style={{ alignItems: 'baseline' }}>
                 <span style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: 'var(--rs-fs-nano)',
@@ -181,7 +177,7 @@ export default function PulseWidget({ token }) {
             label="OVERHEAD"
             time={fmtTs(ts?.flights)}
           >
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <div className="rs-flex rs-gap-2" style={{ alignItems: 'baseline' }}>
               <span style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 'var(--rs-fs-body)',
@@ -214,10 +210,7 @@ export default function PulseWidget({ token }) {
 function PulseRow({ icon, iconColor, label, time, badge, children }) {
   return (
     <div style={{ padding: '11px 0' }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
+      <div className="rs-flex rs-items-center rs-gap-2" style={{
         marginBottom: 7,
       }}>
         <span
@@ -232,13 +225,12 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
         >
           {icon}
         </span>
-        <span style={{
+        <span className="rs-grow" style={{
           fontSize: 'var(--rs-fs-nano)',
           fontWeight: 800,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: C.dim,
-          flex: 1,
         }}>
           {label}
         </span>
@@ -284,7 +276,7 @@ function PulseSkeleton() {
       {[0, 1, 2].map((i) => (
         <React.Fragment key={i}>
           {i > 0 && <div style={{ height: 1, background: C.divider }} />}
-          <div style={{ padding: '11px 0', display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div className="rs-flex rs-flex-col" style={{ padding: '11px 0', gap: 9 }}>
             {shimmer('35%')}
             {shimmer(i === 1 ? '55%' : '80%')}
           </div>

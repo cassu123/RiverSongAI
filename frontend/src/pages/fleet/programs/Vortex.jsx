@@ -13,7 +13,7 @@ const COMMANDS = [
 function Gauge({ label, pct, color }) {
   const v = Math.max(0, Math.min(100, pct || 0))
   return (
-    <div style={{ flex: 1, minWidth: 120 }}>
+    <div className="rs-grow" style={{ minWidth: 120 }}>
       <div className="rs-flex rs-justify-between rs-mb-1">
         <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</span>
         <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 700, color }}>{v}%</span>
@@ -47,7 +47,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
         <div className="rs-flex rs-gap-6 rs-flex-wrap rs-mb-4">
           <MetricStat label="DEVICES" value={t.connected_devices ?? 0} accent="#22d3ee" />
           <MetricStat label="UPTIME" value={fmtUptime(t.uptime_s)} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div className="rs-flex rs-flex-col" style={{ gap: 2 }}>
             <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>CASTING</div>
             <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>{t.casting ? (t.cast_target || 'on') : '—'}</span>
           </div>
@@ -57,7 +57,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
           <Gauge label="MEMORY" pct={t.mem_pct} color="#818cf8" />
         </div>
         <div className="rs-mt-4">
-          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>CPU LOAD</div>
+          <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>CPU LOAD</div>
           <Sparkline data={telemetry} field="cpu_pct" color="#22d3ee" />
         </div>
       </Panel>

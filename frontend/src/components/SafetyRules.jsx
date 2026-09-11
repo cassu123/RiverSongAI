@@ -144,12 +144,13 @@ export default function SafetyRules() {
           const tone = SEVERITY_TONE[rule.severity] || SEVERITY_TONE.info
           const showing = result && result.ruleId === rule.id
           return (
-            <div key={rule.id} style={{
-              border: '1px solid var(--border)', borderLeft: `3px solid ${tone}`,
-              borderRadius: 10, padding: 14,
+            <div key={rule.id} className="rs-p-4" style={{
+              border: '1px solid var(--border)',
+              borderLeft: `3px solid ${tone}`,
+              borderRadius: 10,
               opacity: rule.enabled ? 1 : 0.55,
             }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+              <div className="rs-flex rs-gap-3 rs-flex-wrap" style={{ alignItems: 'baseline' }}>
                 <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700 }}>{rule.name}</span>
                 <span style={{ fontSize: 'var(--rs-fs-tiny)', color: tone, fontWeight: 700,
                                letterSpacing: '0.08em', textTransform: 'uppercase' }}>
@@ -166,7 +167,7 @@ export default function SafetyRules() {
                 </button>
               </div>
 
-              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', marginTop: 6 }}>
+              <div className="rs-card-meta rs-mt-2" style={{ fontSize: 'var(--rs-fs-small)' }}>
                 Watches {watching(rule)}.
               </div>
 
@@ -183,9 +184,10 @@ export default function SafetyRules() {
               </div>
 
               {showing && (
-                <div style={{
-                  marginTop: 10, padding: 12, borderRadius: 8,
-                  background: 'rgba(0,0,0,0.22)', fontSize: 'var(--rs-fs-small)',
+                <div className="rs-mt-3 rs-p-3" style={{
+                  borderRadius: 8,
+                  background: 'rgba(0,0,0,0.22)',
+                  fontSize: 'var(--rs-fs-small)',
                   border: `1px solid ${result.ok ? 'var(--secondary)' : 'var(--warn)'}`,
                 }}>
                   <div style={{ fontWeight: 700, color: result.ok ? 'var(--secondary)' : 'var(--warn)' }}>
@@ -195,19 +197,19 @@ export default function SafetyRules() {
                           : 'Would fire')
                       : 'Would not fire'}
                   </div>
-                  <div style={{ opacity: 0.85, marginTop: 4 }}>{result.reason}</div>
+                  <div className="rs-mt-1" style={{ opacity: 0.85 }}>{result.reason}</div>
                   {result.delivered && (
-                    <div style={{ marginTop: 6, color: 'var(--md-primary)' }}>
+                    <div className="rs-mt-2" style={{ color: 'var(--md-primary)' }}>
                       Sent for real — check your phone. Quiet hours still apply
                       unless this rule is critical.
                     </div>
                   )}
                   {result.others.length > 0 && (
-                    <div style={{ marginTop: 6, opacity: 0.8 }}>
+                    <div className="rs-mt-2" style={{ opacity: 0.8 }}>
                       Also matched: {result.others.join(', ')}
                     </div>
                   )}
-                  <div style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 'var(--rs-fs-tiny)' }}>
+                  <div className="rs-mt-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)' }}>
                     Local time {result.localTime}
                   </div>
                 </div>

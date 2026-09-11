@@ -146,16 +146,12 @@ export default function ChatToolsSection({ data, token, onChanged }) {
 
         {/* Search & Bulk Action Bar */}
         <div className="rs-flex rs-flex-wrap rs-items-center rs-gap-3 rs-mt-1">
-          <div style={{
-            flex: 1,
+          <div className="rs-grow rs-flex rs-items-center rs-gap-2" style={{
             minWidth: 220,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
             padding: '8px 12px',
             background: 'var(--md-surface-container)',
             border: '1px solid var(--md-outline-variant)',
-            borderRadius: 'var(--md-shape-sm)'
+            borderRadius: 'var(--md-shape-sm)',
           }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--md-outline)' }}>search</span>
             <input
@@ -163,11 +159,10 @@ export default function ChatToolsSection({ data, token, onChanged }) {
               placeholder="Search chat & voice tools..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{
+              className="rs-w-full" style={{
                 all: 'unset',
-                width: '100%',
                 fontSize: 'var(--rs-fs-tiny)',
-                color: 'var(--md-on-surface)'
+                color: 'var(--md-on-surface)',
               }}
             />
             {search && (
@@ -196,7 +191,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {/* Category Filter Chips */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBlock: 4 }}>
+        <div className="rs-flex rs-gap-2 rs-flex-wrap" style={{ marginBlock: 4 }}>
           {categories.map(cat => (
             <button
               key={cat}
@@ -211,23 +206,18 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {/* Tool Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginTop: 4 }}>
+        <div className="rs-gap-3 rs-mt-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {filteredTools.map(tool => {
             const isEnabled = !disabledList.includes(tool.name)
             return (
               <div
                 key={tool.name}
-                style={{
+                className="rs-p-4 rs-flex rs-flex-col rs-justify-between rs-gap-3" style={{
                   background: isEnabled ? 'var(--md-surface-container-low)' : 'var(--md-surface-container-lowest)',
-                  padding: 14,
                   border: `1px solid ${isEnabled ? 'var(--md-outline-variant)' : 'color-mix(in srgb, var(--md-outline) 20%, transparent)'}`,
                   borderRadius: 'var(--md-shape-md)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: 10,
                   opacity: isEnabled ? 1 : 0.65,
-                  transition: 'all 0.15s ease'
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <div>
@@ -252,26 +242,22 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                     </span>
                   </div>
 
-                  <p style={{
+                  <p className="rs-m-0" style={{
                     fontSize: 'var(--rs-fs-micro)',
                     color: 'var(--md-on-surface-variant)',
-                    margin: 0,
                     lineHeight: 1.35,
                     display: '-webkit-box',
                     WebkitLineClamp: 3,
                     WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
                   }}>
                     {tool.description}
                   </p>
                 </div>
 
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                <div className="rs-flex rs-items-center rs-justify-between" style={{
                   paddingTop: 8,
-                  borderTop: '1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)'
+                  borderTop: '1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)',
                 }}>
                   <span style={{
                     fontSize: 'var(--rs-fs-micro)',
@@ -293,7 +279,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {filteredTools.length === 0 && (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--md-outline)', fontSize: 'var(--rs-fs-tiny)' }}>
+          <div className="rs-p-5 rs-text-center" style={{ color: 'var(--md-outline)', fontSize: 'var(--rs-fs-tiny)' }}>
             No tools found matching "{search}".
           </div>
         )}

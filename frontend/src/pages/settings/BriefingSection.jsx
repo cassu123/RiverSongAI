@@ -52,7 +52,7 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
             }
             return (
               <div className="rs-mt-3">
-                <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>NEWS SOURCE CATEGORIES</div>
+                <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-nano)' }}>NEWS SOURCE CATEGORIES</div>
                 <div className="rs-flex rs-flex-wrap rs-gap-2">
                   {PULSE_CATS.map(({ key, label }) => {
                     const on = active.includes(key)

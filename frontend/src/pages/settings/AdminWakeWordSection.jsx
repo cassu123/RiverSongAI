@@ -45,9 +45,9 @@ export default function AdminWakeWordSection({ token }) {
   return (
     <Section title="AMBIENT LISTENING">
       {!installed && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'color-mix(in srgb, var(--md-error) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)', borderRadius: 8 }}>
+        <div className="rs-flex rs-items-center rs-gap-2 rs-mb-4" style={{ padding: '10px 14px', background: 'color-mix(in srgb, var(--md-error) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)', borderRadius: 8 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>cloud_off</span>
-          <span className="rs-card-meta" style={{ margin: 0, color: 'var(--md-error)' }}>
+          <span className="rs-card-meta rs-m-0" style={{ color: 'var(--md-error)' }}>
             The local ambient detection engine is currently offline. River cannot hear you until it is restored.
           </span>
         </div>

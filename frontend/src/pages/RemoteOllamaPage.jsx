@@ -99,7 +99,7 @@ export default function RemoteOllamaPage({ setAction }) {
             <input type="text" value={draft.base_url} onChange={e => setDraft(d => ({ ...d, base_url: e.target.value }))} placeholder="Base URL — e.g. http://localhost:11500" style={inputStyle} />
             <textarea          value={draft.notes}    onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}    placeholder="Notes (optional)" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
             {editId && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--rs-fs-micro)' }}>
+              <label className="rs-flex rs-items-center rs-gap-2" style={{ fontSize: 'var(--rs-fs-micro)' }}>
                 <input type="checkbox" checked={!!draft.is_active} onChange={e => setDraft(d => ({ ...d, is_active: e.target.checked }))} /> Active
               </label>
             )}
@@ -115,7 +115,7 @@ export default function RemoteOllamaPage({ setAction }) {
       <div className="rs-card-flow">
         {rigs.length === 0 && !draft && <div className="rs-card-meta">No rigs registered yet.</div>}
         {rigs.map(r => (
-          <div key={r.id} className="rs-card is-wide" style={{ padding: 16, opacity: r.is_active ? 1 : 0.55 }}>
+          <div key={r.id} className="rs-card is-wide rs-p-4" style={{ opacity: r.is_active ? 1 : 0.55 }}>
             <div className="rs-card-head">
               <span className="rs-card-label">{r.label?.toUpperCase()}</span>
               <span className="rs-pill" style={{
@@ -124,8 +124,8 @@ export default function RemoteOllamaPage({ setAction }) {
                 color: 'var(--bg-base)',
               }}>{r.last_health?.toUpperCase() || 'UNKNOWN'}</span>
             </div>
-            <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 4 }}>{r.base_url}</div>
-            {r.notes && <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 6 }}>{r.notes}</div>}
+            <div className="rs-mt-1" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>{r.base_url}</div>
+            {r.notes && <div className="rs-mt-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>{r.notes}</div>}
             {(r.last_models || []).length > 0 && (
               <div className="rs-flex rs-flex-wrap rs-gap-1 rs-mt-2">
                 {r.last_models.slice(0, 6).map((m, i) => (

@@ -358,14 +358,14 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       
       {embedded && (
         <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
-          <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-h3)', color: 'var(--primary)' }}>Vehicle Assistant</h3>
+          <h3 className="rs-m-0" style={{ fontSize: 'var(--rs-fs-h3)', color: 'var(--primary)' }}>Vehicle Assistant</h3>
           <button className="rs-pill" onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
         </div>
       )}
       {!embedded && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-2 rs-mb-5 rs-items-center" style={{ justifyContent: 'flex-end' }}>
           <RateIndicator activeModel={selectedModel} token={token} />
           {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginRight: 12 }}>SYNCING…</span>}
           <button className="rs-pill" onClick={() => setShowSystem(!showSystem)}>
@@ -385,7 +385,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           <div className="rs-card-inner">
             <div className="rs-card-label">System Directives</div>
             <textarea
-              style={{ all: 'unset', width: '100%', marginTop: 12, fontSize: 'var(--rs-fs-small)', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
+              className="rs-w-full rs-mt-3" style={{ all: 'unset', fontSize: 'var(--rs-fs-small)', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
               placeholder="Inject custom neural constraints..."
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
@@ -412,7 +412,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           )}
         </div>
       ) : (
-        <div className="rs-thread" style={{ paddingBottom: embedded ? '20px' : '120px', flex: 1, overflowY: 'auto' }}>
+        <div className="rs-thread rs-grow" style={{ paddingBottom: embedded ? '20px' : '120px', overflowY: 'auto' }}>
           {viewingSession && (
             <div className="rs-mb-5">
               <button className="rs-pill is-active" onClick={() => setViewingSession(null)}>
@@ -422,11 +422,13 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
             </div>
           )}
           {modelNotice && (
-            <div className="rs-model-notice animate-fade-in" style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 16px', marginBottom: 16, borderRadius: 10,
-              background: 'rgba(230,170,60,0.13)', border: '1px solid rgba(230,170,60,0.3)',
-              color: '#e6c07b', fontSize: 'var(--rs-fs-small)',
+            <div className="rs-model-notice animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4" style={{
+              padding: '10px 16px',
+              borderRadius: 10,
+              background: 'rgba(230,170,60,0.13)',
+              border: '1px solid rgba(230,170,60,0.3)',
+              color: '#e6c07b',
+              fontSize: 'var(--rs-fs-small)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>info</span>
               <span className="rs-grow">
@@ -439,11 +441,13 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
             </div>
           )}
           {error && (
-            <div className="rs-error-banner animate-fade-in" style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 16px', marginBottom: 16, borderRadius: 10,
-              background: 'rgba(220,60,60,0.15)', border: '1px solid rgba(220,60,60,0.3)',
-              color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-small)',
+            <div className="rs-error-banner animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4" style={{
+              padding: '10px 16px',
+              borderRadius: 10,
+              background: 'rgba(220,60,60,0.15)',
+              border: '1px solid rgba(220,60,60,0.3)',
+              color: 'var(--rs-status-critical)',
+              fontSize: 'var(--rs-fs-small)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>error</span>
               <span className="rs-grow">{error}</span>

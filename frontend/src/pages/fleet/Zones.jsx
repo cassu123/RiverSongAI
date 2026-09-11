@@ -159,7 +159,7 @@ export default function Zones() {
       </div>
 
       <div className="rs-map rs-mt-5">
-        <MapContainer center={[0, 0]} zoom={2} style={{ height: '100%', width: '100%' }}>
+        <MapContainer center={[0, 0]} zoom={2} className="rs-w-full" style={{ height: '100%' }}>
           <TileLayer
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             attribution="Tiles &copy; Esri"

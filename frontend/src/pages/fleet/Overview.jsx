@@ -94,7 +94,7 @@ export default function Overview({ setAction }) {
       <h2>Overview</h2>
       <div className="grid grid-cols-1 rail:grid-cols-[3fr_2fr] gap-5">
         <div className="rs-map">
-          <MapContainer center={[0, 0]} zoom={2} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[0, 0]} zoom={2} className="rs-w-full" style={{ height: '100%' }}>
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               attribution="Tiles &copy; Esri"
@@ -117,7 +117,7 @@ export default function Overview({ setAction }) {
           </MapContainer>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '600px', overflowY: 'auto' }}>
+        <div className="rs-flex rs-flex-col rs-gap-4" style={{ maxHeight: '600px', overflowY: 'auto' }}>
           {units.map(u => (
               <div key={u.unit_id} className="rs-card">
                 <h3><Link to={`/fleet/vector/units/${u.unit_id}`}>{u.name || u.unit_id}</Link></h3>

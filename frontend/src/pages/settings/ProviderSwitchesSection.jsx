@@ -135,7 +135,7 @@ export default function ProviderSwitchesSection({ token }) {
         <strong> Users</strong> controls whether non-admin accounts can select it.
         {busy && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>Saving…</span>}
       </p>
-      <p className="rs-card-meta" style={{ marginBottom: 14, opacity: 0.75 }}>
+      <p className="rs-card-meta rs-mb-4" style={{ opacity: 0.75 }}>
         Local and free providers are switchable too — costing nothing is not a reason
         to be unblockable.
       </p>
@@ -143,8 +143,9 @@ export default function ProviderSwitchesSection({ token }) {
       {error && (
         <div
           role="alert"
-          style={{
-            display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 8, marginBottom: 10,
+          className="rs-flex rs-gap-2 rs-mb-3" style={{
+            padding: '10px 12px',
+            borderRadius: 8,
             background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
             border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
             fontSize: 'var(--rs-fs-micro)',
@@ -157,14 +158,11 @@ export default function ProviderSwitchesSection({ token }) {
 
       {/* Column headers */}
       <div
-        style={{
+        className="rs-gap-4 rs-items-center rs-mb-2" style={{
           display: 'grid',
           gridTemplateColumns: '1fr auto auto',
-          gap: 14,
-          alignItems: 'center',
           paddingBottom: 6,
           borderBottom: '1px solid var(--md-outline-variant)',
-          marginBottom: 6,
         }}
       >
         <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>PROVIDER</span>
@@ -172,7 +170,7 @@ export default function ProviderSwitchesSection({ token }) {
         <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>USERS</span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div className="rs-flex rs-flex-col" style={{ gap: 2 }}>
         {rows.map((r) => {
           const meta = PROVIDER_LABEL[r.provider] || { name: r.provider, note: '' }
           // "Off" has three causes and they need three different actions.
@@ -192,11 +190,9 @@ export default function ProviderSwitchesSection({ token }) {
           return (
             <div
               key={r.provider}
-              style={{
+              className="rs-gap-4 rs-items-center" style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr auto auto',
-                gap: 14,
-                alignItems: 'center',
                 padding: '8px 0',
                 opacity: r.enabled ? 1 : 0.62,
               }}

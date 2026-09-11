@@ -205,8 +205,8 @@ export default function UsersPage({ embedded = false }) {
 
   if (currentUser?.role !== 'admin') {
     return (
-      <div className="rs-card" style={{ textAlign: 'center', padding: '48px 24px', background: '#151c27', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24 }}>
-        <span className="material-symbols-rounded" style={{ fontSize: '3.2rem', color: 'var(--rs-status-critical)', marginBottom: 16, display: 'block' }}>
+      <div className="rs-card rs-text-center" style={{ padding: '48px 24px', background: '#151c27', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24 }}>
+        <span className="material-symbols-rounded rs-mb-4" style={{ fontSize: '3.2rem', color: 'var(--rs-status-critical)', display: 'block' }}>
           admin_panel_settings
         </span>
         <h3 style={{ margin: '0 0 10px', fontSize: '1.4rem', color: 'var(--fg)' }}>Administrator Clearance Required</h3>
@@ -256,7 +256,7 @@ export default function UsersPage({ embedded = false }) {
                 )}
               </div>
               <div className="rs-flex rs-items-center rs-gap-4">
-                <div className="rs-status-dot" style={{ width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: '#0d1219', fontWeight: 900, fontSize: 'var(--rs-fs-h3)', animation: 'none' }}>
+                <div className="rs-status-dot rs-flex rs-items-center rs-justify-center" style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--primary)', color: '#0d1219', fontWeight: 900, fontSize: 'var(--rs-fs-h3)', animation: 'none' }}>
                   {u.display_name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div>
@@ -266,7 +266,7 @@ export default function UsersPage({ embedded = false }) {
               </div>
               
               <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-4">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
                     <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--fg)' }}>FORCE PASSWORD CHANGE</span>
                     <span style={{ display: 'block', fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', marginTop: 2 }}>Requires changing password on next sign-in</span>
@@ -280,7 +280,7 @@ export default function UsersPage({ embedded = false }) {
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
                     <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--fg)' }}>SUSPEND ACCOUNT</span>
                     <span style={{ display: 'block', fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', marginTop: 2 }}>Block sign-in and API access immediately</span>
@@ -294,7 +294,7 @@ export default function UsersPage({ embedded = false }) {
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
                     <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--fg)' }}>
                       FREE MODELS ONLY
@@ -334,14 +334,13 @@ export default function UsersPage({ embedded = false }) {
             <div className="rs-card-label rs-mb-2">NEW PASSWORD</div>
             <input 
               type="password"
-              className="rs-chat-textarea"
-              style={{ 
-                background: 'var(--md-surface-container-low)', 
+              className="rs-chat-textarea rs-w-full"
+              style={{
+                background: 'var(--md-surface-container-low)',
                 border: '1px solid var(--md-outline-variant)',
                 borderRadius: 12,
                 padding: '12px 16px',
-                width: '100%',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
               }}
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
@@ -350,8 +349,8 @@ export default function UsersPage({ embedded = false }) {
             />
           </div>
 
-          {resetError && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)', marginBottom: 16 }}>{resetError}</div>}
-          {resetSuccess && <div style={{ color: 'var(--rs-status-nominal)', fontSize: 'var(--rs-fs-tiny)', marginBottom: 16 }}>{resetSuccess}</div>}
+          {resetError && <div className="rs-mb-4" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)' }}>{resetError}</div>}
+          {resetSuccess && <div className="rs-mb-4" style={{ color: 'var(--rs-status-nominal)', fontSize: 'var(--rs-fs-tiny)' }}>{resetSuccess}</div>}
 
           <div className="rs-flex rs-gap-3">
             <button type="submit" className="rs-btn-primary rs-grow">SET PASSWORD</button>

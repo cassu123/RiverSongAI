@@ -132,7 +132,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
       </p>
 
       {/* Rate monitor */}
-      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+      <div className="rs-flex rs-flex-col rs-gap-3" style={{ padding: '14px 16px', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
         <div className="rs-flex rs-justify-between rs-items-center">
           <div className="rs-flex rs-items-center rs-gap-2">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>monitoring</span>
@@ -143,7 +143,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
 
         {/* Req/min gauge */}
         <div className="rs-flex rs-flex-col rs-gap-2">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div className="rs-flex rs-justify-between" style={{ alignItems: 'baseline' }}>
             <span className="rs-card-meta">Requests this minute</span>
             <span style={{ fontWeight: 700, color: barColor, fontSize: 'var(--rs-fs-small)', fontVariantNumeric: 'tabular-nums' }}>
               {nimCalls}<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> / {NIM_RATE_LIMIT}</span>
@@ -176,7 +176,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
             { value: `${(day.tokens / 1000).toFixed(1)}K`, label: 'tokens today', icon: 'token' },
             { value: `$${day.cost.toFixed(2)}`, label: 'cost accrued', icon: 'savings', color: 'var(--primary)' },
           ].map(({ value, label, icon, color }) => (
-            <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div key={label} className="rs-flex rs-flex-col" style={{ gap: 2 }}>
               <div className="rs-flex rs-items-center rs-gap-1">
                 <span className="material-symbols-rounded" style={{ fontSize: '0.8rem', opacity: 0.6 }}>{icon}</span>
                 <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-body)', fontVariantNumeric: 'tabular-nums', color: color || 'inherit' }}>{value}</span>
@@ -197,7 +197,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
           { name: 'Llama 3.1 70B',       tag: 'General' },
           { name: 'Mistral Large',       tag: 'General' },
         ].map(({ name, tag }) => (
-          <div key={name} className="rs-pill" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--rs-fs-nano)', padding: '3px 10px' }}>
+          <div key={name} className="rs-pill rs-flex rs-items-center rs-gap-1" style={{ fontSize: 'var(--rs-fs-nano)', padding: '3px 10px' }}>
             <span>{name}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>· {tag}</span>
           </div>

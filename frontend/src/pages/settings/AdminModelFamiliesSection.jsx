@@ -80,7 +80,7 @@ export default function AdminModelFamiliesSection({ token }) {
           return (
             <div
               key={family.id}
-              style={{ padding: 12, opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}
+              className="rs-p-3" style={{ opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}
             >
               <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
                 <div>
@@ -102,7 +102,7 @@ export default function AdminModelFamiliesSection({ token }) {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+              <div className="rs-gap-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <label style={{ fontSize: 'var(--rs-fs-micro)' }}>
                   <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
                     Quirky name

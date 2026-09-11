@@ -140,10 +140,10 @@ export default function MemoryPage({ setAction }) {
   useEffect(() => {
     setAction(
       <div className="rs-flex rs-gap-3 rs-items-center">
-        <div className="rs-card" style={{ flex: 1, padding: '8px 16px', background: 'var(--md-surface-container-low)' }}>
+        <div className="rs-card rs-grow" style={{ padding: '8px 16px', background: 'var(--md-surface-container-low)' }}>
           <input 
             type="text" 
-            style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)' }} 
+            className="rs-w-full" style={{ all: 'unset', fontSize: 'var(--rs-fs-small)' }} 
             placeholder="FILTER ARCHIVES..." 
             value={filter} 
             onChange={e => setFilter(e.target.value)} 
@@ -174,7 +174,7 @@ export default function MemoryPage({ setAction }) {
         <h1 className="rs-greeting">Memory Hub</h1>
         <div className="rs-greeting-sub">Inspect, edit, and control everything River Song knows about you.</div>
         
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
+        <div className="rs-flex rs-flex-wrap" style={{ gap: '8px', marginTop: '16px' }}>
           {['ALL', 'FACT', 'PREFERENCE', 'SUMMARY', 'SUGGESTION'].map(t => (
             <button 
               key={t}
@@ -219,7 +219,7 @@ export default function MemoryPage({ setAction }) {
         ) : (
           filtered.map((m, i) => (
             <div key={m.id || i} className="rs-card is-wide animate-page-in">
-              <div className="rs-card-head" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 8, marginBottom: 12 }}>
+              <div className="rs-card-head rs-mb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 8 }}>
                 <span className="rs-card-label" style={{ 
                   color: m._type === 'FACT' ? 'var(--primary)' 
                        : m._type === 'PREFERENCE' ? 'var(--rs-status-warning)' 
@@ -240,7 +240,7 @@ export default function MemoryPage({ setAction }) {
                   </span>
                 )}
                 
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                <div className="rs-flex rs-gap-2" style={{ marginLeft: 'auto' }}>
                   {m._type === 'SUGGESTION' && (
                     <button className="rs-pill" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', background: 'var(--rs-status-success)' }}>
                       APPROVE
@@ -289,7 +289,7 @@ export default function MemoryPage({ setAction }) {
                 </div>
               )}
               
-              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div className="rs-mt-4 rs-flex rs-justify-between" style={{ alignItems: 'flex-end' }}>
                 {renderProvenance(m)}
                 {m._type === 'SUMMARY' && m.expires_at && (
                   <span style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-warning)' }}>

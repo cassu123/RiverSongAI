@@ -27,7 +27,7 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
               { path: 'Household/',      desc: 'Shared with family',  icon: 'home',         color: 'var(--md-sys-color-tertiary)' },
               { path: 'Shared with me/', desc: 'Explicit invites',    icon: 'group',        color: 'var(--md-sys-color-secondary)' },
             ].map(({ path, desc, icon, color }) => (
-              <div key={path} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
+              <div key={path} className="rs-flex rs-flex-col rs-gap-1" style={{ padding: '10px 12px', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
                 <div className="rs-flex rs-items-center rs-gap-2">
                   <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', color }}>{icon}</span>
                   <code style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600 }}>{path}</code>
@@ -55,7 +55,7 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
           </p>
 
           {/* Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'color-mix(in srgb, var(--primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)' }}>
+          <div className="rs-flex rs-items-center rs-gap-2" style={{ padding: '8px 12px', borderRadius: 8, background: 'color-mix(in srgb, var(--primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)' }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)', flexShrink: 0 }}>check_circle</span>
             <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>
               CHRONOS page, CodeMirror editor, backlinks, search, and Scribe daemon are fully operational. Graph view is Phase 3.

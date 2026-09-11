@@ -165,11 +165,12 @@ export default function VoiceIDSection({ token }) {
       </div>
 
       {confirmDelete && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginTop: 8,
+        <div className="rs-flex rs-items-center rs-gap-3 rs-mt-2" style={{
+          padding: '10px 14px',
           background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
           border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
-          borderRadius: 8, fontSize: 'var(--rs-fs-tiny)',
+          borderRadius: 8,
+          fontSize: 'var(--rs-fs-tiny)',
         }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
           <span className="rs-grow">Delete your voice prints? River Song will no longer recognize your voice.</span>

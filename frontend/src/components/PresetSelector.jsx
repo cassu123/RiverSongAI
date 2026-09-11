@@ -80,10 +80,9 @@ export default function PresetSelector({ onApply, onManage }) {
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={() => setOpen(false)} />
           <div
-            className="rs-card"
+            className="rs-card rs-p-3"
             style={{
               zIndex: 9999,
-              padding: 10,
               background: 'var(--md-surface-container-highest)',
               boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
               // On phones this anchored dropdown (right:0, 240px wide) overflows
@@ -100,12 +99,12 @@ export default function PresetSelector({ onApply, onManage }) {
             {presets.map(p => (
               <button
                 key={p.id}
-                className="rs-drawer-item"
+                className="rs-drawer-item rs-w-full"
                 onClick={() => apply(p)}
                 disabled={applying === p.id}
-                style={{ textAlign: 'left', width: '100%', padding: '8px 10px' }}
+                style={{ textAlign: 'left', padding: '8px 10px' }}
               >
-                <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', flex: 1 }}>
+                <span className="rs-grow" style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)' }}>
                   {p.is_default && <span style={{ marginRight: 4, opacity: 0.7 }}>★</span>}
                   {p.name}
                 </span>
@@ -114,9 +113,9 @@ export default function PresetSelector({ onApply, onManage }) {
             ))}
             {onManage && (
               <button
-                className="rs-drawer-item"
+                className="rs-drawer-item rs-w-full rs-mt-1"
                 onClick={() => { setOpen(false); onManage() }}
-                style={{ textAlign: 'left', width: '100%', padding: '8px 10px', opacity: 0.7, borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }}
+                style={{ textAlign: 'left', padding: '8px 10px', opacity: 0.7, borderTop: '1px solid rgba(255,255,255,0.08)' }}
               >
                 <span style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700 }}>+ MANAGE PRESETS</span>
               </button>

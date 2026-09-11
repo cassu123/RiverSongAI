@@ -141,7 +141,7 @@ export default function Programs() {
 
       <div className="rs-card">
         <div className="rs-table-wrap">
-          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="rs-w-full" style={{ textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <th className="rs-p-3">Name</th>
@@ -177,7 +177,7 @@ export default function Programs() {
       </div>
 
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000 }}>
           <div className="rs-card" style={{ width: 600, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3>{editingId ? 'Edit Program' : 'Create Program'}</h3>
             
@@ -196,9 +196,9 @@ export default function Programs() {
 
               <div style={{ gridColumn: '1 / span 2' }}>
                 <label>Zones</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 5 }}>
+                <div className="rs-flex rs-flex-wrap rs-gap-3" style={{ marginTop: 5 }}>
                   {zones.map(z => (
-                    <label key={z.zone_id || z.id} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: 4 }}>
+                    <label key={z.zone_id || z.id} className="rs-flex rs-items-center" style={{ gap: 5, background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: 4 }}>
                       <input type="checkbox" checked={formData.zone_ids.includes(z.zone_id || z.id)} onChange={() => toggleZone(z.zone_id || z.id)} />
                       {z.name}
                     </label>
@@ -238,7 +238,7 @@ export default function Programs() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+            <div className="rs-flex rs-gap-3 rs-mt-5" style={{ justifyContent: 'flex-end' }}>
               <button className="rs-btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="rs-btn-primary" onClick={handleSave}>Save</button>
             </div>

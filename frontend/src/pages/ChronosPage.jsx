@@ -234,11 +234,11 @@ export default function ChronosPage({ setAction }) {
       
       {/* Search Modal */}
       {showQuickSwitcher && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }} onClick={() => setShowQuickSwitcher(false)}>
-          <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 12 }}>
+        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }} onClick={() => setShowQuickSwitcher(false)}>
+          <div className="rs-card is-elev rs-w-full" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+            <div className="rs-flex rs-gap-3 rs-items-center" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 12 }}>
                <span className="material-symbols-rounded">search</span>
-               <input autoFocus type="text" style={{ all: 'unset', flex: 1 }} placeholder="JUMP TO NOTE..." onChange={handleSearch} />
+               <input autoFocus type="text" className="rs-grow" style={{ all: 'unset' }} placeholder="JUMP TO NOTE..." onChange={handleSearch} />
             </div>
             <div className="rs-mt-3 rs-flex rs-flex-col rs-gap-1">
               {searchResults.map(r => (
@@ -260,14 +260,14 @@ export default function ChronosPage({ setAction }) {
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
           </button>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="rs-grow" style={{ overflowY: 'auto' }}>
           <TreeList items={fileTree} onSelect={loadNote} activePath={activeNote?.path} />
         </div>
       </div>
 
       {/* Center: Editor/Viewer/Graph */}
-      <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', padding: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--md-outline-variant)' }}>
+      <div className="rs-card rs-flex rs-flex-col" style={{ padding: 0 }}>
+        <div className="rs-flex rs-items-center rs-gap-3" style={{ padding: '12px 20px', borderBottom: '1px solid var(--md-outline-variant)' }}>
           {/* View mode toggle */}
           <div className="rs-flex rs-gap-1">
             <button
@@ -286,7 +286,7 @@ export default function ChronosPage({ setAction }) {
             </button>
           </div>
 
-          <div className="rs-card-label" style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div className="rs-card-label rs-grow" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {viewMode === 'graph'
               ? `GRAPH · ${graphData.nodes.filter(n => !n.ghost).length} notes · ${graphData.edges.length} links`
               : (activeNote?.path || 'CHRONOS VAULT')}
@@ -314,9 +314,9 @@ export default function ChronosPage({ setAction }) {
 
         {/* Graph view */}
         {viewMode === 'graph' ? (
-          <div style={{ flex: 1, position: 'relative' }}>
+          <div className="rs-grow" style={{ position: 'relative' }}>
             {graphLoading ? (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="rs-flex rs-items-center rs-justify-center" style={{ height: '100%' }}>
                 <span className="rs-card-meta">LOADING GRAPH...</span>
               </div>
             ) : (
@@ -330,7 +330,7 @@ export default function ChronosPage({ setAction }) {
           </div>
         ) : (
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+        <div className="rs-grow rs-p-5" style={{ overflowY: 'auto' }}>
           {loading ? (
             <div className="rs-card-meta">RETRIEVING DATA...</div>
           ) : activeNote ? (
@@ -382,7 +382,7 @@ export default function ChronosPage({ setAction }) {
               </div>
             )
           ) : (
-             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
+             <div className="rs-flex rs-items-center rs-justify-center" style={{ height: '100%', opacity: 0.2 }}>
                <span className="material-symbols-rounded" style={{ fontSize: '80px' }}>history</span>
              </div>
           )}
@@ -424,7 +424,7 @@ function TreeItem({ item, onSelect, activePath }) {
       <div>
         <button className="rs-drawer-item rs-drawer-item--compact rs-w-full" onClick={() => setExpanded(!expanded)}>
           <span className="material-symbols-rounded">{expanded ? 'expand_more' : 'chevron_right'}</span>
-          <span style={{ flex: 1, textAlign: 'left' }}>{item.name}</span>
+          <span className="rs-grow" style={{ textAlign: 'left' }}>{item.name}</span>
         </button>
         {expanded && <div style={{ paddingLeft: 12 }}><TreeList items={item.children} onSelect={onSelect} activePath={activePath} /></div>}
       </div>
@@ -434,7 +434,7 @@ function TreeItem({ item, onSelect, activePath }) {
   return (
     <button className={`rs-drawer-item rs-drawer-item--compact ${isSelected ? 'is-active' : ''}`} style={{ width: '100%' }} onClick={() => onSelect(item.path)}>
       <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>description</span>
-      <span style={{ flex: 1, textAlign: 'left' }}>{item.name.replace(/\.md$/, '')}</span>
+      <span className="rs-grow" style={{ textAlign: 'left' }}>{item.name.replace(/\.md$/, '')}</span>
     </button>
   )
 }

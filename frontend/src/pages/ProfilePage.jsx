@@ -206,7 +206,7 @@ function TwoFactorCard({ token }) {
 
       {phase === 'idle' && !enabled && (
         <div className="rs-flex rs-gap-4 rs-items-center rs-flex-wrap">
-          <div style={{ flex: 1, minWidth: 200 }}>
+          <div className="rs-grow" style={{ minWidth: 200 }}>
             <div className="rs-card-meta">
               Protect your account with an authenticator app (Aegis, 1Password, Authy, Google Authenticator).
               You'll be asked for a 6-digit code on every login.
@@ -218,7 +218,7 @@ function TwoFactorCard({ token }) {
 
       {phase === 'idle' && enabled && (
         <div className="rs-flex rs-gap-4 rs-items-center rs-flex-wrap">
-          <div style={{ flex: 1, minWidth: 200 }}>
+          <div className="rs-grow" style={{ minWidth: 200 }}>
             <div className="rs-card-meta">
               2FA is active. {status?.recovery_codes_left ?? 0} recovery {(status?.recovery_codes_left ?? 0) === 1 ? 'code' : 'codes'} remaining.
             </div>
@@ -233,30 +233,32 @@ function TwoFactorCard({ token }) {
             <img
               src={`data:image/png;base64,${enrollment.qr_png_b64}`}
               alt="2FA QR code"
-              style={{ width: 180, height: 180, background: 'white', padding: 12, borderRadius: 8 }}
+              className="rs-p-3" style={{ width: 180, height: 180, background: 'white', borderRadius: 8 }}
             />
           )}
-          <div style={{ flex: 1, minWidth: 240 }}>
+          <div className="rs-grow" style={{ minWidth: 240 }}>
             <div className="rs-card-meta rs-mb-2">
               Scan the code, or paste this secret manually:
             </div>
             <code
-              style={{
-                display: 'block', padding: '8px 12px',
+              className="rs-mb-4" style={{
+                display: 'block',
+                padding: '8px 12px',
                 background: 'var(--md-surface-container)',
-                borderRadius: 6, fontSize: 'var(--rs-fs-tiny)',
-                wordBreak: 'break-all', marginBottom: 16,
+                borderRadius: 6,
+                fontSize: 'var(--rs-fs-tiny)',
+                wordBreak: 'break-all',
               }}
             >
               {enrollment.secret}
             </code>
-            <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 6 }}>VERIFY WITH FIRST CODE</div>
+            <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-nano)' }}>VERIFY WITH FIRST CODE</div>
             <input
               type="text"
               inputMode="numeric"
               maxLength={6}
-              className="rs-pill"
-              style={{ width: '100%', padding: '12px 16px', background: 'var(--md-surface-container)', letterSpacing: '0.2em' }}
+              className="rs-pill rs-w-full"
+              style={{ padding: '12px 16px', background: 'var(--md-surface-container)', letterSpacing: '0.2em' }}
               value={verifyCode}
               onChange={e => setVerifyCode(e.target.value.replace(/\D/g, ''))}
               placeholder="000000"
@@ -276,14 +278,15 @@ function TwoFactorCard({ token }) {
             if you ever lose your authenticator. <strong>You will not see them again.</strong>
           </div>
           <div
-            style={{
-              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
-              gap: 8, marginBottom: 16,
-              padding: 12, background: 'var(--md-surface-container)', borderRadius: 8,
+            className="rs-gap-2 rs-mb-4 rs-p-3" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
+              background: 'var(--md-surface-container)',
+              borderRadius: 8,
             }}
           >
             {recoveryCodes.map((c, i) => (
-              <code key={i} style={{ fontSize: 'var(--rs-fs-small)', textAlign: 'center' }}>{c}</code>
+              <code key={i} className="rs-text-center" style={{ fontSize: 'var(--rs-fs-small)' }}>{c}</code>
             ))}
           </div>
           <button className="rs-btn-primary" onClick={dismissRecoveryCodes}>I'VE SAVED THEM</button>
@@ -291,7 +294,7 @@ function TwoFactorCard({ token }) {
       )}
 
       {phase === 'disabling' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360 }}>
+        <div className="rs-flex rs-flex-col rs-gap-3" style={{ maxWidth: 360 }}>
           <div className="rs-card-meta">Confirm with your password and a current 6-digit code.</div>
           <input
             type="password"
@@ -319,7 +322,7 @@ function TwoFactorCard({ token }) {
       )}
 
       {error && (
-        <div className="rs-card-meta" style={{ color: 'var(--md-error)', marginTop: 12 }}>{error}</div>
+        <div className="rs-card-meta rs-mt-3" style={{ color: 'var(--md-error)' }}>{error}</div>
       )}
     </div>
   )
@@ -447,13 +450,13 @@ export default function ProfilePage({
              <span className="rs-card-label">PROFILE IDENTITY</span>
              {saveStatus && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1 }}>{saveStatus}</span>}
           </div>
-          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 240 }}>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>DISPLAY NAME</div>
+          <div className="rs-flex rs-gap-5 rs-flex-wrap" style={{ alignItems: 'flex-end' }}>
+            <div className="rs-grow" style={{ minWidth: 240 }}>
+              <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)' }}>DISPLAY NAME</div>
               <input 
                 type="text" 
-                className="rs-pill" 
-                style={{ width: '100%', padding: '12px 18px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
+                className="rs-pill rs-w-full" 
+                style={{ padding: '12px 18px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
                 value={displayName} 
                 onChange={e => setDisplayName(e.target.value)} 
               />
@@ -463,11 +466,11 @@ export default function ProfilePage({
           <div className="rs-card-meta rs-mt-5 rs-flex rs-gap-6">
             <div>
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ACCOUNT EMAIL</div>
-              <div style={{ fontSize: 'var(--rs-fs-body)', marginTop: 4 }}>{user?.email}</div>
+              <div className="rs-mt-1" style={{ fontSize: 'var(--rs-fs-body)' }}>{user?.email}</div>
             </div>
             <div>
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ROLE & CLEARANCE</div>
-              <div style={{ fontSize: 'var(--rs-fs-body)', marginTop: 4, color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)', fontWeight: 700 }}>
+              <div className="rs-mt-1" style={{ fontSize: 'var(--rs-fs-body)', color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)', fontWeight: 700 }}>
                 {user?.role ? user.role.toUpperCase() : 'USER'}
               </div>
             </div>
@@ -479,7 +482,7 @@ export default function ProfilePage({
           <div className="rs-card-head">
             <span className="rs-card-label">VISUAL THEME</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
             {UNIVERSES.map(u => (
               <div 
                 key={u.key} 
@@ -580,15 +583,12 @@ export default function ProfilePage({
                   return (
                     <div 
                       key={service.key}
-                      className="rs-input-group"
+                      className="rs-input-group rs-flex rs-items-center rs-justify-between"
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
                         padding: '12px 16px',
                         background: 'var(--md-surface-container)',
                         borderRadius: '8px',
-                        border: '1px solid var(--md-outline-variant)'
+                        border: '1px solid var(--md-outline-variant)',
                       }}
                     >
                       <div className="rs-flex rs-items-center rs-gap-4">
@@ -598,7 +598,7 @@ export default function ProfilePage({
                             {service.name}
                           </div>
                           {isConnected && (
-                            <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--rs-status-nominal)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div className="rs-mt-1 rs-flex rs-items-center rs-gap-1" style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--rs-status-nominal)' }}>
                               <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
                               Connected
                               {meta.email && ` as ${meta.email}`}
@@ -610,27 +610,27 @@ export default function ProfilePage({
                       
                       {isConnected ? (
                         <button
-                          className="rs-pill"
+                          className="rs-pill rs-justify-center"
                           onClick={() => handleDisconnect(service.key)}
                           disabled={disconnecting === service.key}
-                          style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px', justifyContent: 'center' }}
+                          style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px' }}
                         >
                           {disconnecting === service.key ? 'DISCONNECTING...' : 'DISCONNECT'}
                         </button>
                       ) : service.comingSoon ? (
                         <button
-                          className="rs-pill"
+                          className="rs-pill rs-justify-center"
                           disabled
                           title="This integration is not available yet."
-                          style={{ color: 'var(--text-muted)', padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px', justifyContent: 'center' }}
+                          style={{ color: 'var(--text-muted)', padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px' }}
                         >
                           COMING SOON
                         </button>
                       ) : (
                         <button
-                          className="rs-btn-primary"
+                          className="rs-btn-primary rs-justify-center"
                           onClick={() => handleConnect(service.key)}
-                          style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-micro)', minWidth: '110px', justifyContent: 'center', borderRadius: '4px' }}
+                          style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-micro)', minWidth: '110px', borderRadius: '4px' }}
                         >
                           CONNECT
                         </button>

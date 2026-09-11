@@ -10,7 +10,7 @@ export default function CapabilityFlagsSection({ data }) {
         These core capabilities are hard-toggled via <code>.env</code> on the server and require a system restart to take effect. <strong>They are read-only here.</strong>
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="rs-flex rs-flex-col" style={{ gap: '16px' }}>
         {data.flags.map(flag => (
           <div key={flag.key} style={{
             padding: '12px 16px',
@@ -34,7 +34,7 @@ export default function CapabilityFlagsSection({ data }) {
               </div>
             </div>
             
-            <p style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)', marginBottom: 12, lineHeight: 1.4 }}>
+            <p className="rs-mb-3" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)', lineHeight: 1.4 }}>
               {flag.description}
             </p>
             

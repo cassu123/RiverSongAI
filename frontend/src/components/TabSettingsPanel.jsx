@@ -34,7 +34,7 @@ export function InlineSettingsSection({
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+        <div className="rs-flex rs-items-center rs-gap-2 rs-grow" style={{ minWidth: 0 }}>
           {icon && (
             <span
               className="material-symbols-rounded"
@@ -84,7 +84,7 @@ export function InlineSettingsSection({
 export function SettingsRow({ label, children }) {
   return (
     <div className="rs-mb-4">
-      <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 8 }}>
+      <div className="rs-mb-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em' }}>
         {label}
       </div>
       {children}
@@ -99,9 +99,12 @@ export function ToggleGroup({ options, value, onChange }) {
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          style={{
-            flex: 1, padding: '6px 0', borderRadius: 8, cursor: 'pointer',
-            fontSize: 'var(--rs-fs-nano)', fontWeight: 700,
+          className="rs-grow" style={{
+            padding: '6px 0',
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontSize: 'var(--rs-fs-nano)',
+            fontWeight: 700,
             border: value === opt.value ? '1px solid var(--primary)' : '1px solid var(--md-outline-variant)',
             background: value === opt.value ? 'rgba(var(--primary-rgb,100,100,255),0.12)' : 'transparent',
             color: value === opt.value ? 'var(--primary)' : 'var(--md-on-surface-variant)',
@@ -117,7 +120,7 @@ export function ToggleGroup({ options, value, onChange }) {
 
 export function Toggle({ checked, onChange, label }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+    <label className="rs-flex rs-items-center rs-gap-3" style={{ cursor: 'pointer' }}>
       <div
         onClick={() => onChange(!checked)}
         style={{
@@ -150,19 +153,26 @@ export default function TabSettingsPanel({ open, onClose, panelRef, title = 'SET
   if (!open) return null
 
   return (
-    <div style={{
-      position: 'absolute', top: '100%', right: 0, zIndex: 100,
+    <div className="rs-mt-2" style={{
+      position: 'absolute',
+      top: '100%',
+      right: 0,
+      zIndex: 100,
       background: 'var(--md-surface-container)',
       border: '1px solid var(--md-outline-variant)',
-      borderRadius: 12, padding: '16px 18px', marginTop: 8,
+      borderRadius: 12,
+      padding: '16px 18px',
       boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
-      minWidth: 280, maxWidth: 340,
+      minWidth: 280,
+      maxWidth: 340,
     }}>
       <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
         <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 800, letterSpacing: '0.1em' }}>{title}</span>
-        <button onClick={onClose} style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-          color: 'var(--md-on-surface-variant)', display: 'flex',
+        <button onClick={onClose} className="rs-p-1 rs-flex" style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--md-on-surface-variant)',
         }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
         </button>

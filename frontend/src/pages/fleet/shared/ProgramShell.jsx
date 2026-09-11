@@ -40,7 +40,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
   return (
     <div className="rs-foyer animate-fade-in" style={{ maxWidth: '100%' }}>
       <header className="rs-foyer-head rs-mb-4">
-        <Link to="/fleet" className="rs-card-label" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <Link to="/fleet" className="rs-card-label rs-items-center rs-gap-2" style={{ textDecoration: 'none', display: 'inline-flex' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>arrow_back</span> ECOSYSTEM
         </Link>
         <h1 className="rs-greeting rs-flex rs-items-center rs-gap-3">
@@ -56,7 +56,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
 
       <div className="rs-flex rs-gap-2 rs-mb-5 rs-flex-wrap">
         <SimulateButton program={program} onDone={refresh} />
-        <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        <button className="rs-btn-ghost rs-items-center rs-gap-2" style={{ fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex' }}
           onClick={() => setShowClaim(true)}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add_link</span>
           Claim real unit
@@ -73,7 +73,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
           <SimulateButton program={program} onDone={refresh} />
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="rs-gap-5" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) 1fr', alignItems: 'start' }}>
           {/* Unit list */}
           <div className="rs-flex rs-flex-col rs-gap-3">
             {units.map(u => (
@@ -88,7 +88,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
                   <UnitStatusPill unit={u} />
                 </div>
                 {(u.metadata?.simulated || String(u.unit_id).startsWith('sim-')) && (
-                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', marginTop: 6, display: 'inline-block' }}>SIM</span>
+                  <span className="rs-pill rs-mt-2" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', display: 'inline-block' }}>SIM</span>
                 )}
                 <div className="rs-flex rs-gap-2 rs-mt-2">
                   <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-nano)', padding: '3px 8px', color: 'var(--md-error)', borderColor: 'var(--md-error)' }}

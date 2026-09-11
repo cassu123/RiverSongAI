@@ -72,7 +72,7 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
         const group = allVoices.filter(v => v.accent === accent)
         return (
           <div key={accent} className="rs-mb-3">
-            <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
+            <div className="rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em' }}>
               {accent.toUpperCase()}
             </div>
             <div className="rs-flex rs-flex-col rs-gap-1">
@@ -112,7 +112,7 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
         const group = allLlms.filter(m => m.provider === provider)
         return (
           <div key={provider} className="rs-mb-3">
-            <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
+            <div className="rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em' }}>
               {(PROVIDER_DISPLAY[provider] || provider).toUpperCase()}
             </div>
             <div className="rs-flex rs-flex-col rs-gap-1">

@@ -50,7 +50,7 @@ function OcearchMap({ lat, lon, sharks }) {
     })
   }, [sharks, mapReady])
 
-  return <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' }} />
+  return <div ref={mapRef} className="rs-w-full" style={{ height: '100%', borderRadius: 8, overflow: 'hidden' }} />
 }
 
 export default function EarthTab({ token, active }) {
@@ -89,26 +89,26 @@ export default function EarthTab({ token, active }) {
   }, [token, active])
 
   if (loading) return (
-    <div style={{ padding: 40, textAlign: 'center', opacity: 0.5 }}>
+    <div className="rs-p-7 rs-text-center" style={{ opacity: 0.5 }}>
       <span className="material-symbols-rounded" style={{ fontSize: '2rem', animation: 'spin 2s linear infinite' }}>public</span>
     </div>
   )
   
   if (error === 'location') return (
-    <div style={{ padding: '40px 0', textAlign: 'center' }}>
-      <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>location_off</span>
+    <div className="rs-text-center" style={{ padding: '40px 0' }}>
+      <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '3rem', opacity: 0.2, display: 'block' }}>location_off</span>
       <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
       <div className="rs-card-meta rs-mb-5">Please set your location in Weather settings first.</div>
     </div>
   )
   
-  if (error) return <div style={{ padding: 20, color: 'var(--rs-status-critical)' }}>Error: {error}</div>
+  if (error) return <div className="rs-p-5" style={{ color: 'var(--rs-status-critical)' }}>Error: {error}</div>
   if (!data) return null
 
   const { eonet = [], neows = [], ocearch = [] } = data
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' }}>
+    <div className="rs-gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'start' }}>
       
       {/* EONET Events */}
       <div className="rs-card" style={{ padding: '20px', maxHeight: '600px', overflowY: 'auto' }}>
@@ -117,10 +117,10 @@ export default function EarthTab({ token, active }) {
           <span style={{ opacity: 0.5 }}>NASA EONET</span>
         </div>
         {eonet.length > 0 ? eonet.map((e, i) => (
-          <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: i < eonet.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
+          <div key={i} className="rs-mb-4" style={{ paddingBottom: 14, borderBottom: i < eonet.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
             <div className="rs-flex rs-items-start rs-justify-between rs-gap-3">
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>{e.title}</div>
+                <div className="rs-mb-1" style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, lineHeight: 1.3 }}>{e.title}</div>
                 <div className="rs-flex rs-items-center rs-gap-2">
                   <div style={{ 
                     fontSize: 'var(--rs-fs-nano)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
@@ -152,7 +152,7 @@ export default function EarthTab({ token, active }) {
           <span style={{ opacity: 0.5 }}>NASA NeoWs</span>
         </div>
         {neows.length > 0 ? neows.map((n, i) => (
-          <div key={i} style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--md-surface-container-high)', borderRadius: 8, border: n.hazardous ? '1px solid #ff440055' : '1px solid transparent' }}>
+          <div key={i} className="rs-mb-4" style={{ padding: '12px 14px', background: 'var(--md-surface-container-high)', borderRadius: 8, border: n.hazardous ? '1px solid #ff440055' : '1px solid transparent' }}>
             <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
               <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 800 }}>{n.name}</div>
               {n.hazardous && (
@@ -161,7 +161,7 @@ export default function EarthTab({ token, active }) {
                 </div>
               )}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div className="rs-gap-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
               <div>
                 <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>APPROACH</div>
                 <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{new Date(n.approach_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
@@ -186,7 +186,7 @@ export default function EarthTab({ token, active }) {
       </div>
 
       {/* OCEARCH */}
-      <div className="rs-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
+      <div className="rs-card rs-flex rs-flex-col" style={{ padding: '20px' }}>
         <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>MARINE WILDLIFE</span>
           <span style={{ opacity: 0.5 }}>OCEARCH</span>

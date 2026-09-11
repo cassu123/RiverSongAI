@@ -37,7 +37,7 @@ const inputStyle = {
 
 function Field({ label, children }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+    <label className="rs-flex rs-flex-col" style={{ gap: 5 }}>
       <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</span>
       {children}
     </label>
@@ -154,17 +154,21 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1200, display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', padding: 16,
+      className="rs-flex rs-items-center rs-justify-center rs-p-4" style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1200,
+        background: 'rgba(0,0,0,0.7)',
+        backdropFilter: 'blur(10px)',
       }}
       onClick={onClose}
     >
       <div
-        className="rs-card"
+        className="rs-card rs-w-full"
         style={{
-          maxWidth: 620, width: '100%', maxHeight: '90vh', overflowY: 'auto',
+          maxWidth: 620,
+          maxHeight: '90vh',
+          overflowY: 'auto',
           background: 'var(--md-surface-container)',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -185,10 +189,11 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
             {MODES.map((m) => (
               <button
                 key={m.id}
-                className="rs-pill"
+                className="rs-pill rs-flex rs-items-center"
                 onClick={() => { setMode(m.id); setError('') }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                  gap: 5,
+                  cursor: 'pointer',
                   fontSize: 'var(--rs-fs-nano)',
                   background: mode === m.id
                     ? 'color-mix(in srgb, var(--primary) 22%, transparent)' : 'transparent',
@@ -207,11 +212,13 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
 
           {error && (
             <div
-              style={{
-                display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 8,
+              className="rs-flex rs-gap-2" style={{
+                padding: '10px 12px',
+                borderRadius: 8,
                 background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
-                fontSize: 'var(--rs-fs-micro)', lineHeight: 1.5,
+                fontSize: 'var(--rs-fs-micro)',
+                lineHeight: 1.5,
               }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
@@ -230,7 +237,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
               </Field>
 
               <div className="rs-flex rs-gap-3 rs-flex-wrap">
-                <div style={{ flex: 1, minWidth: 130 }}>
+                <div className="rs-grow" style={{ minWidth: 130 }}>
                   <Field label="MEAL">
                     <select
                       style={{ ...inputStyle, cursor: 'pointer' }}
@@ -240,7 +247,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
                     </select>
                   </Field>
                 </div>
-                <div style={{ flex: 1, minWidth: 110 }}>
+                <div className="rs-grow" style={{ minWidth: 110 }}>
                   <Field label="SERVINGS">
                     <input
                       style={inputStyle} type="number" min="1" value={servings}
@@ -319,15 +326,15 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 4 }}>
+          <div className="rs-flex rs-gap-2" style={{ justifyContent: 'flex-end', paddingTop: 4 }}>
             <button className="rs-pill" onClick={onClose} disabled={busy} style={{ cursor: 'pointer' }}>
               CANCEL
             </button>
             <button
-              className="rs-btn-primary"
+              className="rs-btn-primary rs-justify-center"
               onClick={submit}
               disabled={busy}
-              style={{ cursor: busy ? 'wait' : 'pointer', minWidth: 130, justifyContent: 'center' }}
+              style={{ cursor: busy ? 'wait' : 'pointer', minWidth: 130 }}
             >
               <span className="material-symbols-rounded">
                 {busy ? 'hourglass_top' : 'add'}

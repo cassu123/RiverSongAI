@@ -27,7 +27,7 @@ function LineChart({ data }) {
   const last = closes[closes.length - 1]
   return (
     <div className="rs-mb-3">
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H }} preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${W} ${H}`} className="rs-w-full" style={{ height: H }} preserveAspectRatio="none">
         <polyline points={pts} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
       </svg>
       <div className="rs-flex rs-justify-between">
@@ -56,7 +56,7 @@ function NewsList({ items }) {
     <div className="rs-card-meta" style={{ color: 'var(--text-muted)', padding: '12px 0', fontSize: 'var(--rs-fs-micro)' }}>No recent news.</div>
   )
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div className="rs-flex rs-flex-col" style={{ gap: 0 }}>
       {items.map((n, i) => (
         <a
           key={i}
@@ -99,9 +99,9 @@ function QuoteRow({ quote, selected, onSelect, onRemove }) {
   return (
     <div
       onClick={() => onSelect(quote.ticker)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 0', borderBottom: '1px solid var(--md-outline-variant)',
+      className="rs-flex rs-items-center rs-gap-3" style={{
+        padding: '12px 0',
+        borderBottom: '1px solid var(--md-outline-variant)',
         cursor: 'pointer',
         background: selected ? 'rgba(var(--primary-rgb,100,100,255),0.06)' : 'transparent',
         borderRadius: selected ? 4 : 0,
@@ -118,7 +118,7 @@ function QuoteRow({ quote, selected, onSelect, onRemove }) {
         )}
       </div>
       <SparkBar change={quote.change} />
-      <div style={{ flex: 1, textAlign: 'right' }}>
+      <div className="rs-grow" style={{ textAlign: 'right' }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 'var(--rs-fs-body)' }}>
           {quote.price != null ? `$${Number(quote.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
         </div>
@@ -133,7 +133,7 @@ function QuoteRow({ quote, selected, onSelect, onRemove }) {
       </div>
       <button
         onClick={e => { e.stopPropagation(); onRemove(quote.ticker) }}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--md-on-surface-variant)', opacity: 0.4, flexShrink: 0 }}
+        className="rs-p-1" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', opacity: 0.4, flexShrink: 0 }}
         title={`Remove ${quote.ticker}`}
       >
         <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>close</span>
@@ -300,11 +300,11 @@ export default function StocksTab({ token, active }) {
       <div className="rs-mb-5">
         <div style={{ position: 'relative' }}>
           <input
-            type="text" className="rs-input"
+            type="text" className="rs-input rs-w-full"
             placeholder="Search symbol or company…"
             value={searchQ}
             onChange={e => { setSearchQ(e.target.value); setAddError('') }}
-            style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)', boxSizing: 'border-box' }}
+            style={{ fontSize: 'var(--rs-fs-tiny)', boxSizing: 'border-box' }}
           />
           {searchQ && (
             <button className="rs-icon-btn" onClick={() => { setSearchQ(''); setResults([]) }}
@@ -313,50 +313,58 @@ export default function StocksTab({ token, active }) {
             </button>
           )}
           {(searchResults.length > 0 || searching) && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, right: 0,
+            <div className="rs-mt-1" style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
               background: 'var(--md-surface-container-high)',
               border: '1px solid var(--md-outline-variant)',
-              borderRadius: 8, marginTop: 4, zIndex: 50, overflow: 'hidden',
+              borderRadius: 8,
+              zIndex: 50,
+              overflow: 'hidden',
             }}>
               {searching && <div className="rs-card-meta" style={{ padding: '10px 16px', fontSize: 'var(--rs-fs-micro)' }}>Searching…</div>}
               {searchResults.slice(0, 5).map(r => (
-                <button key={r.ticker} onClick={() => addTicker(r.ticker)} style={{
-                  display: 'flex', width: '100%', gap: 12, padding: '10px 16px',
-                  background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                  alignItems: 'center', borderTop: '1px solid var(--md-outline-variant)',
+                <button key={r.ticker} onClick={() => addTicker(r.ticker)} className="rs-flex rs-w-full rs-gap-3 rs-items-center" style={{
+                  padding: '10px 16px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  borderTop: '1px solid var(--md-outline-variant)',
                 }}>
                   <span style={{ fontWeight: 800, fontSize: 'var(--rs-fs-tiny)', color: 'var(--primary)', minWidth: 52 }}>{r.ticker}</span>
-                  <span className="rs-card-meta" style={{ flex: 1, fontSize: 'var(--rs-fs-micro)' }}>{r.name}</span>
+                  <span className="rs-card-meta rs-grow" style={{ fontSize: 'var(--rs-fs-micro)' }}>{r.name}</span>
                   <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{r.region}</span>
                 </button>
               ))}
             </div>
           )}
-          {addError && <div style={{ color: 'oklch(64% 0.17 22)', fontSize: 'var(--rs-fs-micro)', marginTop: 6, fontWeight: 600 }}>{addError}</div>}
+          {addError && <div className="rs-mt-2" style={{ color: 'oklch(64% 0.17 22)', fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{addError}</div>}
         </div>
       </div>
 
       {/* Column headers */}
       {quotes.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8, borderBottom: '1px solid var(--md-outline-variant)' }}>
+        <div className="rs-flex rs-items-center rs-gap-3" style={{ paddingBottom: 8, borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div style={{ minWidth: 52 }}>{colHeader('SYMBOL')}</div>
           <div style={{ minWidth: 56 }}>{colHeader('TREND')}</div>
-          <div style={{ flex: 1, textAlign: 'right' }}>{colHeader('PRICE', 'right')}</div>
+          <div className="rs-grow" style={{ textAlign: 'right' }}>{colHeader('PRICE', 'right')}</div>
           <div style={{ minWidth: 80 }}>{colHeader('CHANGE', 'right')}</div>
           <div style={{ width: 28 }} />
         </div>
       )}
 
       {loading ? <StocksSkeleton /> : error ? (
-        <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>trending_flat</span>
+        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+          <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>trending_flat</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchQuotes}>RETRY</button>
         </div>
       ) : quotes.length === 0 ? (
-        <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>candlestick_chart</span>
+        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+          <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>candlestick_chart</span>
           <div className="rs-card-label rs-mb-2">EMPTY WATCHLIST</div>
           <div className="rs-card-meta">Search for a ticker symbol above to start tracking.</div>
         </div>
@@ -376,7 +384,7 @@ export default function StocksTab({ token, active }) {
       {/* Chart pane */}
       {settings?.show_charts && selectedTicker && (
         <div className="rs-mt-5">
-          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
+          <div className="rs-card-label rs-mb-3" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
             {selectedTicker} · 30-DAY CHART
           </div>
           {chartLoading ? (
@@ -392,7 +400,7 @@ export default function StocksTab({ token, active }) {
       {/* News pane */}
       {settings?.show_news && selectedTicker && (
         <div className="rs-mt-5">
-          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
+          <div className="rs-card-label rs-mb-3" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
             {selectedTicker} · RECENT NEWS
           </div>
           {newsLoading ? (
@@ -410,16 +418,16 @@ function StocksSkeleton() {
   return (
     <div className="rs-flex rs-flex-col">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--md-outline-variant)', alignItems: 'center' }}>
-          <div style={{ minWidth: 52, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div key={i} className="rs-flex rs-gap-3 rs-items-center" style={{ padding: '12px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-flex rs-flex-col rs-gap-1" style={{ minWidth: 52 }}>
             <div style={{ height: 10, width: 40, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
             <div style={{ height: 8, width: 32, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
           </div>
           <div style={{ height: 8, width: 56, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="rs-grow rs-flex" style={{ justifyContent: 'flex-end' }}>
             <div style={{ height: 14, width: 64, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.35 }} />
           </div>
-          <div style={{ minWidth: 80, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+          <div className="rs-flex rs-flex-col rs-gap-1" style={{ minWidth: 80, alignItems: 'flex-end' }}>
             <div style={{ height: 10, width: 48, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
             <div style={{ height: 8, width: 36, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.2 }} />
           </div>

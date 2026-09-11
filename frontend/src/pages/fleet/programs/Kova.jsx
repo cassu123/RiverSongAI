@@ -32,11 +32,11 @@ function Dashboard({ unit, sendCmd, latest, alerts, commands, refresh, program }
           <MetricStat label="STATE" value={t.docked ? 'docked' : 'active'} />
         </div>
         <div className="rs-mb-3">
-          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>CHORE PROGRESS</div>
+          <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>CHORE PROGRESS</div>
           <div style={{ height: 10, borderRadius: 5, background: 'var(--md-surface-container-high,#2a2a2a)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${progress}%`, background: '#34d399', transition: 'width .4s ease' }} />
           </div>
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: 4 }}>{progress}%</div>
+          <div className="rs-card-meta rs-mt-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>{progress}%</div>
         </div>
         <BatteryBar pct={t.battery_pct} />
       </Panel>
@@ -48,7 +48,7 @@ function Dashboard({ unit, sendCmd, latest, alerts, commands, refresh, program }
         {commands?.length ? (
           <div className="rs-flex rs-flex-col rs-gap-1">
             {commands.slice(0, 8).map(c => (
-              <div key={c.command_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-micro)' }}>
+              <div key={c.command_id} className="rs-flex rs-justify-between" style={{ fontSize: 'var(--rs-fs-micro)' }}>
                 <span>{c.payload?.command} {c.payload?.params?.chore ? `(${c.payload.params.chore})` : ''}</span>
                 <span style={{ opacity: 0.55 }}>{new Date(c.issued_at).toLocaleTimeString()}</span>
               </div>

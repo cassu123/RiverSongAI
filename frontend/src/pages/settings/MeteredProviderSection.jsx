@@ -198,8 +198,9 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
       {error && (
         <div
           role="alert"
-          style={{
-            display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 10,
+          className="rs-flex rs-gap-2" style={{
+            padding: '10px 12px',
+            borderRadius: 10,
             background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
             border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
             fontSize: 'var(--rs-fs-micro)',
@@ -213,9 +214,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
       {/* Cost warning — this is the one thing that separates these two panels
           from every other provider section. */}
       <div
-        style={{
-          display: 'flex',
-          gap: 8,
+        className="rs-flex rs-gap-2" style={{
           padding: '10px 12px',
           borderRadius: 10,
           background: 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)',
@@ -256,11 +255,8 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
 
       {/* Spend tracker */}
       <div
-        style={{
+        className="rs-flex rs-flex-col rs-gap-3" style={{
           padding: '14px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
           background: 'var(--md-surface-container-low)',
           border: '1px solid var(--md-outline-variant)',
           borderRadius: 12,
@@ -308,7 +304,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
               color: totals.cost > 0 ? 'var(--md-sys-color-tertiary)' : 'inherit',
             },
           ].map(({ value, label, icon, color }) => (
-            <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div key={label} className="rs-flex rs-flex-col" style={{ gap: 2 }}>
               <div className="rs-flex rs-items-center rs-gap-1">
                 <span className="material-symbols-rounded" style={{ fontSize: '0.8rem', opacity: 0.6 }}>
                   {icon}
@@ -334,10 +330,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
         {/* Per-model breakdown — which model is actually costing the money */}
         {rows.length > 0 && (
           <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
+            className="rs-flex rs-flex-col rs-gap-2" style={{
               paddingTop: 8,
               borderTop: '1px solid var(--md-sys-color-outline-variant)',
             }}
@@ -348,7 +341,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
               .map((r) => (
                 <div
                   key={r.model}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}
+                  className="rs-flex rs-justify-between rs-gap-2" style={{ alignItems: 'baseline' }}
                 >
                   <span style={{ fontSize: 'var(--rs-fs-micro)', fontFamily: 'monospace', opacity: 0.85 }}>
                     {r.model}
@@ -375,8 +368,8 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
         {meta.models.map(({ name, tag }) => (
           <div
             key={name}
-            className="rs-pill"
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--rs-fs-nano)', padding: '3px 10px' }}
+            className="rs-pill rs-flex rs-items-center rs-gap-1"
+            style={{ fontSize: 'var(--rs-fs-nano)', padding: '3px 10px' }}
           >
             <span style={{ fontFamily: 'monospace' }}>{name}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>· {tag}</span>

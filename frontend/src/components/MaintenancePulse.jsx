@@ -190,7 +190,7 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
               <input className="cockpit-input-raw" type="number" value={form.due_at_miles} onChange={set('due_at_miles')} placeholder="5000" />
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+          <div className="rs-flex rs-gap-2 rs-mt-4" style={{ justifyContent: 'flex-end' }}>
             <button className="rs-pill" onClick={() => setEditing(false)}>CANCEL</button>
             <button className="rs-btn-primary" onClick={save} disabled={busy}>{busy ? 'SAVING...' : 'SAVE CHANGES'}</button>
           </div>
@@ -316,7 +316,7 @@ function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
               <input className="cockpit-input-raw" type="number" value={newPoint.due_at_miles} onChange={setNp('due_at_miles')} placeholder="5000" />
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+          <div className="rs-flex rs-gap-3 rs-mt-4" style={{ justifyContent: 'flex-end' }}>
             <button className="rs-pill" onClick={() => { setShowAdd(false); setNewPoint(BLANK_CP); }}>CANCEL</button>
             <button className="rs-btn-primary" onClick={addPoint} disabled={busy || !newPoint.description.trim()}>
               {busy ? 'SAVING...' : 'CREATE ITEM'}
@@ -379,7 +379,7 @@ function PeopleSettings({ token, people, onRefresh }) {
       <div className="rs-card-head rs-mb-4">
         <span className="rs-card-label">&gt; MAINTENANCE CREW ROSTER</span>
       </div>
-      <p style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0, marginBottom: 16 }}>
+      <p className="rs-mb-4" style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0 }}>
         Add authorized crew members by email. Assigned crew will appear in the "Performed By" selector when logging maintenance.
       </p>
 
@@ -388,8 +388,8 @@ function PeopleSettings({ token, people, onRefresh }) {
 
       <div className="rs-flex rs-gap-3 rs-mb-5">
         <input
-          className="cockpit-input-raw"
-          style={{ flex: 1, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
+          className="cockpit-input-raw rs-grow"
+          style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
           placeholder="member@example.com"
           value={emailInput}
           onChange={e => setEmailInput(e.target.value)}
@@ -488,7 +488,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
       {msg && <div className="mp-flash--ok rs-mb-4">{msg}</div>}
       {error && <div className="mp-error rs-mb-4">{error}</div>}
 
-      <div className="cockpit-input-box" style={{ maxWidth: 360, marginBottom: 20 }}>
+      <div className="cockpit-input-box rs-mb-5" style={{ maxWidth: 360 }}>
         <span className="card-metric-label">TARGET VEHICLE</span>
         <select className="cockpit-input-raw" value={vehicleId} onChange={e => setVehicleId(e.target.value)}>
           {vehicles.map(v => (
@@ -499,9 +499,9 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
         </select>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+      <div className="rs-gap-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         {/* Assigned */}
-        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="card-metric-label rs-mb-3">
             ASSIGNED TO {currentV?.nickname?.toUpperCase() || currentV?.model?.toUpperCase() || 'VEHICLE'}
           </div>
@@ -510,7 +510,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
           ) : (
             <ul className="cp-list">
               {assignments.map(a => (
-                <li key={a.person_id} className="cp-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+                <li key={a.person_id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between" style={{ padding: '10px 14px' }}>
                   <span style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--fg)' }}>{a.person_display_name || a.person_email}</span>
                   <button className="rs-pill btn-danger" onClick={() => handleUnassign(a.person_id)} disabled={busy}>
                     UNASSIGN
@@ -522,14 +522,14 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
         </div>
 
         {/* Unassigned */}
-        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="card-metric-label rs-mb-3">AVAILABLE ROSTER MEMBERS</div>
           {unassigned.length === 0 ? (
             <div className="mp-empty-specs rs-p-4">All registered members are assigned.</div>
           ) : (
             <ul className="cp-list">
               {unassigned.map(p => (
-                <li key={p.id} className="cp-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+                <li key={p.id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between" style={{ padding: '10px 14px' }}>
                   <span style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--fg)' }}>{p.display_name || p.email}</span>
                   <button className="rs-pill is-active" onClick={() => handleAssign(p.id)} disabled={busy}>
                     + ASSIGN
@@ -604,7 +604,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
       <div className="rs-card-head rs-mb-4">
         <span className="rs-card-label">&gt; AUTOMATED MANUAL IMPORT &amp; SPECS EXTRACTION</span>
       </div>
-      <p style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0, marginBottom: 16 }}>
+      <p className="rs-mb-4" style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0 }}>
         Upload a factory service manual or owner's handbook (PDF). Maintenance schedules, fluid capacities, torque specs, and intervals will be parsed and staged.
       </p>
 
@@ -632,7 +632,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
       </div>
 
       {preview && (
-        <div style={{ marginTop: 16, background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 12 }}>
+        <div className="rs-mt-4 rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
           <div className="card-metric-label rs-mb-3">PREVIEW — {preview.length} ITEMS DETECTED</div>
           {preview.length === 0 ? (
             <div className="mp-empty-specs">No structured maintenance items detected in this document.</div>
@@ -755,7 +755,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
       <div className="rs-card-head rs-mb-4">
         <span className="rs-card-label">&gt; CONVERSATIONAL TECHNICAL DOSSIER</span>
       </div>
-      <p style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0, marginBottom: 16 }}>
+      <p className="rs-mb-4" style={{ color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-small)', marginTop: 0 }}>
         Ask River Song about fluid capacities, torque specs, part numbers, or upcoming service schedules grounded in your vehicle's technical manual.
       </p>
 
@@ -777,8 +777,8 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
 
       <form onSubmit={handleAsk} className="rs-flex rs-gap-3">
         <input
-          className="cockpit-input-raw"
-          style={{ flex: 1, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
+          className="cockpit-input-raw rs-grow"
+          style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
           placeholder="e.g. 'What oil viscosity is recommended?' or 'What is the torque for the oil drain plug?'"
           value={question}
           onChange={e => setQuestion(e.target.value)}
@@ -795,7 +795,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
             {answer.response}
           </div>
           {answer.chunks?.length > 0 && (
-            <details style={{ marginTop: 14, opacity: 0.8, fontSize: 'var(--rs-fs-tiny)' }}>
+            <details className="rs-mt-4" style={{ opacity: 0.8, fontSize: 'var(--rs-fs-tiny)' }}>
               <summary style={{ cursor: 'pointer', color: 'var(--primary)' }}>View Citations ({answer.chunks.length})</summary>
               <div className="rs-mt-2 rs-flex rs-flex-col rs-gap-2">
                 {answer.chunks.map((c, idx) => (
@@ -1216,7 +1216,7 @@ export default function MaintenancePulse({
             <span>HANGAR</span>
           </button>
           <span className="rs-header-sep" style={{ opacity: 0.3 }}>/</span>
-          <h1 className="rs-greeting" style={{ margin: 0, fontSize: 'clamp(1.4rem, 2.5vw, 1.85rem)' }}>
+          <h1 className="rs-greeting rs-m-0" style={{ fontSize: 'clamp(1.4rem, 2.5vw, 1.85rem)' }}>
             {currentVehicle.nickname || `${currentVehicle.make} ${currentVehicle.model}`}
           </h1>
         </div>
@@ -1256,7 +1256,7 @@ export default function MaintenancePulse({
 
       {/* Inline Vehicle Details Drawer (toggled by DETAILS button) */}
       {showDetailsDrawer && (
-        <div className="rs-card is-wide is-elev" style={{ marginBottom: 24, borderTop: '2px solid var(--primary)' }}>
+        <div className="rs-card is-wide is-elev rs-mb-5" style={{ borderTop: '2px solid var(--primary)' }}>
           <div className="rs-card-inner">
             <div className="rs-card-head rs-mb-4 rs-flex rs-justify-between rs-items-center">
               <span className="rs-card-label" style={{ color: 'var(--primary)' }}>&gt; VEHICLE SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
@@ -1266,7 +1266,7 @@ export default function MaintenancePulse({
             </div>
 
             <form onSubmit={handleSaveVehicleDetails}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20 }}>
+              <div className="rs-gap-4 rs-mb-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <div className="cockpit-input-box">
                   <span className="card-metric-label">MAKE</span>
                   <input className="cockpit-input-raw" value={editForm.make} onChange={e => setEditForm({ ...editForm, make: e.target.value })} required />
@@ -1311,7 +1311,7 @@ export default function MaintenancePulse({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rs-flex rs-justify-between rs-items-center" style={{ paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 <button type="button" className="rs-pill btn-danger" onClick={handleDeleteVehicle}>
                   DELETE VEHICLE
                 </button>
@@ -1463,7 +1463,7 @@ export default function MaintenancePulse({
           </div>
 
           {/* Staged Required Supplies & Torque Specs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 20 }}>
+          <div className="rs-gap-4 rs-mb-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
             {/* Required Fluids & Parts */}
             <div className="staging-card">
               <div className="staging-card-head">
@@ -1530,8 +1530,8 @@ export default function MaintenancePulse({
                     <div className="rs-flex rs-justify-between rs-items-start rs-gap-3">
                       <div className="rs-flex rs-items-center rs-gap-3">
                         <button
-                          className="rs-pill is-active"
-                          style={{ minWidth: 32, height: 32, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          className="rs-pill is-active rs-flex rs-items-center rs-justify-center"
+                          style={{ minWidth: 32, height: 32, padding: 0 }}
                           onClick={() => {
                             setCheckStatuses(prev => ({
                               ...prev,
@@ -1579,7 +1579,7 @@ export default function MaintenancePulse({
       {activeTab === 'log' && (
         <div className="mp-log-form animate-page-in">
           <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
-            <h3 style={{ margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h3 className="rs-m-0 rs-flex rs-items-center rs-gap-3" style={{ color: 'var(--primary)' }}>
               <span className="material-symbols-rounded">edit_calendar</span>
               <span>LOG VEHICLE MAINTENANCE</span>
             </h3>
@@ -1603,7 +1603,7 @@ export default function MaintenancePulse({
           </div>
 
           <form onSubmit={handleSubmitServiceLog}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 20 }}>
+            <div className="rs-gap-4 rs-mb-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
               <div className="cockpit-input-box">
                 <span className="card-metric-label">SERVICE TYPE / PROCEDURE *</span>
                 <input
@@ -1653,7 +1653,7 @@ export default function MaintenancePulse({
 
             {/* Pro Service Specific Fields */}
             {logForm.is_pro_service && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 20, padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
+              <div className="rs-gap-4 rs-mb-5 rs-p-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
                 <div className="cockpit-input-box">
                   <span className="card-metric-label">SERVICE FACILITY / DEALER</span>
                   <input
@@ -1703,7 +1703,7 @@ export default function MaintenancePulse({
                     SELECT ALL
                   </button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
                   {(currentVehicle.check_points || []).map(cp => {
                     const isDone = logCheckedPoints[cp.id] === 'done';
                     return (
@@ -1743,7 +1743,7 @@ export default function MaintenancePulse({
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <div className="rs-flex rs-gap-3" style={{ justifyContent: 'flex-end' }}>
               <button type="button" className="rs-pill" onClick={() => setActiveTab('walkthrough')}>CANCEL</button>
               <button type="submit" className="rs-btn-primary" disabled={submittingLog}>
                 <span className="material-symbols-rounded">save</span>
@@ -1788,7 +1788,7 @@ export default function MaintenancePulse({
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 16, fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)', flexWrap: 'wrap' }}>
+                  <div className="rs-flex rs-gap-4 rs-flex-wrap" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>
                     <span>Odometer: <strong>{log.odometer != null ? `${log.odometer.toLocaleString()} ${unitLabel.toLowerCase()}` : '—'}</strong></span>
                     <span>Facility: <strong>{log.service_center || 'Personal Hangar'}</strong></span>
                     {log.cost != null && <span>Cost: <strong>${Number(log.cost).toFixed(2)}</strong></span>}
@@ -1857,7 +1857,7 @@ export default function MaintenancePulse({
       {/* RAG Ask River Sheet */}
       {showAskRiver && (
         <Sheet open={showAskRiver} onClose={() => setShowAskRiver(false)} title={`River Song // ${currentVehicle.nickname || currentVehicle.model}`}>
-          <div style={{ height: '70vh', display: 'flex', flexDirection: 'column' }}>
+          <div className="rs-flex rs-flex-col" style={{ height: '70vh' }}>
             <ChatInterface
               embedded={true}
               onClose={() => setShowAskRiver(false)}

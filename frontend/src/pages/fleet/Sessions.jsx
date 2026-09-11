@@ -84,7 +84,7 @@ export default function Sessions() {
 
       <div className="rs-card">
         <div className="rs-table-wrap">
-          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="rs-w-full" style={{ textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <th className="rs-p-3">Started At</th>
@@ -131,7 +131,7 @@ export default function Sessions() {
       </div>
 
       {selectedSession && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+        <div className="rs-flex rs-items-center rs-justify-center rs-p-5" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000 }}>
           <div className="rs-card" style={{ width: 'min(95vw, 1000px)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="rs-flex rs-justify-between">
               <h3>Session Details: {selectedSession.session_id.substring(0,8)}...</h3>
@@ -147,13 +147,13 @@ export default function Sessions() {
 
             {sessionDetails ? (
               sessionDetails.error ? (
-                <div style={{ textAlign: 'center', padding: 20, color: 'var(--danger)' }}>{sessionDetails.error}</div>
+                <div className="rs-text-center rs-p-5" style={{ color: 'var(--danger)' }}>{sessionDetails.error}</div>
               ) : (
               <div className="rs-flex rs-flex-col rs-gap-5">
                 {sessionDetails.telemetry && sessionDetails.telemetry.length > 0 && (
                   <div>
                     <h4>Telemetry Over Time (Battery %)</h4>
-                    <div style={{ height: 300, background: 'rgba(0,0,0,0.2)', padding: 10, borderRadius: 8 }}>
+                    <div className="rs-p-3" style={{ height: 300, background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={sessionDetails.telemetry}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -171,7 +171,7 @@ export default function Sessions() {
                 {sessionDetails.events && sessionDetails.events.length > 0 && (
                   <div>
                     <h4>Event Timeline</h4>
-                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: 10, borderRadius: 8, maxHeight: 300, overflowY: 'auto' }}>
+                    <div className="rs-p-3" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, maxHeight: 300, overflowY: 'auto' }}>
                       {sessionDetails.events.map((e, idx) => (
                         <div key={idx} style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9em' }}>
                           <span style={{ color: 'var(--text-muted)', marginRight: 10 }}>{new Date(e.timestamp + 'Z').toLocaleTimeString()}</span>

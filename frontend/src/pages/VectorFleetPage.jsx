@@ -23,13 +23,13 @@ export default function VectorFleetPage({ setAction }) {
       </header>
 
       <div style={{ padding: '0 24px' }}>
-        <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid var(--border)', marginBottom: 24, paddingBottom: 8 }}>
+        <div className="rs-flex rs-gap-5 rs-mb-5" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
           <Link to="/environment" style={{ fontWeight: 400, color: 'var(--text-secondary)', textDecoration: 'none' }}>Property / Home</Link>
           <Link to="/fleet" style={{ fontWeight: 400, color: 'var(--text-secondary)', textDecoration: 'none' }}>Ecosystem</Link>
           <Link to="/fleet/vector" style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 8, marginBottom: -9 }}>Vector</Link>
         </div>
 
-        <div style={{ marginBottom: 24, display: 'flex', gap: 16, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
+        <div className="rs-mb-5 rs-flex rs-gap-4" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
           <Link to="/fleet/vector" style={{ fontWeight: loc.pathname === '/fleet/vector' ? 700 : 400, color: 'var(--text-primary)', textDecoration: 'none' }}>Overview</Link>
           <Link to="/fleet/vector/zones" style={{ fontWeight: loc.pathname === '/fleet/vector/zones' ? 700 : 400, color: 'var(--text-primary)', textDecoration: 'none' }}>Zones</Link>
           <Link to="/fleet/vector/programs" style={{ fontWeight: loc.pathname === '/fleet/vector/programs' ? 700 : 400, color: 'var(--text-primary)', textDecoration: 'none' }}>Programs</Link>

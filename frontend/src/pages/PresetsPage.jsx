@@ -129,7 +129,7 @@ export default function PresetsPage({ setAction }) {
               placeholder="Preset name (e.g. Deep dive, Quick draft)"
               style={inputStyle}
             />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
               <input type="text" value={draft.config.provider || ''} onChange={e => set('provider', e.target.value)} placeholder="Provider (ollama, claude…)" style={inputStyle} />
               <input type="text" value={draft.config.model    || ''} onChange={e => set('model',    e.target.value)} placeholder="Model id"                        style={inputStyle} />
               <input type="text" value={draft.config.voice_id || ''} onChange={e => set('voice_id', e.target.value)} placeholder="Voice id"                        style={inputStyle} />

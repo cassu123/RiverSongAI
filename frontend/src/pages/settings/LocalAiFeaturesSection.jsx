@@ -14,8 +14,8 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
             Toggle advanced AI capabilities. These are global settings that affect all users.
           </p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+          <div className="rs-gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-semantic"
                 label="Semantic Memory"
@@ -25,7 +25,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               <p className="rs-card-meta">Use vector search for memory recall</p>
             </div>
 
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-vision"
                 label="Vision Analysis"
@@ -35,7 +35,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               <p className="rs-card-meta">AI photo analysis for inventory & recipes</p>
             </div>
 
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-image"
                 label="Image Generation"
@@ -48,7 +48,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               </div>
             </div>
 
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-rag"
                 label="RAG Documents"
@@ -58,7 +58,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               <p className="rs-card-meta">Answer questions from documents</p>
             </div>
 
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-streaming"
                 label="LLM Streaming"
@@ -68,7 +68,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               <p className="rs-card-meta">Stream AI responses token by token</p>
             </div>
 
-            <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <Toggle
                 id="feat-chatterbox"
                 label="Chatterbox TTS"
@@ -82,7 +82,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
             </div>
           </div>
           
-          <div style={{ marginTop: 16, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="rs-mt-4 rs-flex rs-items-center rs-gap-2" style={{ padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)' }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
             <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
               Backend restart required for changes to take effect.

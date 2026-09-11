@@ -121,15 +121,15 @@ export default function ComparePage({ setAction }) {
           placeholder="Prompt to send to both models…"
           style={inputStyle}
         />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+        <div className="rs-gap-3 rs-mt-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
           <ModelInput label="MODEL A" value={modelA} onChange={setModelA} />
           <ModelInput label="MODEL B" value={modelB} onChange={setModelB} />
         </div>
-        {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)', marginTop: 10 }}>{error.toUpperCase()}</div>}
+        {error && <div className="rs-mt-3" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
       </div>
 
       {run && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <div className="rs-gap-3 rs-mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
           <ResponseCard
             label={revealed ? `${revealed.model_a.provider} · ${revealed.model_a.model}` : 'A'}
             body={run.response_a}
@@ -159,7 +159,7 @@ export default function ComparePage({ setAction }) {
           <div className="rs-card-label rs-mb-2">LEADERBOARD (YOUR VOTES)</div>
           <div className="rs-flex rs-flex-col rs-gap-1">
             {board.slice(0, 8).map((row, i) => (
-              <div key={`${row.provider}:${row.model}:${i}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-micro)', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div key={`${row.provider}:${row.model}:${i}`} className="rs-flex rs-justify-between" style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <span>{row.provider} · {row.model}</span>
                 <span style={{ opacity: 0.7 }}>{row.wins}W · {row.ties}T · {row.losses}L · {(row.win_rate * 100).toFixed(0)}%</span>
               </div>
@@ -172,8 +172,8 @@ export default function ComparePage({ setAction }) {
         <div className="rs-card is-wide rs-p-4">
           <div className="rs-card-label rs-mb-2">RECENT RUNS</div>
           {history.slice(0, 6).map(h => (
-            <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--rs-fs-tiny)' }}>{h.prompt}</span>
+            <div key={h.id} className="rs-flex rs-justify-between rs-items-center" style={{ padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="rs-grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--rs-fs-tiny)' }}>{h.prompt}</span>
               <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>{h.winner ? h.winner.toUpperCase() : 'OPEN'}</span>
             </div>
           ))}
@@ -186,7 +186,7 @@ export default function ComparePage({ setAction }) {
 function ModelInput({ label, value, onChange }) {
   return (
     <div>
-      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>{label}</div>
+      <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</div>
       <div className="rs-flex rs-gap-2">
         <input
           type="text"
@@ -209,9 +209,9 @@ function ModelInput({ label, value, onChange }) {
 
 function ResponseCard({ label, body, chosen }) {
   return (
-    <div className="rs-card" style={{ padding: 14, border: chosen ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rs-card rs-p-4" style={{ border: chosen ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.08)' }}>
       <div className="rs-card-label rs-mb-2">{label}</div>
-      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 'var(--rs-fs-tiny)', lineHeight: 1.5, margin: 0 }}>{body || '(empty)'}</pre>
+      <pre className="rs-m-0" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 'var(--rs-fs-tiny)', lineHeight: 1.5 }}>{body || '(empty)'}</pre>
     </div>
   )
 }

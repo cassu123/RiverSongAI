@@ -90,9 +90,9 @@ export default function StepTimer({ timer, api, onChanged }) {
     <div
       role="timer"
       aria-live={done ? 'assertive' : 'off'}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-        marginTop: 8, padding: '8px 10px', borderRadius: 8,
+      className="rs-flex rs-items-center rs-gap-2 rs-flex-wrap rs-mt-2" style={{
+        padding: '8px 10px',
+        borderRadius: 8,
         background: done
           ? 'color-mix(in srgb, var(--md-error) 18%, transparent)'
           : 'var(--md-surface-container-high)',
@@ -104,7 +104,7 @@ export default function StepTimer({ timer, api, onChanged }) {
         minWidth: 66, color: done ? 'var(--md-error)' : 'var(--primary)',
       }}>{mmss(left)}</span>
 
-      <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', flex: 1, minWidth: 60 }}>
+      <span className="rs-card-label rs-grow" style={{ fontSize: 'var(--rs-fs-nano)', minWidth: 60 }}>
         {done ? 'TIME' : paused ? 'PAUSED' : timer.label}
       </span>
 

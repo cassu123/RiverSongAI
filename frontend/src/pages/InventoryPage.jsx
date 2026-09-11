@@ -138,12 +138,12 @@ export default function InventoryPage({ setAction }) {
     setAction(
       <div className="rs-chat-input-controls rs-w-full">
         <div className="rs-flex rs-gap-3 rs-items-center rs-w-full">
-          <div className="rs-chat-input-container" style={{ flex: 1, padding: '8px 16px', background: 'color-mix(in srgb, var(--md-surface-container-low) 60%, transparent)' }}>
+          <div className="rs-chat-input-container rs-grow" style={{ padding: '8px 16px', background: 'color-mix(in srgb, var(--md-surface-container-low) 60%, transparent)' }}>
             <div className="rs-flex rs-items-center rs-gap-3">
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
-                style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }} 
+                className="rs-w-full" style={{ all: 'unset', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }} 
                 placeholder="IDENTIFY ASSET..." 
                 value={query} 
                 onChange={e => setQuery(e.target.value)} 
@@ -171,15 +171,15 @@ export default function InventoryPage({ setAction }) {
             <span className="material-symbols-rounded">add</span>
             <span className="rs-speak-actions-label">ADD ASSET</span>
           </button>
-          <a href={homeId ? `/api/inventory/homes/${homeId}/labels.pdf?token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }} disabled={!homeId} title="Print QR Labels">
+          <a href={homeId ? `/api/inventory/homes/${homeId}/labels.pdf?token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Print QR Labels">
             <span className="material-symbols-rounded">print</span>
             <span className="rs-speak-actions-label">LABELS</span>
           </a>
-          <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=pdf&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }} disabled={!homeId} title="Download PDF Dossier">
+          <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=pdf&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Download PDF Dossier">
             <span className="material-symbols-rounded">picture_as_pdf</span>
             <span className="rs-speak-actions-label">DOSSIER</span>
           </a>
-          <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=csv&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }} disabled={!homeId} title="Download CSV Manifest">
+          <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=csv&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 24px', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Download CSV Manifest">
             <span className="material-symbols-rounded">csv</span>
             <span className="rs-speak-actions-label">CSV</span>
           </a>
@@ -217,10 +217,10 @@ export default function InventoryPage({ setAction }) {
 
       {homes && homes.length === 0 && (
         <div className="rs-card is-wide rs-mt-6 rs-p-7 rs-text-center">
-          <span className="material-symbols-rounded" style={{ fontSize: '3rem', color: 'var(--md-primary)', marginBottom: 16 }}>home</span>
+          <span className="material-symbols-rounded rs-mb-4" style={{ fontSize: '3rem', color: 'var(--md-primary)' }}>home</span>
           <h2 style={{ margin: '0 0 8px 0', fontSize: '1.5rem' }}>Welcome to The Stash</h2>
           <div className="rs-card-meta rs-mb-5">Before you can track assets, you need to create a Home or Location.</div>
-          <form onSubmit={createHome} style={{ display: 'flex', gap: 12, justifyContent: 'center', maxWidth: 400, margin: '0 auto' }}>
+          <form onSubmit={createHome} className="rs-flex rs-gap-3 rs-justify-center" style={{ maxWidth: 400, margin: '0 auto' }}>
             <input type="text" name="homeName" className="rs-input rs-grow" placeholder="e.g. River's House, Storage Unit" autoFocus required />
             <button type="submit" className="rs-btn-primary">CREATE</button>
           </form>
@@ -283,7 +283,7 @@ export default function InventoryPage({ setAction }) {
       <div className="rs-card-flow rs-mb-6">
         <div className="rs-card is-wide is-elev">
            <div className="rs-card-inner">
-             <div style={{ display: 'flex', gap: 64, flexWrap: 'wrap' }}>
+             <div className="rs-flex rs-flex-wrap" style={{ gap: 64 }}>
                <div>
                  <div className="rs-card-label">TOTAL ASSETS</div>
                  <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)' }}>{stats.total}</div>
@@ -296,7 +296,7 @@ export default function InventoryPage({ setAction }) {
                  <div className="rs-card-label" style={{ color: 'var(--warn)' }}>MISSING INFO</div>
                  <div className="rs-card-value" style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: stats.missingDocs > 0 ? 'var(--warn)' : 'inherit' }}>{stats.missingDocs}</div>
                </div>
-               <div style={{ flex: 1, minWidth: 200, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+               <div className="rs-grow rs-flex rs-items-center" style={{ minWidth: 200, justifyContent: 'flex-end' }}>
                   <div className="rs-status-strip">
                     <span className="rs-status-dot" style={{ background: stats.missingDocs === 0 ? '#4ade80' : 'var(--warn)' }} />
                     <span>{stats.missingDocs === 0 ? 'CLAIM READY' : 'NEEDS ATTENTION'}</span>
@@ -311,8 +311,8 @@ export default function InventoryPage({ setAction }) {
         {loading && items.length === 0 ? (
           <div className="rs-card-meta rs-p-7 rs-text-center">INITIALIZING ASSET SCAN...</div>
         ) : filtered.length === 0 ? (
-          <div className="rs-card is-wide" style={{ textAlign: 'center', padding: '64px 24px' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.1, marginBottom: 16 }}>inventory_2</span>
+          <div className="rs-card is-wide rs-text-center" style={{ padding: '64px 24px' }}>
+            <span className="material-symbols-rounded rs-mb-4" style={{ fontSize: '3rem', opacity: 0.1 }}>inventory_2</span>
             <div className="rs-card-value">Frequency clear</div>
             <div className="rs-card-meta">No assets identified with current query.</div>
           </div>
@@ -327,7 +327,7 @@ export default function InventoryPage({ setAction }) {
                     <span style={{ fontSize: 'var(--rs-fs-nano)' }}>{(item.unit || 'UNIT').toUpperCase()}</span>
                   </div>
                 </div>
-                <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-h3)', marginBottom: 4 }}>{item.name}</div>
+                <div className="rs-card-value rs-mb-1" style={{ fontSize: 'var(--rs-fs-h3)' }}>{item.name}</div>
                 <div className="rs-card-meta rs-mb-3">
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', verticalAlign: 'middle', marginRight: 6 }}>location_on</span>
                   {item.location || 'SECTOR UNKNOWN'}
@@ -340,7 +340,7 @@ export default function InventoryPage({ setAction }) {
                   </div>
                 )}
                 
-                <div style={{ marginTop: 'auto', display: 'flex', gap: 10 }}>
+                <div className="rs-flex rs-gap-3" style={{ marginTop: 'auto' }}>
                   <button className="rs-pill is-active rs-grow" onClick={(e) => { e.stopPropagation(); setActiveItem(item); }}>ADJUST</button>
                   <button className="rs-pill" onClick={(e) => {
                      e.stopPropagation();

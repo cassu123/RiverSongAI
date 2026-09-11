@@ -398,10 +398,10 @@ export default function HomeNodePage({ setAction }) {
 
       {!loading && status?.configured && !status?.reachable && (
         <div className="rs-card is-wide animate-fade-in rs-p-5 rs-text-center">
-          <span className="material-symbols-rounded" style={{ fontSize: 48, color: 'var(--warn)', marginBottom: 12 }}>
+          <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: 48, color: 'var(--warn)' }}>
             cloud_off
           </span>
-          <h2 style={{ fontSize: 'var(--rs-fs-h3)', fontWeight: 600, color: 'var(--fg)', marginBottom: 8 }}>
+          <h2 className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-h3)', fontWeight: 600, color: 'var(--fg)' }}>
             Home Assistant Unreachable
           </h2>
           <p className="rs-card-meta" style={{ maxWidth: 440, margin: '0 auto 20px auto' }}>
@@ -470,10 +470,10 @@ export default function HomeNodePage({ setAction }) {
 
           {operable.length === 0 && (
             <div className="rs-card is-wide animate-fade-in rs-text-center rs-p-6">
-              <span className="material-symbols-rounded" style={{ fontSize: 44, color: 'var(--text-muted)', marginBottom: 12 }}>
+              <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: 44, color: 'var(--text-muted)' }}>
                 devices
               </span>
-              <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--fg)', marginBottom: 16 }}>
+              <p className="rs-card-meta rs-mb-4" style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--fg)' }}>
                 No active devices found in Home Assistant.
               </p>
               <button className="gh-glance-action" style={{ margin: '0 auto' }} onClick={runSync} disabled={syncing}>
@@ -529,7 +529,7 @@ function RoomSection({ room, acting, onAction }) {
       )}
 
       {media.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <div className="rs-gap-4 rs-mb-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {media.map(m => (
             <MediaTile key={m.entity_id} device={m} busy={acting === m.entity_id} onAction={onAction} />
           ))}
@@ -875,16 +875,16 @@ function NotConfigured() {
       <div className="rs-card-head rs-mb-3">
         <span className="rs-card-label">SETUP HOME ASSISTANT</span>
       </div>
-      <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', marginBottom: 20 }}>
+      <p className="rs-card-meta rs-mb-5" style={{ fontSize: 'var(--rs-fs-small)' }}>
         River Song connects directly to your local or remote Home Assistant instance. Add your URL and long-lived access token to <code>.env</code> to activate tactile smart home controls.
       </p>
       <div className="rs-flex rs-flex-col rs-gap-4">
         <div className="rs-flex rs-gap-3 rs-items-center">
-          <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>1</span>
+          <span className="gh-chip rs-justify-center" style={{ width: 28, height: 28, padding: 0 }}>1</span>
           <span>Home Assistant → User Profile → Long-lived access tokens → Create token</span>
         </div>
         <div className="rs-flex rs-gap-3 rs-items-center">
-          <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>2</span>
+          <span className="gh-chip rs-justify-center" style={{ width: 28, height: 28, padding: 0 }}>2</span>
           <span>Add to your backend <code>.env</code> file:</span>
         </div>
         <div style={{
@@ -900,7 +900,7 @@ function NotConfigured() {
           <div>HOME_ASSISTANT_TOKEN=your_token_here</div>
         </div>
         <div className="rs-flex rs-gap-3 rs-items-center">
-          <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>3</span>
+          <span className="gh-chip rs-justify-center" style={{ width: 28, height: 28, padding: 0 }}>3</span>
           <span>Restart the service, then tap the Sync button above.</span>
         </div>
       </div>

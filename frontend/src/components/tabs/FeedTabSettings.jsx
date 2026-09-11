@@ -60,7 +60,7 @@ export function WeatherSettings({ prefs, savePrefs }) {
 
   return (
     <InlineSettingsSection title="WEATHER SETTINGS" icon="tune" subtitle={subtitle}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
+      <div className="rs-gap-3 rs-mb-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
         <div>
           <div className="rs-card-meta rs-mb-2">Latitude</div>
           <input
@@ -101,7 +101,7 @@ export function WeatherSettings({ prefs, savePrefs }) {
       </button>
 
       <div className="rs-mb-4">
-        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>TEMPERATURE UNIT</div>
+        <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-nano)' }}>TEMPERATURE UNIT</div>
         <div className="rs-flex rs-gap-2">
           {['celsius', 'fahrenheit'].map(u => (
             <button
@@ -116,7 +116,7 @@ export function WeatherSettings({ prefs, savePrefs }) {
       </div>
 
       <div className="rs-mb-4">
-        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>AQI SOURCE</div>
+        <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-nano)' }}>AQI SOURCE</div>
         <div className="rs-flex rs-gap-2">
           {['purpleair', 'openmeteo'].map(src => {
             const isActive = p.aqi_source === src || (p.aqi_source === undefined && src === 'purpleair')
@@ -161,7 +161,7 @@ export function StocksSettings({ prefs, savePrefs }) {
     <InlineSettingsSection title="WATCHLIST" icon="tune" subtitle={`${tickers.length} symbol${tickers.length === 1 ? '' : 's'}`}>
       <div className="rs-flex rs-gap-2 rs-flex-wrap rs-mb-3">
         {tickers.map(t => (
-          <div key={t} className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', cursor: 'default', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div key={t} className="rs-pill is-active rs-flex rs-items-center rs-gap-2" style={{ fontSize: 'var(--rs-fs-nano)', cursor: 'default' }}>
             {t}
             <button
               onClick={() => savePrefs({ stock_tickers: tickers.filter(x => x !== t) })}
@@ -177,11 +177,11 @@ export function StocksSettings({ prefs, savePrefs }) {
       </div>
       <div className="rs-flex rs-gap-2">
         <input
-          type="text" className="rs-input" placeholder="Add ticker (e.g. AAPL)"
+          type="text" className="rs-input rs-grow" placeholder="Add ticker (e.g. AAPL)"
           value={addSym}
           onChange={e => setAddSym(e.target.value.toUpperCase())}
           onKeyDown={e => { if (e.key === 'Enter') add() }}
-          style={{ flex: 1, fontSize: 'var(--rs-fs-tiny)' }}
+          style={{ fontSize: 'var(--rs-fs-tiny)' }}
         />
         <button className="rs-pill" disabled={!addSym.trim() || tickers.includes(addSym.trim()) || tickers.length >= 15} onClick={add}>
           ADD

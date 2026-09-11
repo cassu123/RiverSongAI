@@ -109,7 +109,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
 
   return (
     <Sheet open={open} onClose={onClose} title="Data Sources">
-      <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="rs-flex rs-flex-col rs-gap-5" style={{ padding: '0 24px 24px' }}>
         
         {/* Libby */}
         <div className="rs-card">
@@ -185,7 +185,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
               </div>
             </div>
             <div className="rs-flex rs-gap-2">
-              <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} style={{fontSize: 'var(--rs-fs-tiny)', flex: 1}} />
+              <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} className="rs-grow" style={{ fontSize: 'var(--rs-fs-tiny)' }} />
               <button className="rs-pill is-active" disabled={!csvFile} onClick={handleCsvImport}>IMPORT</button>
             </div>
           </div>

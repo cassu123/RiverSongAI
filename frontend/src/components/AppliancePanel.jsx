@@ -73,14 +73,14 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
   const stations  = [...new Set(scheduled.filter(r => on.has(r.key)).map(r => r.station))]
 
   return (
-    <div style={{
-      marginTop: 14, paddingTop: 14,
+    <div className="rs-mt-4" style={{
+      paddingTop: 14,
       borderTop: '1px solid var(--rs-border, rgba(128,128,128,0.25))',
     }}>
       <div className="rs-card-label rs-mb-2">
         WHAT IS PRINTED ON IT
       </div>
-      <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', marginBottom: 12, lineHeight: 1.5 }}>
+      <div className="rs-card-meta rs-mb-3" style={{ fontSize: 'var(--rs-fs-micro)', lineHeight: 1.5 }}>
         {confirmed
           ? 'Confirmed from the machine. Retick if anything is wrong.'
           : 'Guessed from the name. Two appliances can share a name and differ by one button — tick what you can actually see.'}
@@ -101,7 +101,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
             </>
           )}
 
-          <div className="rs-card-meta" style={{ marginTop: 14, fontSize: 'var(--rs-fs-micro)' }}>
+          <div className="rs-card-meta rs-mt-4" style={{ fontSize: 'var(--rs-fs-micro)' }}>
             {stations.length
               ? <>This makes it a <strong style={{ color: 'var(--primary)' }}>
                   {stations.join(', ').replace(/_/g, ' ')}
@@ -110,7 +110,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
           </div>
 
           {error && (
-            <div className="rs-card-meta" style={{ marginTop: 8, color: 'var(--md-error)' }}>
+            <div className="rs-card-meta rs-mt-2" style={{ color: 'var(--md-error)' }}>
               {error}
             </div>
           )}

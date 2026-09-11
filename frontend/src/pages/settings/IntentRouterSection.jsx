@@ -54,7 +54,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
 
           {/* Sensitivity selector — min 44px touch targets */}
           <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
-            <span className="rs-card-meta" style={{ margin: 0, flexShrink: 0 }}>Signal sensitivity</span>
+            <span className="rs-card-meta rs-m-0" style={{ flexShrink: 0 }}>Signal sensitivity</span>
             <div className="rs-flex rs-gap-2">
               {[
                 { n: 1, label: 'High',          desc: 'Routes on 1+ match' },
@@ -80,13 +80,13 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
               "Commerce → Claude" with Anthropic switched off, when the router
               had in fact walked on to Gemini and then to Kimi. The panel was
               describing a decision it was not making. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 6 }}>
+          <div className="rs-gap-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
             {(intentRouterSettings.routes || []).map((r) => {
               const where = r.provider === 'ollama' ? 'local'
                 : r.provider === 'nvidia_nim' ? 'NIM'
                   : r.provider ? 'cloud' : null
               return (
-                <div key={r.intent} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10, opacity: r.reachable ? 1 : 0.6 }}>
+                <div key={r.intent} className="rs-flex rs-flex-col rs-gap-1" style={{ padding: '10px 12px', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10, opacity: r.reachable ? 1 : 0.6 }}>
                   <div className="rs-flex rs-items-center rs-gap-2">
                     <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.75 }}>{INTENT_ICONS[r.intent] || 'chat'}</span>
                     <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{r.label}</span>

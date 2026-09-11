@@ -101,7 +101,7 @@ export default function Drawer({
         </div>
 
         {/* Account & Quick Controls Footer */}
-        <div className="rs-drawer-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 14, marginTop: 10 }}>
+        <div className="rs-drawer-footer rs-mt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 14 }}>
           <div className="rs-flex rs-items-center rs-justify-between rs-gap-3">
             <button
               className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
@@ -140,7 +140,7 @@ export default function Drawer({
           </div>
 
           {userIsAdmin && (
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
+            <div className="rs-mt-3 rs-flex rs-items-center rs-justify-between" style={{ padding: '6px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
               <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', fontWeight: 500 }}>Admin Mode</span>
               <button
                 className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}

@@ -17,7 +17,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
           {/* Detected hardware row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rs-mb-4">
             <div className="rs-card rs-p-3">
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>GPU</div>
+              <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>GPU</div>
               {hardwareCookbook.hardware.gpus.length === 0 ? (
                 <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No NVIDIA GPU detected.</div>
               ) : hardwareCookbook.hardware.gpus.map(g => (
@@ -30,7 +30,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
               ))}
             </div>
             <div className="rs-card rs-p-3">
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>RAM</div>
+              <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>RAM</div>
               <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>
                 {hardwareCookbook.hardware.ram_gb.total_gb} GB
               </div>
@@ -39,7 +39,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
               </div>
             </div>
             <div className="rs-card rs-p-3">
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>CPU</div>
+              <div className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>CPU</div>
               <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {hardwareCookbook.hardware.cpu.model}
               </div>
@@ -79,7 +79,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
                     width: 8, height: 8, borderRadius: '50%',
                     background: palette.dot, flexShrink: 0,
                   }} />
-                  <span className="toggle-label" style={{ fontSize: 'var(--rs-fs-tiny)', flex: 1 }}>
+                  <span className="toggle-label rs-grow" style={{ fontSize: 'var(--rs-fs-tiny)' }}>
                     {m.display_name}
                     {m.vram_gb != null && (
                       <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginLeft: 8 }}>
@@ -95,7 +95,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
             })}
           </div>
 
-          <p className="rs-card-meta" style={{ marginTop: 12, fontSize: 'var(--rs-fs-nano)' }}>
+          <p className="rs-card-meta rs-mt-3" style={{ fontSize: 'var(--rs-fs-nano)' }}>
             Detected {new Date(hardwareCookbook.hardware.detected_at).toLocaleString()}.
             Reload Settings to refresh. VRAM estimates assume Q4_K_M quantisation.
           </p>

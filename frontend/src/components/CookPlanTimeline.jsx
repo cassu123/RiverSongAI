@@ -80,12 +80,12 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
         </div>
       ))}
 
-      <div style={{ display: 'flex', gap: 14, marginTop: 2, paddingLeft: 82, flexWrap: 'wrap' }}>
-        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div className="rs-flex rs-gap-4 rs-flex-wrap" style={{ marginTop: 2, paddingLeft: 82 }}>
+        <span className="rs-card-meta rs-flex rs-items-center" style={{ fontSize: 'var(--rs-fs-nano)', gap: 5 }}>
           <span style={{ width: 14, height: 8, borderRadius: 2, background: 'var(--md-on-surface)', opacity: 0.8 }} />
           you
         </span>
-        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span className="rs-card-meta rs-flex rs-items-center" style={{ fontSize: 'var(--rs-fs-nano)', gap: 5 }}>
           <span style={{
             width: 14, height: 8, borderRadius: 2, background: 'var(--md-on-surface)', opacity: 0.42,
             backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.28) 3px, rgba(0,0,0,0.28) 6px)',

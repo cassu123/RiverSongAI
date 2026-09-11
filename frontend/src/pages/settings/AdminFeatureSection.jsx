@@ -45,9 +45,9 @@ export default function AdminFeatureSection({ featureVis, token, onChanged }) {
         Hide features globally. Admin always sees everything.
         {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+      <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
         {(featureVis.all_features || []).map(f => (
-          <div key={f.key} style={{ background: 'var(--md-surface-container-low)', padding: 12, border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
+          <div key={f.key} className="rs-p-3" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10 }}>
             <Toggle
               id={`feat-vis-${f.key}`}
               label={f.label}

@@ -155,10 +155,10 @@ export default function NewsTab({ token, active }) {
       ) : error ? (
         <ErrorState message={error} onRetry={fetchArticles} />
       ) : !articles.length ? (
-        <div style={{ padding: '32px 0', textAlign: 'center' }}>
+        <div className="rs-text-center" style={{ padding: '32px 0' }}>
           <span
-            className="material-symbols-rounded"
-            style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}
+            className="material-symbols-rounded rs-mb-3"
+            style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}
           >
             newspaper
           </span>
@@ -219,7 +219,7 @@ function NewsSkeletons() {
   return (
     <div className="rs-flex rs-flex-col rs-gap-3">
       {[0, 1, 2, 3, 4].map(i => (
-        <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+        <div key={i} className="rs-flex rs-gap-4" style={{ padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div style={{ width: 80, height: 64, borderRadius: 6, background: 'var(--md-outline-variant)', flexShrink: 0, opacity: 0.4 }} />
           <div className="rs-grow rs-flex rs-flex-col rs-gap-2">
             <div style={{ height: 9, width: '35%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.5 }} />
@@ -234,8 +234,8 @@ function NewsSkeletons() {
 
 function ErrorState({ message, onRetry }) {
   return (
-    <div style={{ padding: '32px 0', textAlign: 'center' }}>
-      <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.3, display: 'block', marginBottom: 8 }}>wifi_off</span>
+    <div className="rs-text-center" style={{ padding: '32px 0' }}>
+      <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.3, display: 'block' }}>wifi_off</span>
       <div className="rs-card-meta rs-mb-3">{message}</div>
       <button className="rs-pill" onClick={onRetry}>RETRY</button>
     </div>

@@ -33,12 +33,12 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
         opacity: isDisabled ? 0.5 : 1
       }}
     >
-      <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 600, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.display_name}</div>
+      <div className="rs-card-value rs-mb-2" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.display_name}</div>
 
       <div className="rs-flex rs-flex-wrap rs-gap-1">
         {model.vram_gb != null && (
           <>
-            <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <span className="rs-pill rs-items-center" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', display: 'inline-flex', gap: 3 }}>
               {model.vram_gb <= 4 && <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>bolt</span>}
               {model.vram_gb <= 4 ? 'GPU' : 'RAM'} {model.vram_gb}GB
             </span>
@@ -127,8 +127,8 @@ export default function ModelSection({
         </div>
 
         {showAdmin && (
-          <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--md-outline-variant)' }}>
-            <div className="rs-card-label" style={{ marginBottom: 8, color: 'var(--md-primary)' }}>ADMIN MASTER SWITCHES</div>
+          <div className="rs-mb-5" style={{ paddingBottom: 16, borderBottom: '1px solid var(--md-outline-variant)' }}>
+            <div className="rs-card-label rs-mb-2" style={{ color: 'var(--md-primary)' }}>ADMIN MASTER SWITCHES</div>
             <Toggle
               id="llm-routing-local"
               label="Globally Enable Local LLMs (Ollama)"
@@ -153,7 +153,7 @@ export default function ModelSection({
         {/* RECOMMENDED STRIP */}
         {recommendedModels.length > 0 && (
           <div className="rs-mb-5">
-            <div className="rs-card-label" style={{ color: 'var(--md-tertiary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="rs-card-label rs-mb-3 rs-flex rs-items-center rs-gap-2" style={{ color: 'var(--md-tertiary)' }}>
               <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>bolt</span>
               RECOMMENDED FOR SPEAK
             </div>

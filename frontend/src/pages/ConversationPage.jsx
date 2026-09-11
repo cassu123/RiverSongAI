@@ -80,7 +80,7 @@ export default function ConversationPage({ setAction }) {
     if (!setAction) return
     setAction(
       <div className="rs-chat-input-container">
-        <div className="rs-chat-textarea" style={{ display: 'flex', alignItems: 'center', minHeight: 40 }}>
+        <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
           <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 12 }} />
           <span style={{ fontWeight: 600, letterSpacing: '0.1em', fontSize: 'var(--rs-fs-tiny)' }}>
             {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
@@ -126,10 +126,12 @@ export default function ConversationPage({ setAction }) {
           </span>
         </div>
         {convState === 'idle' && (
-          <div style={{
-            marginTop: 12, fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)', 
-            color: 'var(--primary)', textAlign: 'center', minHeight: 80,
-            pointerEvents: 'none'
+          <div className="rs-mt-3 rs-text-center" style={{
+            fontSize: 'var(--rs-fs-micro)',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--primary)',
+            minHeight: 80,
+            pointerEvents: 'none',
           }}>
             {sysLogs.map((log, i) => (
               <div key={i} style={{ animation: 'slideUpFade 0.3s ease-out' }}>&gt; {log}</div>
@@ -198,7 +200,7 @@ export default function ConversationPage({ setAction }) {
           </div>
         )}
         {messages.length === 0 && !streamingContent && convState === 'listening' && (
-          <div style={{ fontSize: 'var(--rs-fs-small)', textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
+          <div className="rs-text-center" style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--primary)' }}>Intercepting audio stream...</div>
         )}
       </div>
     </div>

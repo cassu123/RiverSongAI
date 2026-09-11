@@ -100,7 +100,7 @@ function LineChart({ data, color, height = 80 }) {
           <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="#fff" stroke={color} strokeWidth="2" />
         ))}
       </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-nano)', opacity: 0.8, letterSpacing: '0.05em', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+      <div className="rs-flex rs-justify-between" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.8, letterSpacing: '0.05em', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
         <span>{first.toUpperCase()}</span>
         <span>{last.toUpperCase()}</span>
       </div>
@@ -150,9 +150,9 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
 
       {connected && latest ? (
         <div className="rs-flex rs-flex-col rs-gap-4">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <div className="rs-flex rs-gap-3" style={{ alignItems: 'baseline' }}>
             <span className="rs-card-value" style={{ fontSize: '2.2rem', letterSpacing: '-0.05em' }}>{fmtMetric(primary, primaryVal)}</span>
-            <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 900, margin: 0, textTransform: 'uppercase' }}>{metricLabel(primary)}</span>
+            <span className="rs-card-meta rs-m-0" style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 900, textTransform: 'uppercase' }}>{metricLabel(primary)}</span>
             {delta != null && (
               <span style={{ 
                 fontSize: 'var(--rs-fs-micro)', 
@@ -170,12 +170,12 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
           <LineChart data={chartData} color="var(--primary)" height={60} />
         </div>
       ) : (
-        <div className="rs-card-meta" style={{ minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16 }}>
+        <div className="rs-card-meta rs-flex rs-flex-col rs-justify-center rs-gap-4" style={{ minHeight: 100 }}>
           <div style={{ fontStyle: 'italic', fontSize: 'var(--rs-fs-small)' }}>STATUS: PENDING_DATA_LINK</div>
           {platform === 'shopify' && (
             <button 
-              className="rs-btn-primary" 
-              style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)' }}
+              className="rs-btn-primary rs-w-full" 
+              style={{ fontSize: 'var(--rs-fs-tiny)' }}
               onClick={(e) => { e.stopPropagation(); onConnect(); }}
             >
               INITIALIZE CONNECTION
@@ -198,8 +198,8 @@ function PlatformDetail({
   const metrics = p.metrics.length ? p.metrics : Object.keys(snapshots[0]?.metrics || {})
 
   return (
-    <div className="rs-card is-wide animate-fade-in" style={{ padding: 40, border: '1px solid var(--md-outline-variant)', marginTop: 40 }}>
-      <div className="rs-card-head" style={{ marginBottom: 40, borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
+    <div className="rs-card is-wide animate-fade-in rs-p-7 rs-mt-7" style={{ border: '1px solid var(--md-outline-variant)' }}>
+      <div className="rs-card-head rs-mb-7" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
         <div>
           <span className="rs-card-label">{p.label} / DETAILED_ANALYSIS</span>
           <h2 style={{ fontSize: '2.5rem', fontWeight: 950, textTransform: 'uppercase', margin: '4px 0 0' }}>{p.label}</h2>
@@ -221,18 +221,16 @@ function PlatformDetail({
         </div>
       </div>
 
-      {loading && <div className="rs-card-meta" style={{ fontStyle: 'italic', fontSize: 'var(--rs-fs-body)', marginBottom: 24 }}>River is analysing your data...</div>}
-      {error && <div style={{ color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-small)', marginBottom: 24, fontWeight: 700 }}>{error}</div>}
+      {loading && <div className="rs-card-meta rs-mb-5" style={{ fontStyle: 'italic', fontSize: 'var(--rs-fs-body)' }}>River is analysing your data...</div>}
+      {error && <div className="rs-mb-5" style={{ color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-small)', fontWeight: 700 }}>{error}</div>}
 
       {insights && !loading && (
-        <div style={{ 
-          background: 'var(--md-surface-container)', 
-          padding: 24, 
+        <div className="rs-p-5 rs-mb-7" style={{
+          background: 'var(--md-surface-container)',
           borderRadius: 4,
-          marginBottom: 40,
-          border: '1px solid var(--md-outline-variant)'
+          border: '1px solid var(--md-outline-variant)',
         }}>
-          <div className="rs-card-label" style={{ marginBottom: 12, color: 'var(--md-on-surface)' }}>AI STRATEGIC INSIGHTS</div>
+          <div className="rs-card-label rs-mb-3" style={{ color: 'var(--md-on-surface)' }}>AI STRATEGIC INSIGHTS</div>
           <div style={{ fontSize: 'var(--rs-fs-body)', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontWeight: 500 }}>{insights}</div>
         </div>
       )}
@@ -242,7 +240,7 @@ function PlatformDetail({
       ) : (
         <>
           {/* Metric Charts Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40, marginBottom: 48 }}>
+          <div className="rs-gap-7 rs-mb-7" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
             {metrics.map(metric => {
               const chartData = [...snapshots]
                 .sort((a,b) => a.date.localeCompare(b.date))
@@ -251,8 +249,8 @@ function PlatformDetail({
               if (!chartData.length) return null
               const latest = chartData[chartData.length - 1]?.value
               return (
-                <div key={metric} style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: 24, border: '1px solid var(--md-outline-variant)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 8 }}>
+                <div key={metric} className="rs-flex rs-flex-col rs-gap-5 rs-p-5" style={{ border: '1px solid var(--md-outline-variant)' }}>
+                  <div className="rs-flex rs-justify-between" style={{ alignItems: 'baseline', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 8 }}>
                     <span className="rs-card-label" style={{ border: 'none', padding: 0 }}>{metricLabel(metric)}</span>
                     <span className="rs-card-value" style={{ fontSize: '1.8rem' }}>{fmtMetric(metric, latest)}</span>
                   </div>
@@ -263,7 +261,7 @@ function PlatformDetail({
           </div>
 
           <div className="rs-table-wrap" style={{ overflowX: 'auto', border: '1px solid var(--md-outline-variant)', borderRadius: 4 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--rs-fs-small)' }}>
+            <table className="rs-w-full" style={{ borderCollapse: 'collapse', fontSize: 'var(--rs-fs-small)' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--md-outline-variant)', background: 'var(--md-surface-container-high)' }}>
                   <th style={{ padding: '16px', textAlign: 'left', fontWeight: 900 }}>DATE</th>
@@ -280,7 +278,7 @@ function PlatformDetail({
                     ))}
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <button
-                        style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)', cursor: 'pointer', padding: 4 }}
+                        className="rs-p-1" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)', cursor: 'pointer' }}
                         onClick={() => onDeleteSnapshot(s.id)}
                       >
                         <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>delete</span>
@@ -325,12 +323,14 @@ function AddDataModal({ platform, onClose, onSave }) {
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.9)',
-      backdropFilter: 'blur(4px)', zIndex: 2000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+    <div className="rs-flex rs-items-center rs-justify-center rs-p-5" style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(255,255,255,0.9)',
+      backdropFilter: 'blur(4px)',
+      zIndex: 2000,
     }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="rs-card animate-scale-in" style={{ width: '100%', maxWidth: 450, padding: 40 }}>
+      <div className="rs-card animate-scale-in rs-w-full rs-p-7" style={{ maxWidth: 450 }}>
         <div className="rs-card-head" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
           <span className="rs-card-label">MANUAL_DATA_ENTRY / {p.label}</span>
           <button style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)', cursor: 'pointer' }} onClick={onClose}>
@@ -365,7 +365,7 @@ function AddDataModal({ platform, onClose, onSave }) {
           {err && <div style={{ color: 'var(--rs-status-critical)', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>{err}</div>}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 40 }}>
+        <div className="rs-flex rs-gap-4 rs-mt-7" style={{ justifyContent: 'flex-end' }}>
           <button className="rs-pill" onClick={onClose} style={{ border: 'none', textDecoration: 'underline', fontWeight: 900 }}>CANCEL</button>
           <button className="rs-btn-primary" onClick={handleSave} disabled={saving} style={{ padding: '12px 32px' }}>
             {saving ? 'RECORDING…' : 'COMMIT DATA'}
@@ -597,12 +597,12 @@ export default function AnalyticsPage() {
       )}
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
-        <header style={{ paddingTop: 48, paddingBottom: 32, borderBottom: '2px solid var(--md-outline-variant)', marginBottom: 40 }}>
-          <div className="rs-status-strip" style={{ marginBottom: 16, border: 'none', padding: 0, background: 'none' }}>
+        <header className="rs-mb-7" style={{ paddingTop: 48, paddingBottom: 32, borderBottom: '2px solid var(--md-outline-variant)' }}>
+          <div className="rs-status-strip rs-mb-4" style={{ border: 'none', padding: 0, background: 'none' }}>
             <span className="rs-status-dot" />
             <span style={{ color: 'var(--md-on-surface)', fontWeight: 900 }}>SYSTEM // ANALYTICS / COMMAND</span>
           </div>
-          <h1 className="rs-page-title" style={{ fontSize: '4rem', marginBottom: 8 }}>Analytics</h1>
+          <h1 className="rs-page-title rs-mb-2" style={{ fontSize: '4rem' }}>Analytics</h1>
           <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-body)', fontWeight: 500, maxWidth: '60ch' }}>
             Commercial performance, audience growth, and multi-channel telemetry.
           </div>
@@ -611,7 +611,7 @@ export default function AnalyticsPage() {
         <div className="rs-flex rs-flex-col rs-gap-6">
 
           {/* Controls Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
+          <div className="rs-flex rs-items-center rs-justify-between rs-flex-wrap rs-gap-4" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
             <div className="rs-flex rs-gap-3">
               {RANGE_OPTIONS.map(o => (
                 <button
@@ -640,8 +640,8 @@ export default function AnalyticsPage() {
         </div>
 
         {showSettings && (
-          <div className="rs-card is-wide animate-fade-in" style={{ background: 'var(--md-surface-container-high)', border: '1px solid var(--md-outline-variant)', padding: 32 }}>
-            <div className="rs-card-label" style={{ marginBottom: 20, color: 'var(--md-on-surface)', fontSize: 'var(--rs-fs-tiny)' }}>PLATFORM_VISIBILITY_CONFIG</div>
+          <div className="rs-card is-wide animate-fade-in rs-p-6" style={{ background: 'var(--md-surface-container-high)', border: '1px solid var(--md-outline-variant)' }}>
+            <div className="rs-card-label rs-mb-5" style={{ color: 'var(--md-on-surface)', fontSize: 'var(--rs-fs-tiny)' }}>PLATFORM_VISIBILITY_CONFIG</div>
             <div className="rs-flex rs-flex-wrap rs-gap-3 rs-mb-5">
               {PLATFORMS.map(p => {
                 const on = visiblePlatforms.has(p.key)
@@ -674,7 +674,7 @@ export default function AnalyticsPage() {
 
         {/* Summary Stats */}
         {snapshots.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 32, padding: '32px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', padding: '32px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
             <div>
               <span className="rs-card-label">REVENUE / AGGREGATE</span>
               <div className="rs-card-value" style={{ fontSize: '3rem' }}>{fmtMoney(totalRevenue)}</div>
@@ -694,7 +694,7 @@ export default function AnalyticsPage() {
         )}
 
         {/* AI Business Report Card */}
-        <div className="rs-card is-wide is-elev" style={{ border: '1px solid var(--md-outline-variant)', padding: 40 }}>
+        <div className="rs-card is-wide is-elev rs-p-7" style={{ border: '1px solid var(--md-outline-variant)' }}>
           <div className="rs-card-head" style={{ border: 'none' }}>
             <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)' }}>AI STRATEGIC DEBRIEF</span>
             <button 
@@ -707,27 +707,25 @@ export default function AnalyticsPage() {
             </button>
           </div>
           {businessReport ? (
-            <div style={{ 
-              whiteSpace: "pre-wrap", 
-              fontSize: "1.1rem", 
-              lineHeight: 1.8, 
+            <div className="rs-p-6 rs-mt-5" style={{
+              whiteSpace: "pre-wrap",
+              fontSize: "1.1rem",
+              lineHeight: 1.8,
               background: "var(--md-surface-container)",
-              padding: 32,
               border: '1px solid var(--md-outline-variant)',
-              marginTop: 24,
-              fontFamily: 'var(--font-mono)'
+              fontFamily: 'var(--font-mono)',
             }}>
               {businessReport}
             </div>
           ) : (
-            <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-body)', marginTop: 16 }}>
+            <div className="rs-card-meta rs-mt-4" style={{ fontSize: 'var(--rs-fs-body)' }}>
               Request a natural-language summary of your recent sales, revenue, and product performance across all active platforms.
             </div>
           )}
         </div>
 
         {/* Platform Grid */}
-        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+        <div className="rs-w-full rs-gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
           {(sortedPlatforms || []).map(p => (
             <PlatformTile
               key={p.key}
@@ -745,12 +743,14 @@ export default function AnalyticsPage() {
         </div>
 
         {showShopifyModal && (
-          <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.9)',
-            backdropFilter: 'blur(4px)', zIndex: 2000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+          <div className="rs-flex rs-items-center rs-justify-center rs-p-5" style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(255,255,255,0.9)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 2000,
           }} onClick={e => e.target === e.currentTarget && setShowShopifyModal(false)}>
-            <div className="rs-card animate-scale-in" style={{ width: '100%', maxWidth: 450, padding: 40 }}>
+            <div className="rs-card animate-scale-in rs-w-full rs-p-7" style={{ maxWidth: 450 }}>
               <div className="rs-card-head" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
                 <span className="rs-card-label">EXTERNAL_LINK / SHOPIFY</span>
                 <button style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)', cursor: 'pointer' }} onClick={() => setShowShopifyModal(false)}>
@@ -762,7 +762,7 @@ export default function AnalyticsPage() {
                 <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-5">
                   <div className="rs-flex rs-items-center rs-gap-3">
                     <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--rs-status-nominal, #4ade80)' }} />
-                    <span className="rs-card-meta" style={{ margin: 0, fontSize: 'var(--rs-fs-body)', fontWeight: 900, color: 'var(--md-on-surface)' }}>
+                    <span className="rs-card-meta rs-m-0" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 900, color: 'var(--md-on-surface)' }}>
                       CONNECTED: {shopifyStatus.shop?.toUpperCase()}
                     </span>
                   </div>
@@ -788,10 +788,10 @@ export default function AnalyticsPage() {
                       onKeyDown={e => e.key === 'Enter' && handleConnectShopify()}
                     />
                   </div>
-                  <div className="rs-card-meta" style={{ marginTop: 16, fontSize: 'var(--rs-fs-small)' }}>
+                  <div className="rs-card-meta rs-mt-4" style={{ fontSize: 'var(--rs-fs-small)' }}>
                     Enter your Shopify store domain to initialize the OAuth handshake. This will enable real-time sales analytics and inventory syncing.
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 40 }}>
+                  <div className="rs-flex rs-gap-4 rs-mt-7" style={{ justifyContent: 'flex-end' }}>
                     <button className="rs-pill" onClick={() => setShowShopifyModal(false)} style={{ border: 'none', textDecoration: 'underline', fontWeight: 900 }}>CANCEL</button>
                     <button className="rs-btn-primary" onClick={handleConnectShopify} disabled={shopifyConnecting || !shopifyDomain.trim()}>
                       {shopifyConnecting ? 'LINKING…' : 'INITIALIZE LINK'}
@@ -817,7 +817,7 @@ export default function AnalyticsPage() {
         )}
 
         {!selectedPlatform && snapshots.length === 0 && !loading && (
-          <div className="rs-card is-wide" style={{ textAlign: 'center', padding: 48, borderStyle: 'dashed' }}>
+          <div className="rs-card is-wide rs-text-center rs-p-7" style={{ borderStyle: 'dashed' }}>
             <div className="rs-card-meta">Click any platform tile above to add your first data snapshot.</div>
           </div>
         )}

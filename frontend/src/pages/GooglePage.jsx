@@ -179,11 +179,10 @@ export default function GooglePage() {
       </header>
 
       {error && (
-        <div className="rs-card" style={{ 
-          background: 'var(--md-error-container)', 
+        <div className="rs-card rs-mb-5" style={{
+          background: 'var(--md-error-container)',
           color: 'var(--md-on-error-container)',
-          marginBottom: 24,
-          borderLeft: '4px solid var(--md-error)'
+          borderLeft: '4px solid var(--md-error)',
         }}>
           {error}
         </div>
@@ -225,13 +224,11 @@ export default function GooglePage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, width: '100%' }}>
+        <div className="rs-gap-5 rs-w-full" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
            {/* Calendar Preview */}
-           <div className="rs-card" style={{ 
-             opacity: !status.connected ? 0.6 : 1, 
+           <div className="rs-card rs-flex rs-flex-col" style={{
+             opacity: !status.connected ? 0.6 : 1,
              backdropFilter: 'var(--glass-blur)',
-             display: 'flex',
-             flexDirection: 'column'
            }}>
               <div className="rs-card-head">
                  <div className="rs-flex rs-items-center rs-gap-2">
@@ -259,11 +256,9 @@ export default function GooglePage() {
            </div>
 
            {/* Gmail Preview */}
-           <div className="rs-card" style={{ 
-             opacity: !status.connected ? 0.6 : 1, 
+           <div className="rs-card rs-flex rs-flex-col" style={{
+             opacity: !status.connected ? 0.6 : 1,
              backdropFilter: 'var(--glass-blur)',
-             display: 'flex',
-             flexDirection: 'column'
            }}>
               <div className="rs-card-head rs-justify-between">
                  <div className="rs-flex rs-items-center rs-gap-2">
@@ -305,12 +300,12 @@ export default function GooglePage() {
                               <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 7px', background: urgencyColor, color: 'var(--bg-base)' }}>
                                 {(t.urgency || 'med').toUpperCase()}
                               </span>
-                              <span style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, color: 'var(--md-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <span className="rs-grow" style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, color: 'var(--md-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {(msg.from || '').split('<')[0].trim()}
                               </span>
                             </div>
                             <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg.subject}</div>
-                            {t.summary && <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 4, lineHeight: 1.35 }}>{t.summary}</div>}
+                            {t.summary && <div className="rs-mt-1" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', lineHeight: 1.35 }}>{t.summary}</div>}
                             {(t.tags || []).length > 0 && (
                               <div className="rs-flex rs-gap-1 rs-flex-wrap rs-mt-2">
                                 {t.tags.slice(0, 4).map((tag, i) => (
@@ -321,7 +316,7 @@ export default function GooglePage() {
                             {t.draft_reply && (
                               <details className="rs-mt-2">
                                 <summary style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, opacity: 0.8, cursor: 'pointer' }}>DRAFT REPLY</summary>
-                                <div style={{ fontSize: 'var(--rs-fs-micro)', marginTop: 4, padding: 8, background: 'rgba(0,0,0,0.2)', borderRadius: 6, whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{t.draft_reply}</div>
+                                <div className="rs-mt-1 rs-p-2" style={{ fontSize: 'var(--rs-fs-micro)', background: 'rgba(0,0,0,0.2)', borderRadius: 6, whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{t.draft_reply}</div>
                               </details>
                             )}
                           </div>
@@ -341,16 +336,14 @@ export default function GooglePage() {
                     </div>
                   ) : <div className="rs-card-meta">No unread messages.</div>
                 ) : <div className="rs-card-meta">Connect account to see emails</div>}
-                {triage.error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-nano)', marginTop: 6 }}>{triage.error}</div>}
+                {triage.error && <div className="rs-mt-2" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-nano)' }}>{triage.error}</div>}
               </div>
            </div>
 
            {/* Google Books Preview */}
-           <div className="rs-card" style={{ 
-             opacity: !status.connected ? 0.6 : 1, 
+           <div className="rs-card rs-flex rs-flex-col" style={{
+             opacity: !status.connected ? 0.6 : 1,
              backdropFilter: 'var(--glass-blur)',
-             display: 'flex',
-             flexDirection: 'column'
            }}>
               <div className="rs-card-head">
                  <div className="rs-flex rs-items-center rs-gap-2">
@@ -364,11 +357,11 @@ export default function GooglePage() {
                   books.library.length > 0 ? (
                     <div className="rs-flex rs-flex-col rs-gap-3">
                       {books.library.slice(0, 3).map(b => (
-                        <div key={b.volume_id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none', display: 'flex', gap: 12 }}>
+                        <div key={b.volume_id} className="rs-card rs-flex rs-gap-3" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
                           {b.cover_url && (
                             <img src={b.cover_url} alt={b.title} style={{ width: 40, height: 60, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
                           )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="rs-grow" style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
                             <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {b.authors.join(', ')}
@@ -391,11 +384,9 @@ export default function GooglePage() {
            </div>
 
            {/* Google Tasks Preview */}
-           <div className="rs-card" style={{ 
-             opacity: !status.connected ? 0.6 : 1, 
+           <div className="rs-card rs-flex rs-flex-col" style={{
+             opacity: !status.connected ? 0.6 : 1,
              backdropFilter: 'var(--glass-blur)',
-             display: 'flex',
-             flexDirection: 'column'
            }}>
               <div className="rs-card-head">
                  <div className="rs-flex rs-items-center rs-gap-2">
@@ -411,17 +402,15 @@ export default function GooglePage() {
                       {tasks.list.slice(0, 4).map(t => {
                         const completed = t.status === 'completed'
                         return (
-                          <div key={t.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ 
-                              width: 14, 
-                              height: 14, 
-                              borderRadius: '50%', 
+                          <div key={t.id} className="rs-card rs-flex rs-items-center rs-gap-3" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                            <span className="rs-items-center rs-justify-center" style={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: '50%',
                               border: completed ? 'none' : '1.5px solid var(--text-muted)',
                               background: completed ? 'var(--md-tertiary)' : 'transparent',
                               display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0
+                              flexShrink: 0,
                             }}>
                               {completed && (
                                 <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -429,15 +418,14 @@ export default function GooglePage() {
                                 </svg>
                               )}
                             </span>
-                            <div style={{ 
-                              fontSize: 'var(--rs-fs-tiny)', 
+                            <div className="rs-grow" style={{
+                              fontSize: 'var(--rs-fs-tiny)',
                               fontWeight: 500,
                               textDecoration: completed ? 'line-through' : 'none',
                               opacity: completed ? 0.5 : 1,
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
-                              flex: 1
                             }}>
                               {t.title}
                             </div>
@@ -452,7 +440,7 @@ export default function GooglePage() {
         </div>
 
         {/* Features Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, width: '100%', marginTop: 24 }}>
+        <div className="rs-gap-5 rs-w-full rs-mt-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           {GOOGLE_FEATURES.map(({ key, icon: Icon, title, desc, tags }) => (
             <div key={key} className="rs-card" style={{ 
               opacity: !status.connected ? 0.6 : 1,

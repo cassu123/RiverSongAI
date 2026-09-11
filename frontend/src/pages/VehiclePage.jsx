@@ -190,13 +190,13 @@ export default function VehiclePage({ setAction, onNavigate }) {
             </div>
 
             {newError && (
-              <div className="mp-error" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(255,139,139,0.1)', color: 'var(--rs-status-critical, #ff8b8b)', border: '1px solid rgba(255,139,139,0.3)' }}>
+              <div className="mp-error rs-mb-4" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(255,139,139,0.1)', color: 'var(--rs-status-critical, #ff8b8b)', border: '1px solid rgba(255,139,139,0.3)' }}>
                 {newError}
               </div>
             )}
 
             <form onSubmit={handleCreateVehicle}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+              <div className="rs-gap-4 rs-mb-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
                 <div className="cockpit-input-box">
                   <span className="card-metric-label">MAKE *</span>
                   <input
@@ -280,7 +280,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rs-flex rs-gap-3" style={{ justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 <button type="button" className="rs-pill" onClick={() => setSelectedVehicleId(null)}>
                   CANCEL
                 </button>
@@ -325,7 +325,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
       {/* Hangar Header with Primary Actions */}
       <div className="rs-foyer-head hangar-header">
         <div>
-          <div className="rs-card-label" style={{ letterSpacing: '0.2em', marginBottom: 8, color: 'var(--primary)', opacity: 0.9 }}>
+          <div className="rs-card-label rs-mb-2" style={{ letterSpacing: '0.2em', color: 'var(--primary)', opacity: 0.9 }}>
             SECTOR GARAGE · FLEET TELEMETRY
           </div>
           <h1 className="rs-greeting">The Hangar</h1>
@@ -408,7 +408,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
       </div>
 
       {loading && vehicles.length === 0 ? (
-        <div className="rs-card is-wide" style={{ padding: 64, textAlign: 'center' }}>
+        <div className="rs-card is-wide rs-text-center" style={{ padding: 64 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '3rem', color: 'var(--primary)', opacity: 0.6, animation: 'spin 2s linear infinite' }}>sync</span>
           <div className="card-metric-label rs-mt-4">SCANNING HANGAR TRANSPONDERS...</div>
         </div>

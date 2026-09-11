@@ -18,12 +18,12 @@ export function MusicDiscoveryCard({
     return (
       <div className="rs-card rs-span-2 animate-pulse">
         <Head />
-        <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+        <div className="rs-flex rs-gap-4" style={{ overflowX: 'auto', paddingBottom: 8 }}>
           {[1, 2, 3, 4].map(i => (
             <div key={i} style={{ flex: '0 0 140px' }}>
               <div style={{ width: 140, height: 140, background: 'var(--md-surface-container-high)', borderRadius: 12 }} />
-              <div style={{ height: 12, width: '80%', background: 'var(--md-surface-container-high)', marginTop: 8, borderRadius: 4 }} />
-              <div style={{ height: 10, width: '60%', background: 'var(--md-surface-container-high)', marginTop: 4, borderRadius: 4 }} />
+              <div className="rs-mt-2" style={{ height: 12, width: '80%', background: 'var(--md-surface-container-high)', borderRadius: 4 }} />
+              <div className="rs-mt-1" style={{ height: 10, width: '60%', background: 'var(--md-surface-container-high)', borderRadius: 4 }} />
             </div>
           ))}
         </div>
@@ -62,13 +62,11 @@ export function MusicDiscoveryCard({
     <div className="rs-card rs-span-2 animate-fade-in">
       <Head />
 
-      <div style={{ 
-        display: 'flex', 
-        gap: 20, 
-        overflowX: 'auto', 
+      <div className="rs-flex rs-gap-5" style={{
+        overflowX: 'auto',
         paddingBottom: 12,
         scrollSnapType: 'x mandatory',
-        WebkitOverflowScrolling: 'touch'
+        WebkitOverflowScrolling: 'touch',
       }}>
         {tracks.map((track) => (
           <div 
@@ -86,27 +84,23 @@ export function MusicDiscoveryCard({
               <img 
                 src={track.thumbnail} 
                 alt={track.title}
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'cover', 
+                className="rs-w-full" style={{
+                  height: '100%',
+                  objectFit: 'cover',
                   borderRadius: 16,
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
                 }}
               />
-              <div style={{ 
-                position: 'absolute', 
-                bottom: 8, 
-                right: 8, 
-                width: 36, 
-                height: 36, 
-                borderRadius: '50%', 
-                background: 'var(--primary)', 
+              <div className="rs-flex rs-items-center rs-justify-center" style={{
+                position: 'absolute',
+                bottom: 8,
+                right: 8,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'var(--primary)',
                 color: 'var(--on-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
               }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>play_arrow</span>
               </div>

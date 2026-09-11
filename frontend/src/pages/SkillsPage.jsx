@@ -178,7 +178,7 @@ export default function SkillsPage({ setAction }) {
           <div className="rs-card-meta">Nothing yet. Tap + ADD to tell River about you.</div>
         )}
         {skills.map(s => (
-          <div key={s.id} className="rs-card is-wide" style={{ padding: 16, opacity: s.is_active ? 1 : 0.55 }}>
+          <div key={s.id} className="rs-card is-wide rs-p-4" style={{ opacity: s.is_active ? 1 : 0.55 }}>
             <div className="rs-card-head">
               <span className="rs-card-label">{s.name?.toUpperCase()}</span>
               <span className="rs-card-label" style={{ opacity: 0.4 }}>
@@ -192,7 +192,7 @@ export default function SkillsPage({ setAction }) {
                 ))}
               </div>
             )}
-            <div style={{ fontSize: 'var(--rs-fs-small)', lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap', opacity: 0.9 }}>
+            <div className="rs-mt-2" style={{ fontSize: 'var(--rs-fs-small)', lineHeight: 1.5, whiteSpace: 'pre-wrap', opacity: 0.9 }}>
               {s.prompt}
             </div>
             <div className="rs-mt-3 rs-flex rs-gap-2">

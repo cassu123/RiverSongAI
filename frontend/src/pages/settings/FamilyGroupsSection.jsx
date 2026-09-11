@@ -115,7 +115,7 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
         Parental Controls below.
       </p>
 
-      {err && <p style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)', marginBottom: 10 }}>{err}</p>}
+      {err && <p className="rs-mb-3" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)' }}>{err}</p>}
 
       {/* Group list */}
       <div className="rs-flex rs-flex-col rs-gap-3 rs-mb-4">
@@ -137,15 +137,16 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
               working={working}
             />
             {confirmDelId === group.id && (
-              <div style={{
-                display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4, padding: '10px 14px',
+              <div className="rs-flex rs-flex-col rs-gap-3 rs-mt-1" style={{
+                padding: '10px 14px',
                 background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
-                borderRadius: 8, fontSize: 'var(--rs-fs-tiny)',
+                borderRadius: 8,
+                fontSize: 'var(--rs-fs-tiny)',
               }}>
                 <div className="rs-flex rs-items-center rs-gap-3">
                   <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
-                  <span style={{ flex: 1, color: 'var(--md-on-surface)' }}>
+                  <span className="rs-grow" style={{ color: 'var(--md-on-surface)' }}>
                     Delete <strong>{group.name}</strong>? Whatever the group holds has to go
                     to someone — nothing records who contributed which row, so it moves
                     as one piece or not at all.
@@ -198,8 +199,8 @@ export default function FamilyGroupsSection({ data, token, onChanged }) {
           </button>
         </div>
       ) : (
-        <button className="rs-pill" onClick={() => setCreating(true)}
-          style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <button className="rs-pill rs-items-center rs-gap-2" onClick={() => setCreating(true)}
+          style={{ cursor: 'pointer', display: 'inline-flex' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
           New Family Group
         </button>
@@ -267,8 +268,8 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
       overflow: 'hidden',
     }}>
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px' }}>
-        <div style={{ flex: 1, fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>{group.name}</div>
+      <div className="rs-flex rs-items-center rs-gap-3" style={{ padding: '12px 16px' }}>
+        <div className="rs-grow" style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>{group.name}</div>
         <div className="rs-flex rs-gap-2">
           {ALL_MODULES.map(m => (
             <span key={m.key} style={{
@@ -294,7 +295,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
       </div>
 
       {expanded && (
-        <div style={{ borderTop: '1px solid var(--md-outline-variant)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="rs-flex rs-flex-col rs-gap-4" style={{ borderTop: '1px solid var(--md-outline-variant)', padding: '14px 16px' }}>
 
           {/* Rename */}
           <div className="rs-flex rs-gap-2 rs-items-center">
@@ -308,7 +309,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
 
           {/* Module toggles */}
           <div>
-            <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)', marginBottom: 8 }}>Shared Modules</div>
+            <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)' }}>Shared Modules</div>
             <div className="rs-flex rs-gap-2 rs-flex-wrap">
               {ALL_MODULES.map(m => {
                 const on = group.shared_modules?.includes(m.key)
@@ -330,17 +331,19 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
 
           {/* Members */}
           <div>
-            <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)', marginBottom: 8 }}>Members</div>
+            <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)' }}>Members</div>
             {(group.members || []).length === 0 && (
               <p className="rs-card-meta" style={{ margin: '0 0 8px' }}>No members yet.</p>
             )}
             <div className="rs-flex rs-flex-col rs-gap-1 rs-mb-3">
               {(group.members || []).map(m => (
-                <div key={m.profile_id} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--rs-fs-tiny)',
-                  padding: '6px 10px', background: 'var(--md-surface-container-high)', borderRadius: 8,
+                <div key={m.profile_id} className="rs-flex rs-items-center rs-gap-3" style={{
+                  fontSize: 'var(--rs-fs-tiny)',
+                  padding: '6px 10px',
+                  background: 'var(--md-surface-container-high)',
+                  borderRadius: 8,
                 }}>
-                  <span style={{ flex: 1, fontWeight: 500 }}>{m.display_name}</span>
+                  <span className="rs-grow" style={{ fontWeight: 500 }}>{m.display_name}</span>
                   <span style={{ color: 'var(--md-outline)', fontSize: 'var(--rs-fs-micro)' }}>{m.email}</span>
                   <span style={{
                     padding: '1px 8px', borderRadius: 12, fontSize: 'var(--rs-fs-nano)',
@@ -355,12 +358,13 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
             </div>
 
             {confirmRemove && (
-              <div style={{
-                marginBottom: 10, padding: '10px 12px', borderRadius: 8,
+              <div className="rs-mb-3" style={{
+                padding: '10px 12px',
+                borderRadius: 8,
                 background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)',
               }}>
-                <div style={{ fontSize: 'var(--rs-fs-tiny)', marginBottom: 8 }}>{confirmRemove.message}</div>
+                <div className="rs-mb-2" style={{ fontSize: 'var(--rs-fs-tiny)' }}>{confirmRemove.message}</div>
                 <div className="rs-flex rs-gap-2">
                   <button
                     onClick={() => removeMember(confirmRemove.profileId, true)}
@@ -393,7 +397,7 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
                 {addWorking ? 'Adding…' : 'Add'}
               </button>
             </div>
-            {addErr && <p style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)', marginTop: 6 }}>{addErr}</p>}
+            {addErr && <p className="rs-mt-2" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{addErr}</p>}
           </div>
         </div>
       )}

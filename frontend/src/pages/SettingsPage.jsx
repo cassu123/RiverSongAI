@@ -714,7 +714,7 @@ export default function SettingsPage({
       `}</style>
 
       <header className="rs-foyer-head rs-mb-5">
-        <div className="rs-card-label" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)' }}>
+        <div className="rs-card-label rs-mb-2 rs-flex rs-items-center rs-gap-2" style={{ color: 'var(--primary)' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
             {activeHubTab === 'admin' ? 'shield_person' : activeHubTab === 'users' ? 'group' : activeHubTab === 'profile' ? 'account_circle' : 'tune'}
           </span>
@@ -753,9 +753,9 @@ export default function SettingsPage({
       {(activeHubTab === 'assistant' || activeHubTab === 'admin') && (
         <nav
           aria-label="Settings sub-categories"
-          style={{
-            display: 'flex', gap: 8, marginBottom: 20,
-            overflowX: 'auto', paddingBottom: 4,
+          className="rs-flex rs-gap-2 rs-mb-5" style={{
+            overflowX: 'auto',
+            paddingBottom: 4,
             scrollbarWidth: 'none',
           }}
         >
@@ -777,9 +777,8 @@ export default function SettingsPage({
 
       {/* Reload-pending banner for LLM routing flag changes */}
       {reloadPending && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-          padding: '10px 18px', marginBottom: 8,
+        <div className="rs-flex rs-items-center rs-justify-between rs-gap-3 rs-mb-2" style={{
+          padding: '10px 18px',
           background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)',
           border: '1px solid color-mix(in srgb, var(--rs-status-warning) 40%, transparent)',
           borderRadius: 'var(--md-shape-sm)',
@@ -801,9 +800,11 @@ export default function SettingsPage({
         <div
           role="status"
           aria-live="polite"
-          style={{
-            position: 'fixed', bottom: 32, right: 32, zIndex: 1000,
-            display: 'flex', alignItems: 'center', gap: 8,
+          className="rs-flex rs-items-center rs-gap-2" style={{
+            position: 'fixed',
+            bottom: 32,
+            right: 32,
+            zIndex: 1000,
             padding: '10px 18px',
             borderRadius: 'var(--md-shape-lg)',
             background: saveStatus === 'error'
@@ -812,7 +813,9 @@ export default function SettingsPage({
             color: saveStatus === 'error'
               ? 'var(--md-on-error-container)'
               : 'var(--md-on-primary-container)',
-            fontSize: 'var(--rs-fs-tiny)', fontWeight: 600, letterSpacing: '0.06em',
+            fontSize: 'var(--rs-fs-tiny)',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
             boxShadow: '0 8px 32px -8px rgba(0,0,0,0.5)',
             border: '1px solid',
             borderColor: saveStatus === 'error'
@@ -1176,7 +1179,7 @@ export default function SettingsPage({
         <p className="rs-card-meta">Enable ambient detection. River will actively listen for your designated phrase.</p>
         
         {wakeWordRestart && (
-          <div style={{ marginTop: 12, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="rs-mt-3 rs-flex rs-items-center rs-gap-2" style={{ padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)' }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
             <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
               System restart required to apply changes.
@@ -1184,8 +1187,8 @@ export default function SettingsPage({
           </div>
         )}
 
-        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container-low)', padding: '12px 16px', borderRadius: 'var(--md-shape-sm)' }}>
-          <div style={{ display: 'flex', gap: 16, fontSize: 'var(--rs-fs-micro)' }}>
+        <div className="rs-mt-4 rs-flex rs-justify-between rs-items-center" style={{ background: 'var(--md-surface-container-low)', padding: '12px 16px', borderRadius: 'var(--md-shape-sm)' }}>
+          <div className="rs-flex rs-gap-4" style={{ fontSize: 'var(--rs-fs-micro)' }}>
             <span>Active Phrase: <strong>Hey River</strong></span>
           </div>
           <span className="rs-card-label" style={{ color: aiFeatures.WAKE_WORD_ENABLED ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
@@ -1242,7 +1245,7 @@ export default function SettingsPage({
           />
 
           <div className="rs-card-meta">
-            <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>Retention Period</span>
+            <span className="rs-card-label rs-mb-1" style={{ fontSize: 'var(--rs-fs-nano)' }}>Retention Period</span>
             <select
               className="settings-select rs-w-full"
              

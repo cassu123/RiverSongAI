@@ -92,8 +92,8 @@ function StatusBadge({ game }) {
 function TeamSide({ abbr, name, logo, score, winner, showScore, align = 'left' }) {
   const isRight = align === 'right'
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: isRight ? 'flex-end' : 'flex-start', gap: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRight ? 'row-reverse' : 'row' }}>
+    <div className="rs-grow rs-flex rs-flex-col rs-gap-1" style={{ alignItems: isRight ? 'flex-end' : 'flex-start' }}>
+      <div className="rs-flex rs-items-center rs-gap-2" style={{ flexDirection: isRight ? 'row-reverse' : 'row' }}>
         {logo && (
           <img src={logo} alt={abbr} style={{ width: 28, height: 28, objectFit: 'contain' }}
             onError={e => { e.target.style.display = 'none' }} />
@@ -140,7 +140,7 @@ function GameCard({ game, onClick }) {
           )}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+      <div className="rs-flex rs-items-center" style={{ gap: 0 }}>
         <TeamSide abbr={game.away_abbr} name={game.away_team} logo={game.away_logo}
           score={game.away_score} winner={game.away_winner} showScore={!isScheduled} />
         <div style={{ padding: '0 16px', fontSize: 'var(--rs-fs-body)', fontWeight: 900, opacity: 0.2, flexShrink: 0 }}>@</div>
@@ -156,10 +156,10 @@ function SportsSkeleton() {
     <div className="rs-flex rs-flex-col">
       {[0, 1, 2].map(i => (
         <div key={i} style={{ padding: '14px 12px', borderBottom: '1px solid var(--md-outline-variant)' }}>
-          <div style={{ height: 8, width: 60, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4, marginBottom: 12 }} />
+          <div className="rs-mb-3" style={{ height: 8, width: 60, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
           <div className="rs-flex rs-justify-between">
             {[0, 1].map(j => (
-              <div key={j} style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: j ? 'flex-end' : 'flex-start' }}>
+              <div key={j} className="rs-flex rs-flex-col rs-gap-2" style={{ alignItems: j ? 'flex-end' : 'flex-start' }}>
                 <div style={{ height: 10, width: 48, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
                 <div style={{ height: 24, width: 32, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
               </div>
@@ -180,7 +180,7 @@ function LeagueGrid({ favorites, onToggle }) {
     <div>
       {Object.entries(PICKER_GROUPS).map(([cat, leagues]) => (
         <div key={cat} className="rs-mb-4">
-          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 8 }}>
+          <div className="rs-mb-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em' }}>
             {cat.toUpperCase()}
           </div>
           <div className="rs-flex rs-flex-wrap rs-gap-2">
@@ -190,10 +190,13 @@ function LeagueGrid({ favorites, onToggle }) {
                 <button
                   key={l.id}
                   onClick={() => onToggle(l.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '5px 10px', borderRadius: 20,
-                    fontSize: 'var(--rs-fs-nano)', fontWeight: 700, cursor: 'pointer',
+                  className="rs-flex rs-items-center" style={{
+                    gap: 5,
+                    padding: '5px 10px',
+                    borderRadius: 20,
+                    fontSize: 'var(--rs-fs-nano)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
                     border: active ? '1px solid var(--primary)' : '1px solid var(--md-outline-variant)',
                     background: active ? 'rgba(var(--primary-rgb,100,100,255),0.12)' : 'transparent',
                     color: active ? 'var(--primary)' : 'var(--md-on-surface-variant)',
@@ -223,8 +226,7 @@ function NewsArticleCard({ a }) {
   return (
     <div
       onClick={() => window.open(a.url, '_blank')}
-      style={{
-        display: 'flex', gap: 16,
+      className="rs-flex rs-gap-4" style={{
         padding: '14px 0',
         borderBottom: '1px solid var(--md-outline-variant)',
         cursor: 'pointer',
@@ -240,8 +242,8 @@ function NewsArticleCard({ a }) {
           onError={e => { e.target.style.display = 'none' }}
         />
       )}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+      <div className="rs-grow" style={{ minWidth: 0 }}>
+        <div className="rs-flex rs-items-center rs-gap-2" style={{ marginBottom: 5 }}>
           <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--primary)', opacity: 0.9 }}>
             {a.source?.toUpperCase()}
           </span>
@@ -251,10 +253,15 @@ function NewsArticleCard({ a }) {
             </span>
           )}
         </div>
-        <div style={{
-          fontWeight: 650, fontSize: 'var(--rs-fs-small)', lineHeight: 1.3, marginBottom: 4,
+        <div className="rs-mb-1" style={{
+          fontWeight: 650,
+          fontSize: 'var(--rs-fs-small)',
+          lineHeight: 1.3,
           color: 'var(--md-on-surface)',
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
         }}>
           {a.title}
         </div>
@@ -266,7 +273,7 @@ function NewsArticleCard({ a }) {
             {a.summary}
           </div>
         )}
-        <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 6 }}>
+        <div className="rs-card-label rs-mt-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
           {a.published_at ? new Date(a.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
         </div>
       </div>
@@ -278,7 +285,7 @@ function NewsSkeleton() {
   return (
     <div className="rs-flex rs-flex-col rs-gap-3">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+        <div key={i} className="rs-flex rs-gap-4" style={{ padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div style={{ width: 80, height: 64, borderRadius: 6, background: 'var(--md-outline-variant)', flexShrink: 0, opacity: 0.4 }} />
           <div className="rs-grow rs-flex rs-flex-col rs-gap-2">
             <div style={{ height: 9, width: '35%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.5 }} />
@@ -349,8 +356,8 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       {/* Back nav */}
       <button
         onClick={onBack}
-        className="rs-pill"
-        style={{ marginBottom: 16, padding: '5px 12px' }}
+        className="rs-pill rs-mb-4"
+        style={{ padding: '5px 12px' }}
       >
         <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>arrow_back</span>
         Back to scores
@@ -374,7 +381,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       </div>
 
       {loading && (
-        <div style={{ padding: '32px 0', textAlign: 'center' }}>
+        <div className="rs-text-center" style={{ padding: '32px 0' }}>
           <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Loading box score…</div>
         </div>
       )}
@@ -382,8 +389,8 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       {/* Team stats comparison */}
       {!loading && statNames.length > 0 && (
         <div className="rs-card rs-p-4 rs-mb-4">
-          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>TEAM STATS</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px 12px', alignItems: 'center' }}>
+          <div className="rs-card-label rs-mb-3" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>TEAM STATS</div>
+          <div className="rs-items-center" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px 12px' }}>
             <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: 'left' }}>
               {away.team?.abbreviation || 'AWAY'}
             </div>
@@ -396,7 +403,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
                 <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-micro)', textAlign: 'left' }}>
                   {awayBy[name] ?? '—'}
                 </div>
-                <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: 'center' }}>
+                <div className="rs-card-meta rs-text-center" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
                   {label}
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-micro)', textAlign: 'right' }}>
@@ -411,18 +418,17 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       {/* Player leaders */}
       {!loading && leaders.length > 0 && (
         <div className="rs-card rs-p-4">
-          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>LEADERS</div>
+          <div className="rs-card-label rs-mb-3" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>LEADERS</div>
           {leaders.map((teamBlock, ti) => (
             <div key={ti} className="rs-mb-4">
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--primary)', marginBottom: 6 }}>
+              <div className="rs-card-label rs-mb-2" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--primary)' }}>
                 {teamBlock.team?.displayName?.toUpperCase()}
               </div>
               {(teamBlock.leaders || []).map((cat, ci) => {
                 const athleteEntry = (cat.leaders || [])[0]
                 if (!athleteEntry) return null
                 return (
-                  <div key={ci} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  <div key={ci} className="rs-flex rs-items-center rs-justify-between" style={{
                     padding: '6px 0',
                     borderBottom: ci < (teamBlock.leaders.length - 1) ? '1px solid var(--md-outline-variant)' : 'none',
                   }}>
@@ -444,8 +450,8 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       )}
 
       {!loading && statNames.length === 0 && leaders.length === 0 && (
-        <div className="rs-card" style={{ padding: '32px 16px', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>sports</span>
+        <div className="rs-card rs-text-center" style={{ padding: '32px 16px' }}>
+          <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>sports</span>
           <div className="rs-card-meta">Detailed stats not yet published for this event.</div>
         </div>
       )}
@@ -459,8 +465,8 @@ function BoxTeam({ c, align = 'left' }) {
   const winner = c?.winner
   const isRight = align === 'right'
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: isRight ? 'flex-end' : 'flex-start', gap: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRight ? 'row-reverse' : 'row' }}>
+    <div className="rs-grow rs-flex rs-flex-col rs-gap-2" style={{ alignItems: isRight ? 'flex-end' : 'flex-start' }}>
+      <div className="rs-flex rs-items-center rs-gap-2" style={{ flexDirection: isRight ? 'row-reverse' : 'row' }}>
         {t.logo && <img src={t.logo} alt={t.abbreviation} style={{ width: 40, height: 40, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none' }} />}
         <div style={{ textAlign: isRight ? 'right' : 'left' }}>
           <div style={{ fontWeight: 800, fontSize: 'var(--rs-fs-small)' }}>{t.abbreviation || '—'}</div>
@@ -786,7 +792,7 @@ function ScoresView({
             )}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <div className="rs-flex rs-items-center rs-gap-2" style={{ flexShrink: 0 }}>
           {myTeams.length > 0 && (
             <button
               className={`rs-pill ${myTeamsMode ? 'is-active' : ''}`}
@@ -807,8 +813,8 @@ function ScoresView({
       </div>
 
       {myTeamsMode && myTeams.length === 0 && (
-        <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>group</span>
+        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+          <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>group</span>
           <div className="rs-card-label rs-mb-2">NO FAVORITE TEAMS</div>
           <div className="rs-card-meta">Add teams in Feed Preferences to use this view.</div>
         </div>
@@ -817,20 +823,20 @@ function ScoresView({
       {!(myTeamsMode && myTeams.length === 0) && (
         loading ? <SportsSkeleton /> :
         error ? (
-          <div style={{ padding: '24px 0', textAlign: 'center' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>sports</span>
+          <div className="rs-text-center" style={{ padding: '24px 0' }}>
+            <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>sports</span>
             <div className="rs-card-meta">{error}</div>
           </div>
         ) : allGames.length === 0 ? (
-          <div style={{ padding: '24px 0', textAlign: 'center' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>event_available</span>
+          <div className="rs-text-center" style={{ padding: '24px 0' }}>
+            <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>event_available</span>
             <div className="rs-card-label rs-mb-2">NO GAMES TODAY</div>
             <div className="rs-card-meta">Check back on game day or switch leagues above.</div>
           </div>
         ) : (
           <div>
             {myTeamsMode && fixtures.length > 0 && games.length > 0 && (
-              <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 8 }}>RESULTS</div>
+              <div className="rs-card-label rs-mb-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>RESULTS</div>
             )}
             {games.map(g => <GameCard key={g.id} game={g} onClick={() => openEvent(g)} />)}
             {myTeamsMode && fixtures.length > 0 && (
@@ -915,14 +921,14 @@ function NewsView({
 
       {loading ? <NewsSkeleton /> :
        error ? (
-        <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.3, display: 'block', marginBottom: 8 }}>wifi_off</span>
+        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+          <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.3, display: 'block' }}>wifi_off</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={onRetry}>RETRY</button>
         </div>
        ) : !articles.length ? (
-        <div style={{ padding: '32px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>newspaper</span>
+        <div className="rs-text-center" style={{ padding: '32px 0' }}>
+          <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>newspaper</span>
           <div className="rs-card-meta">No articles right now. Try expanding the sources panel above.</div>
         </div>
        ) : (

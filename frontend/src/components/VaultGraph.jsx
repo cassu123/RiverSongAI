@@ -193,8 +193,10 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
   // ── Render ──────────────────────────────────────────────────────────────────
   if (!nodes.length) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 14, opacity: 0.3 }}>
+      <div className="rs-flex rs-flex-col rs-items-center rs-justify-center rs-gap-4" style={{
+        height: '100%',
+        opacity: 0.3,
+      }}>
         <span className="material-symbols-rounded" style={{ fontSize: 64 }}>hub</span>
         <span className="rs-card-meta">No indexed notes yet.<br />Create notes with [[wikilinks]] to build the graph.</span>
       </div>
@@ -206,8 +208,12 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
   return (
     <div
       ref={wrapRef}
-      style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden',
-               cursor: panRef.current ? 'grabbing' : 'grab' }}
+      className="rs-w-full" style={{
+        height: '100%',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: panRef.current ? 'grabbing' : 'grab',
+      }}
     >
       <svg
         width={wh.w} height={wh.h}
@@ -316,12 +322,18 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
         const n = nodes.find(x => x.id === hovered)
         if (!n) return null
         return (
-          <div style={{
-            position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
-            padding: '6px 14px', borderRadius: 8, pointerEvents: 'none', whiteSpace: 'nowrap',
+          <div className="rs-flex rs-gap-2 rs-items-center" style={{
+            position: 'absolute',
+            bottom: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '6px 14px',
+            borderRadius: 8,
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
             background: 'var(--md-surface-container-highest)',
             border: '1px solid var(--md-outline-variant)',
-            fontSize: 'var(--rs-fs-micro)', display: 'flex', gap: 8, alignItems: 'center',
+            fontSize: 'var(--rs-fs-micro)',
           }}>
             <span style={{ fontWeight: 600 }}>{n.title}</span>
             {n.virtual_path
@@ -333,7 +345,7 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
       })()}
 
       {/* ── Legend + hint ── */}
-      <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
+      <div className="rs-flex rs-flex-col rs-gap-2" style={{ position: 'absolute', bottom: 16, left: 16, pointerEvents: 'none' }}>
         <div className="rs-flex rs-gap-3 rs-items-center">
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
           <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Personal</span>

@@ -28,7 +28,7 @@ function MapSelector({ position, onChange }) {
 
   return (
     <div className="rs-map rs-mb-4">
-      <MapContainer center={center} zoom={18} style={{ height: '100%', width: '100%', borderRadius: 8 }}>
+      <MapContainer center={center} zoom={18} className="rs-w-full" style={{ height: '100%', borderRadius: 8 }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="&copy; OpenStreetMap contributors"
@@ -177,7 +177,7 @@ export default function SetupWizard() {
   return (
     <div className="rs-card p-5 md:p-8" style={{ maxWidth: 800, margin: '0 auto' }}>
       <h2 className="rs-mb-2">Setup Wizard: {id}</h2>
-      <div style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Step {step} of 8</div>
+      <div className="rs-mb-5" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-small)' }}>Step {step} of 8</div>
 
       <form onSubmit={step === 8 ? (e)=>{e.preventDefault();handleSave()} : handleNext}>
         {step === 1 && (
@@ -272,7 +272,7 @@ export default function SetupWizard() {
             </div>
             
             {formData.hardware.sensors.gps === 'rtk' && (
-              <div style={{ background: 'rgba(255,255,255,0.05)', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+              <div className="rs-p-4 rs-mb-4" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
                 <h4>RTK NTRIP Config</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label>Host</label><input type="text" className="rs-input" value={formData.hardware.rtk.ntrip_host} onChange={e => updateField('hardware.rtk.ntrip_host', e.target.value)} /></div>
@@ -287,7 +287,7 @@ export default function SetupWizard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rs-mb-4">
               <div><label><input type="checkbox" checked={formData.hardware.sensors.imu} onChange={e => updateField('hardware.sensors.imu', e.target.checked)} /> IMU Installed</label></div>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--rs-fs-small)', marginBottom: 4 }}>Obstacle Sensors</label>
+                <label className="rs-mb-1" style={{ display: 'block', fontSize: 'var(--rs-fs-small)' }}>Obstacle Sensors</label>
                 <select className="rs-input" value={formData.hardware.sensors.obstacle} onChange={e => updateField('hardware.sensors.obstacle', e.target.value)}>
                   <option value="none">None</option>
                   <option value="ultrasonic">Ultrasonic</option>
@@ -365,7 +365,7 @@ export default function SetupWizard() {
         {step === 7 && (
           <div>
             <h3>Home Position</h3>
-            <p style={{ opacity: 0.7, marginBottom: 16 }}>Click the map to set the home coordinate for the unit.</p>
+            <p className="rs-mb-4" style={{ opacity: 0.7 }}>Click the map to set the home coordinate for the unit.</p>
             <MapSelector 
               position={formData.home_position} 
               onChange={(lat, lng) => {
@@ -384,10 +384,10 @@ export default function SetupWizard() {
         {step === 8 && (
           <div>
             <h3>Review & Save</h3>
-            <pre style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 8, fontSize: 'var(--rs-fs-tiny)', overflowX: 'auto' }}>
+            <pre className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, fontSize: 'var(--rs-fs-tiny)', overflowX: 'auto' }}>
               {JSON.stringify(formData, null, 2)}
             </pre>
-            {error && <div style={{ color: 'var(--md-error)', marginTop: 16 }}>{error}</div>}
+            {error && <div className="rs-mt-4" style={{ color: 'var(--md-error)' }}>{error}</div>}
           </div>
         )}
 
