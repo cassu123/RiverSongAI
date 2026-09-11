@@ -135,7 +135,7 @@ export default function WebhookTokensPage({ setAction }) {
             >COPY</button>
             <button className="rs-pill" onClick={() => setFreshlyMinted(null)}>DISMISS</button>
           </div>
-          <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: 8 }}>
+          <div style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6, marginTop: 8 }}>
             This is the only time the plaintext is shown. Only a sha256 digest is stored.
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function WebhookTokensPage({ setAction }) {
               placeholder="Expires at (ISO-8601 UTC, optional) — e.g. 2026-12-31T23:59:59Z"
               style={inputStyle}
             />
-            {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem' }}>{error.toUpperCase()}</div>}
+            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="rs-pill is-active" onClick={create}>ISSUE</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
@@ -199,23 +199,23 @@ export default function WebhookTokensPage({ setAction }) {
               <div className="rs-card-head">
                 <span className="rs-card-label">{t.label?.toUpperCase()}</span>
                 <span className="rs-pill" style={{
-                  fontSize: '0.6rem',
+                  fontSize: 'var(--rs-fs-nano)',
                   background: revoked ? 'var(--md-error)' : expired ? 'rgba(255,255,255,0.15)' : 'var(--md-secondary)',
                   color: 'var(--bg-base)',
                 }}>{revoked ? 'REVOKED' : expired ? 'EXPIRED' : 'ACTIVE'}</span>
               </div>
-              <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: 4 }}>
+              <div style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6, marginTop: 4 }}>
                 ID {t.id} · USES {t.use_count}{t.last_used_at ? ` · LAST ${t.last_used_at}` : ''}
               </div>
               {(t.scopes || []).length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
                   {t.scopes.map((s, i) => (
-                    <span key={i} className="rs-pill" style={{ fontSize: '0.6rem', padding: '1px 6px' }}>{s}</span>
+                    <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{s}</span>
                   ))}
                 </div>
               )}
               {t.expires_at && (
-                <div style={{ fontSize: '0.65rem', opacity: 0.55, marginTop: 6 }}>
+                <div style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.55, marginTop: 6 }}>
                   EXPIRES {t.expires_at}
                 </div>
               )}
@@ -258,7 +258,7 @@ export default function WebhookTokensPage({ setAction }) {
             {!audit.loading && audit.entries.map(e => (
               <div key={e.id} style={{
                 padding: 10, marginBottom: 8, background: 'rgba(255,255,255,0.04)',
-                borderRadius: 6, fontSize: '0.75rem',
+                borderRadius: 6, fontSize: 'var(--rs-fs-micro)',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontWeight: 600 }}>{e.action?.toUpperCase()}</span>
@@ -266,11 +266,11 @@ export default function WebhookTokensPage({ setAction }) {
                 </div>
                 <div style={{ opacity: 0.7, marginBottom: 2 }}>ACTOR {e.actor || '—'}</div>
                 {!audit.tokenId && (
-                  <div style={{ opacity: 0.5, fontSize: '0.65rem' }}>TOKEN {e.token_id}</div>
+                  <div style={{ opacity: 0.5, fontSize: 'var(--rs-fs-nano)' }}>TOKEN {e.token_id}</div>
                 )}
                 {e.detail && (
                   <pre style={{
-                    margin: '4px 0 0', fontSize: '0.65rem', opacity: 0.7,
+                    margin: '4px 0 0', fontSize: 'var(--rs-fs-nano)', opacity: 0.7,
                     whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                   }}>{e.detail}</pre>
                 )}
@@ -292,7 +292,7 @@ const inputStyle = {
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
-  fontSize: '0.85rem',
+  fontSize: 'var(--rs-fs-tiny)',
   outline: 'none',
   fontFamily: 'inherit',
 }

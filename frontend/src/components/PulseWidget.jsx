@@ -89,7 +89,7 @@ export default function PulseWidget({ token }) {
           >
             <span style={{
               flex: 1,
-              fontSize: '0.815rem',
+              fontSize: 'var(--rs-fs-tiny)',
               fontWeight: 550,
               color: C.text,
               letterSpacing: '-0.01em',
@@ -103,7 +103,7 @@ export default function PulseWidget({ token }) {
             {currentNews.source && (
               <span style={{
                 flexShrink: 0,
-                fontSize: '0.58rem',
+                fontSize: 'var(--rs-fs-nano)',
                 fontWeight: 700,
                 letterSpacing: '0.07em',
                 textTransform: 'uppercase',
@@ -130,14 +130,14 @@ export default function PulseWidget({ token }) {
             time={fmtTs(ts?.markets)}
           >
             {markets.error ? (
-              <span style={{ fontSize: '0.75rem', color: C.muted, fontStyle: 'italic' }}>
+              <span style={{ fontSize: 'var(--rs-fs-micro)', color: C.muted, fontStyle: 'italic' }}>
                 No data
               </span>
             ) : (
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
                 <span style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '0.68rem',
+                  fontSize: 'var(--rs-fs-nano)',
                   fontWeight: 600,
                   letterSpacing: '0.05em',
                   color: C.muted,
@@ -146,7 +146,7 @@ export default function PulseWidget({ token }) {
                 </span>
                 <span style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '1.05rem',
+                  fontSize: 'var(--rs-fs-body)',
                   fontWeight: 750,
                   letterSpacing: '-0.02em',
                   color: C.text,
@@ -158,7 +158,7 @@ export default function PulseWidget({ token }) {
                 {markets.change != null && markets.change_pct != null && (
                   <span style={{
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '0.75rem',
+                    fontSize: 'var(--rs-fs-micro)',
                     fontWeight: 650,
                     letterSpacing: '-0.01em',
                     color: marketColor,
@@ -184,7 +184,7 @@ export default function PulseWidget({ token }) {
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '1.15rem',
+                fontSize: 'var(--rs-fs-body)',
                 fontWeight: 800,
                 letterSpacing: '-0.04em',
                 lineHeight: 1,
@@ -193,7 +193,7 @@ export default function PulseWidget({ token }) {
                 {flights.flights?.length ?? 0}
               </span>
               <span style={{
-                fontSize: '0.75rem',
+                fontSize: 'var(--rs-fs-micro)',
                 fontWeight: 500,
                 color: C.muted,
                 letterSpacing: '0.01em',
@@ -233,7 +233,7 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
           {icon}
         </span>
         <span style={{
-          fontSize: '0.58rem',
+          fontSize: 'var(--rs-fs-nano)',
           fontWeight: 800,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
@@ -245,7 +245,7 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
         {badge && (
           <span style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.52rem',
+            fontSize: 'var(--rs-fs-nano)',
             letterSpacing: '0.04em',
             color: C.dim,
             opacity: 0.6,
@@ -256,7 +256,7 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
         )}
         <span style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: '0.58rem',
+          fontSize: 'var(--rs-fs-nano)',
           letterSpacing: '0.04em',
           color: C.dim,
           opacity: 0.75,

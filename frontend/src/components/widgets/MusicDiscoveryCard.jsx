@@ -114,7 +114,7 @@ export function MusicDiscoveryCard({
             
             <div style={{ marginTop: 10 }}>
               <div style={{ 
-                fontSize: '0.85rem', 
+                fontSize: 'var(--rs-fs-tiny)', 
                 fontWeight: 600, 
                 whiteSpace: 'nowrap', 
                 overflow: 'hidden', 
@@ -124,7 +124,7 @@ export function MusicDiscoveryCard({
                 {track.title}
               </div>
               <div style={{ 
-                fontSize: '0.75rem', 
+                fontSize: 'var(--rs-fs-micro)', 
                 opacity: 0.6,
                 whiteSpace: 'nowrap', 
                 overflow: 'hidden', 

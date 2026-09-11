@@ -301,7 +301,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
             <div className="rs-form-group" style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                  Serial Number
-                 <button type="button" className="rs-pill" onClick={() => document.getElementById('serialPhotoInput').click()} style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto' }}>
+                 <button type="button" className="rs-pill" onClick={() => document.getElementById('serialPhotoInput').click()} style={{ padding: '2px 8px', fontSize: 'var(--rs-fs-micro)', height: 'auto' }}>
                     <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4, verticalAlign: 'middle' }}>document_scanner</span>
                     Scan Plate
                  </button>
@@ -344,11 +344,11 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
           {!isNew && (
              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, padding: 16, background: 'var(--md-surface-container)', borderRadius: 12 }}>
                 <div>
-                   <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: 'var(--md-on-surface-variant)' }}>RECEIPT</h4>
+                   <h4 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>RECEIPT</h4>
                    {item.receipt_image_path ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                          <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
-                         <span style={{ fontSize: '0.85rem' }}>Attached</span>
+                         <span style={{ fontSize: 'var(--rs-fs-tiny)' }}>Attached</span>
                          <button className="rs-pill" onClick={() => receiptInputRef.current.click()}>Replace</button>
                       </div>
                    ) : (
@@ -359,11 +359,11 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                    <input type="file" accept="image/*,application/pdf" ref={receiptInputRef} style={{ display: 'none' }} onChange={handleUploadReceipt} />
                 </div>
                 <div>
-                   <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: 'var(--md-on-surface-variant)' }}>WARRANTY</h4>
+                   <h4 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>WARRANTY</h4>
                    {item.warranty_image_path ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                          <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
-                         <span style={{ fontSize: '0.85rem' }}>Attached</span>
+                         <span style={{ fontSize: 'var(--rs-fs-tiny)' }}>Attached</span>
                          <button className="rs-pill" onClick={() => warrantyInputRef.current.click()}>Replace</button>
                       </div>
                    ) : (

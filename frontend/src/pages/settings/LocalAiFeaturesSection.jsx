@@ -44,7 +44,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
                 <p className="rs-card-meta" style={{ margin: 0 }}>Local product/recipe visuals</p>
-                <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: '0.6rem' }}>GPU REQ</span>
+                <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-nano)' }}>GPU REQ</span>
               </div>
             </div>
 
@@ -77,14 +77,14 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
                 <p className="rs-card-meta" style={{ margin: 0 }}>AI voice cloning for River</p>
-                <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: '0.6rem' }}>GPU REQ</span>
+                <span className="rs-card-label" style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-nano)' }}>GPU REQ</span>
               </div>
             </div>
           </div>
           
           <div style={{ marginTop: 16, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+            <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
               Backend restart required for changes to take effect.
             </span>
           </div>

@@ -65,14 +65,14 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
 
       {/* ── Voices ── */}
       <div className="rs-card-label" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span className="rs-pill is-active" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>VOICE</span>
+        <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>VOICE</span>
         Voice Models
       </div>
       {voiceAccents.map(accent => {
         const group = allVoices.filter(v => v.accent === accent)
         return (
           <div key={accent} style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
+            <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
               {accent.toUpperCase()}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -80,10 +80,10 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
                 const hidden = (visibility.hidden_voices || []).includes(v.voice_id)
                 return (
                   <label key={v.voice_id} className="toggle-row" style={{ opacity: hidden ? 0.5 : 1 }}>
-                    <span className="toggle-label" style={{ fontSize: '0.8rem' }}>
+                    <span className="toggle-label" style={{ fontSize: 'var(--rs-fs-tiny)' }}>
                       {v.display_name}
                       {!v.installed && (
-                        <span style={{ fontSize: '0.65rem', color: 'var(--md-outline)', marginLeft: 5 }}>not installed</span>
+                        <span style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--md-outline)', marginLeft: 5 }}>not installed</span>
                       )}
                     </span>
                     <button
@@ -105,14 +105,14 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
 
       {/* ── LLM Models ── */}
       <div className="rs-card-label" style={{ marginTop: 20, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'var(--md-on-tertiary)' }}>AI</span>
+        <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'var(--md-on-tertiary)' }}>AI</span>
         AI Models
       </div>
       {llmProviders.map(provider => {
         const group = allLlms.filter(m => m.provider === provider)
         return (
           <div key={provider} style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
+            <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em', marginBottom: 4 }}>
               {(PROVIDER_DISPLAY[provider] || provider).toUpperCase()}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -120,7 +120,7 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
                 const hidden = (visibility.hidden_llms || []).includes(m.model_id)
                 return (
                   <label key={m.model_id} className="toggle-row" style={{ opacity: hidden ? 0.5 : 1 }}>
-                    <span className="toggle-label" style={{ fontSize: '0.8rem' }}>{m.display_name}</span>
+                    <span className="toggle-label" style={{ fontSize: 'var(--rs-fs-tiny)' }}>{m.display_name}</span>
                     <button
                       role="switch"
                       aria-checked={!hidden}

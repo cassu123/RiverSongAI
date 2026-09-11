@@ -357,7 +357,7 @@ export default function ChronosPage({ setAction }) {
                         return (
                           <button
                             className="rs-pill"
-                            style={{ padding: '0 8px', height: '1.4rem', fontSize: '0.85rem' }}
+                            style={{ padding: '0 8px', height: '1.4rem', fontSize: 'var(--rs-fs-tiny)' }}
                             onClick={async () => {
                               const exists = await loadNote(targetPath)
                               if (!exists) {
@@ -396,7 +396,7 @@ export default function ChronosPage({ setAction }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {backlinks.map(b => (
             <div key={b.virtual_path} className="rs-card is-tappable" style={{ padding: 12 }} onClick={() => loadNote(b.virtual_path)}>
-              <div className="rs-card-label" style={{ fontSize: '0.65rem' }}>{b.title}</div>
+              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{b.title}</div>
             </div>
           ))}
           {backlinks.length === 0 && <div className="rs-card-meta">No references.</div>}

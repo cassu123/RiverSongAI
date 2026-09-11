@@ -310,7 +310,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
         ref={inputRef}
         rows={1}
         className="rs-chat-textarea"
-        style={{ fontSize: '1.05rem', fontWeight: 500 }}
+        style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 500 }}
         placeholder="Ask River Song..."
         value={inputText}
         onChange={e => setInputText(e.target.value)}
@@ -358,7 +358,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       
       {embedded && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>Vehicle Assistant</h3>
+          <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-h3)', color: 'var(--primary)' }}>Vehicle Assistant</h3>
           <button className="rs-pill" onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
@@ -385,7 +385,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           <div className="rs-card-inner">
             <div className="rs-card-label">System Directives</div>
             <textarea
-              style={{ all: 'unset', width: '100%', marginTop: 12, fontSize: '0.92rem', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
+              style={{ all: 'unset', width: '100%', marginTop: 12, fontSize: 'var(--rs-fs-small)', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
               placeholder="Inject custom neural constraints..."
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
@@ -426,7 +426,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 16px', marginBottom: 16, borderRadius: 10,
               background: 'rgba(230,170,60,0.13)', border: '1px solid rgba(230,170,60,0.3)',
-              color: '#e6c07b', fontSize: '0.9rem',
+              color: '#e6c07b', fontSize: 'var(--rs-fs-small)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>info</span>
               <span style={{ flex: 1 }}>
@@ -443,7 +443,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 16px', marginBottom: 16, borderRadius: 10,
               background: 'rgba(220,60,60,0.15)', border: '1px solid rgba(220,60,60,0.3)',
-              color: 'var(--rs-status-critical)', fontSize: '0.9rem',
+              color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-small)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>error</span>
               <span style={{ flex: 1 }}>{error}</span>

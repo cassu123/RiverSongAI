@@ -38,7 +38,7 @@ export default function RateIndicator({ activeModel, token }) {
 
   return (
     <span className="rs-pill" style={{
-      fontSize: '0.65rem',
+      fontSize: 'var(--rs-fs-nano)',
       marginLeft: 12,
       background: 'rgba(16, 185, 129, 0.15)',
       color: 'var(--rs-status-nominal)',

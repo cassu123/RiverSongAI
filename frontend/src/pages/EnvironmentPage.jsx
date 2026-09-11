@@ -190,16 +190,16 @@ export default function EnvironmentPage({ setAction }) {
                     backdropFilter: 'var(--glass-blur)'
                   }}
                 >
-                  {r.stale && <div className="rs-pill" style={{ position: 'absolute', top: 12, right: 12, fontSize: '0.6rem', background: 'var(--warn)', color: 'black' }}>STALE</div>}
+                  {r.stale && <div className="rs-pill" style={{ position: 'absolute', top: 12, right: 12, fontSize: 'var(--rs-fs-nano)', background: 'var(--warn)', color: 'black' }}>STALE</div>}
                   <div className="rs-card-label">{key.replace('_', ' ').toUpperCase()}</div>
                   
                   <div style={{ fontSize: '4rem', fontWeight: 300, lineHeight: 1, margin: '12px 0' }}>{r.persons}</div>
                   
-                  <div style={{ color: act.color, fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  <div style={{ color: act.color, fontSize: 'var(--rs-fs-micro)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     {act.icon} {act.label}
                   </div>
 
-                  <div style={{ marginTop: 20, width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', opacity: 0.7 }}>
+                  <div style={{ marginTop: 20, width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)', opacity: 0.7 }}>
                     <span>{r.temperature ? `${r.temperature}°F` : '--°F'}</span>
                     <span style={{ color: r.lights_on ? 'var(--warn)' : 'inherit' }}>
                       {r.lights_on ? '◉ LIGHTS ON' : '◌ LIGHTS OFF'}
@@ -247,7 +247,7 @@ export default function EnvironmentPage({ setAction }) {
                 </div>
 
                 <div style={{ margin: '20px 0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: 6, opacity: 0.7 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-nano)', marginBottom: 6, opacity: 0.7 }}>
                     <span>BATTERY</span>
                     <span>{rover.battery_pct}% ({rover.battery_v}V)</span>
                   </div>
@@ -258,25 +258,25 @@ export default function EnvironmentPage({ setAction }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16 }}>
                   <div>
-                    <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>SPEED</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{rover.speed_ms} m/s</div>
+                    <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>SPEED</div>
+                    <div style={{ fontSize: 'var(--rs-fs-small)', fontWeight: 500 }}>{rover.speed_ms} m/s</div>
                   </div>
                   <div>
-                    <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>HEADING</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{rover.heading}°</div>
+                    <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>HEADING</div>
+                    <div style={{ fontSize: 'var(--rs-fs-small)', fontWeight: 500 }}>{rover.heading}°</div>
                   </div>
                 </div>
 
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
-                  <div className="rs-card-label" style={{ fontSize: '0.6rem' }}>MISSION STATUS</div>
-                  <div style={{ fontSize: '0.85rem' }}>
+                  <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>MISSION STATUS</div>
+                  <div style={{ fontSize: 'var(--rs-fs-tiny)' }}>
                     {rover.mission_total > 0 
                       ? `Waypoint ${rover.mission_current} of ${rover.mission_total}`
                       : 'No active mission'}
                   </div>
                 </div>
 
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', opacity: 0.5 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>
                   ◈ GPS: {rover.lat.toFixed(6)}, {rover.lon.toFixed(6)}
                 </div>
               </div>
@@ -292,7 +292,7 @@ export default function EnvironmentPage({ setAction }) {
             </div>
 
             <div className="rs-card" style={{ borderStyle: 'dashed', background: 'transparent', backdropFilter: 'var(--glass-blur-sm)' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--primary)' }}>◈ GPS: {rover.lat}, {rover.lon}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-tiny)', color: 'var(--primary)' }}>◈ GPS: {rover.lat}, {rover.lon}</div>
               <div className="rs-card-meta" style={{ marginTop: 4 }}>Full real-time map integration is planned for Phase 14.</div>
             </div>
           </>

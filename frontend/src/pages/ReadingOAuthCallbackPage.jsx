@@ -33,7 +33,7 @@ export default function ReadingOAuthCallbackPage() {
       justifyContent: 'center',
       height: '100vh',
       fontFamily: 'var(--font-display, monospace)',
-      fontSize: '0.7rem',
+      fontSize: 'var(--rs-fs-nano)',
       letterSpacing: '0.15em',
       color: 'var(--text-dim, #aaa)',
     }}>

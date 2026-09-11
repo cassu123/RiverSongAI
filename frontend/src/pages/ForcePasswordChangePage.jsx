@@ -69,7 +69,7 @@ export default function ForcePasswordChangePage() {
             <div className="rs-status-dot" style={{ width: 48, height: 48, margin: '0 auto 16px', background: '#4ade80', animation: 'none', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span className="material-symbols-rounded" style={{ color: 'var(--bg-base)' }}>check</span>
             </div>
-            <div className="rs-card-value" style={{ fontSize: '1.2rem' }}>Update Complete</div>
+            <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-h3)' }}>Update Complete</div>
             <div className="rs-card-meta">Re-authenticating...</div>
           </div>
         ) : (
@@ -115,7 +115,7 @@ export default function ForcePasswordChangePage() {
               />
             </div>
 
-            {error && <div style={{ color: 'var(--md-error)', fontSize: '0.8rem' }}>{error}</div>}
+            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
               <button type="submit" className="rs-btn-primary" style={{ flex: 1 }} disabled={loading}>

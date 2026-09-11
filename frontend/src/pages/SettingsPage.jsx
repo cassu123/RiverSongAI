@@ -723,7 +723,7 @@ export default function SettingsPage({
         <h1 className="rs-greeting" style={{ fontSize: '2.2rem', fontWeight: 700, margin: '0 0 6px' }}>
           {activeHubTab === 'admin' ? 'Admin & System Control' : activeHubTab === 'users' ? 'Family & Household' : activeHubTab === 'profile' ? 'Identity & Account' : 'Assistant & Voice Settings'}
         </h1>
-        <div className="rs-greeting-sub" style={{ fontSize: '1.05rem', color: 'var(--text-muted)' }}>
+        <div className="rs-greeting-sub" style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--text-muted)' }}>
           {activeHubTab === 'admin'
             ? 'Global backend daemons, provider API routing, tool gating, and capability flags.'
             : activeHubTab === 'users'
@@ -764,7 +764,7 @@ export default function SettingsPage({
               key={g.id}
               className={`rs-pill ${group === g.id ? 'is-active' : ''}`}
               aria-current={group === g.id ? 'page' : undefined}
-              style={{ flexShrink: 0, padding: '8px 18px', fontSize: '0.95rem' }}
+              style={{ flexShrink: 0, padding: '8px 18px', fontSize: 'var(--rs-fs-small)' }}
               onClick={() => setGroup(g.id)}
               type="button"
             >
@@ -786,11 +786,11 @@ export default function SettingsPage({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)' }}>warning</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+            <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
               LLM routing change saved — reload required to take effect.
             </span>
           </div>
-          <button className="rs-btn-primary" style={{ fontSize: '0.75rem', padding: '6px 14px' }} onClick={() => window.location.reload()}>
+          <button className="rs-btn-primary" style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 14px' }} onClick={() => window.location.reload()}>
             RELOAD NOW
           </button>
         </div>
@@ -812,7 +812,7 @@ export default function SettingsPage({
             color: saveStatus === 'error'
               ? 'var(--md-on-error-container)'
               : 'var(--md-on-primary-container)',
-            fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.06em',
+            fontSize: 'var(--rs-fs-tiny)', fontWeight: 600, letterSpacing: '0.06em',
             boxShadow: '0 8px 32px -8px rgba(0,0,0,0.5)',
             border: '1px solid',
             borderColor: saveStatus === 'error'
@@ -1178,14 +1178,14 @@ export default function SettingsPage({
         {wakeWordRestart && (
           <div style={{ marginTop: 12, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+            <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
               System restart required to apply changes.
             </span>
           </div>
         )}
 
         <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container-low)', padding: '12px 16px', borderRadius: 'var(--md-shape-sm)' }}>
-          <div style={{ display: 'flex', gap: 16, fontSize: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: 16, fontSize: 'var(--rs-fs-micro)' }}>
             <span>Active Phrase: <strong>Hey River</strong></span>
           </div>
           <span className="rs-card-label" style={{ color: aiFeatures.WAKE_WORD_ENABLED ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
@@ -1242,7 +1242,7 @@ export default function SettingsPage({
           />
 
           <div className="rs-card-meta">
-            <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Retention Period</span>
+            <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>Retention Period</span>
             <select
               className="settings-select"
               style={{ width: '100%' }}

@@ -162,7 +162,7 @@ export default function SkillsPage({ setAction }) {
               rows={6}
               style={{ ...inputStyle, resize: 'vertical' }}
             />
-            {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem' }}>{error.toUpperCase()}</div>}
+            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="rs-pill is-active" onClick={save} disabled={saving}>
                 {saving ? 'SAVING…' : (activeId ? 'UPDATE' : 'CREATE')}
@@ -188,11 +188,11 @@ export default function SkillsPage({ setAction }) {
             {s.trigger_phrases && (
               <div style={{ marginTop: 8, marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {s.trigger_phrases.split(',').map(t => t.trim()).filter(Boolean).map((t, i) => (
-                  <span key={i} className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>{t}</span>
+                  <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>{t}</span>
                 ))}
               </div>
             )}
-            <div style={{ fontSize: '0.88rem', lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap', opacity: 0.9 }}>
+            <div style={{ fontSize: 'var(--rs-fs-small)', lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap', opacity: 0.9 }}>
               {s.prompt}
             </div>
             <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
@@ -217,7 +217,7 @@ const inputStyle = {
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
-  fontSize: '0.88rem',
+  fontSize: 'var(--rs-fs-small)',
   outline: 'none',
   fontFamily: 'inherit',
 }

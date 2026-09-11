@@ -120,15 +120,15 @@ export default function EarthTab({ token, active }) {
           <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: i < eonet.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>{e.title}</div>
+                <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>{e.title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ 
-                    fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                    fontSize: 'var(--rs-fs-nano)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
                     background: e.category_color + '33', color: e.category_color
                   }}>
                     {e.category}
                   </div>
-                  <div className="rs-card-meta" style={{ fontSize: '0.65rem' }}>
+                  <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
                     {e.distance_mi.toLocaleString()} mi away
                   </div>
                 </div>
@@ -141,7 +141,7 @@ export default function EarthTab({ token, active }) {
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>No nearby events reported recently.</div>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No nearby events reported recently.</div>
         )}
       </div>
 
@@ -154,34 +154,34 @@ export default function EarthTab({ token, active }) {
         {neows.length > 0 ? neows.map((n, i) => (
           <div key={i} style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--md-surface-container-high)', borderRadius: 8, border: n.hazardous ? '1px solid #ff440055' : '1px solid transparent' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>{n.name}</div>
+              <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 800 }}>{n.name}</div>
               {n.hazardous && (
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#ff440033', color: '#ff4400' }}>
+                <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#ff440033', color: '#ff4400' }}>
                   HAZARDOUS
                 </div>
               )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div>
-                <div className="rs-card-meta" style={{ fontSize: '0.6rem', marginBottom: 2 }}>APPROACH</div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{new Date(n.approach_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>APPROACH</div>
+                <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{new Date(n.approach_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
               </div>
               <div>
-                <div className="rs-card-meta" style={{ fontSize: '0.6rem', marginBottom: 2 }}>MISS DISTANCE</div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{n.miss_distance_lunar.toFixed(1)} LD</div>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>MISS DISTANCE</div>
+                <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{n.miss_distance_lunar.toFixed(1)} LD</div>
               </div>
               <div>
-                <div className="rs-card-meta" style={{ fontSize: '0.6rem', marginBottom: 2 }}>VELOCITY</div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{n.velocity_kph.toLocaleString()} km/h</div>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>VELOCITY</div>
+                <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{n.velocity_kph.toLocaleString()} km/h</div>
               </div>
               <div>
-                <div className="rs-card-meta" style={{ fontSize: '0.6rem', marginBottom: 2 }}>EST. DIAMETER</div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{n.diameter_m} m</div>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 2 }}>EST. DIAMETER</div>
+                <div style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{n.diameter_m} m</div>
               </div>
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>No close approaches today.</div>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No close approaches today.</div>
         )}
       </div>
 
@@ -196,7 +196,7 @@ export default function EarthTab({ token, active }) {
             <OcearchMap lat={weatherLatLon.lat} lon={weatherLatLon.lon} sharks={ocearch} />
           </div>
         ) : (
-          <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>No marine tracking data available.</div>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No marine tracking data available.</div>
         )}
       </div>
 

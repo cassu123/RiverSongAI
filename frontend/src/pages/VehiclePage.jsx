@@ -402,7 +402,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
       {/* Sector Vehicles Grid */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
-        <span className="card-metric-label" style={{ fontSize: '0.72rem', letterSpacing: '0.12em' }}>
+        <span className="card-metric-label" style={{ fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.12em' }}>
           SECTOR VEHICLES ({vehicles.length})
         </span>
       </div>
@@ -474,7 +474,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                       {odo > 0 ? (
                         <>{odo.toLocaleString()} <span className="card-metric-unit">{unit}</span></>
                       ) : (
-                        <span style={{ opacity: 0.6, fontSize: '0.95rem' }}>Not set</span>
+                        <span style={{ opacity: 0.6, fontSize: 'var(--rs-fs-small)' }}>Not set</span>
                       )}
                     </div>
                   </div>

@@ -20,7 +20,7 @@ export default function MemoryPage({ setAction }) {
     alignItems: isPhone ? 'stretch' : 'center',
   }
   const addInput = (grow) => ({
-    flex: isPhone ? '0 0 auto' : grow, padding: 8, fontSize: '0.8rem',
+    flex: isPhone ? '0 0 auto' : grow, padding: 8, fontSize: 'var(--rs-fs-tiny)',
     minWidth: 0, boxSizing: 'border-box',
   })
   const [memories, setMemories] = useState([])
@@ -143,7 +143,7 @@ export default function MemoryPage({ setAction }) {
         <div className="rs-card" style={{ flex: 1, padding: '8px 16px', background: 'var(--md-surface-container-low)' }}>
           <input 
             type="text" 
-            style={{ all: 'unset', width: '100%', fontSize: '0.9rem' }} 
+            style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)' }} 
             placeholder="FILTER ARCHIVES..." 
             value={filter} 
             onChange={e => setFilter(e.target.value)} 
@@ -165,7 +165,7 @@ export default function MemoryPage({ setAction }) {
     const kind = m.source_kind || 'conversation'
     const ref = m.source_ref ? ` (${m.source_ref})` : ''
     const date = new Date(m.created_at || m.last_updated).toLocaleDateString()
-    return <span style={{ opacity: 0.6, fontSize: '0.7rem' }}>Learned from {kind}{ref}, {date}</span>
+    return <span style={{ opacity: 0.6, fontSize: 'var(--rs-fs-nano)' }}>Learned from {kind}{ref}, {date}</span>
   }
 
   return (
@@ -230,26 +230,26 @@ export default function MemoryPage({ setAction }) {
                 </span>
                 
                 {m._type === 'FACT' && (
-                  <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 6px', background: m.source === 'explicit' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
+                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 6px', background: m.source === 'explicit' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
                     {m.source.toUpperCase()}
                   </span>
                 )}
                 {m._type === 'PREFERENCE' && (
-                  <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 6px', opacity: 0.8 }}>
+                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 6px', opacity: 0.8 }}>
                     CONFIDENCE: {m.confidence.toUpperCase()}
                   </span>
                 )}
                 
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                   {m._type === 'SUGGESTION' && (
-                    <button className="rs-pill" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: 'var(--rs-status-success)' }}>
+                    <button className="rs-pill" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', background: 'var(--rs-status-success)' }}>
                       APPROVE
                     </button>
                   )}
                   {editingId !== m.id && m._type !== 'SUGGESTION' && (
-                    <button className="rs-pill" onClick={() => startEdit(m)} style={{ padding: '4px 8px', fontSize: '0.7rem' }}>EDIT</button>
+                    <button className="rs-pill" onClick={() => startEdit(m)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }}>EDIT</button>
                   )}
-                  <button className="rs-pill" onClick={() => handleDelete(m.id, m._type)} style={{ padding: '4px 8px', fontSize: '0.7rem', color: 'var(--rs-status-error)' }}>
+                  <button className="rs-pill" onClick={() => handleDelete(m.id, m._type)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-error)' }}>
                     {m._type === 'SUGGESTION' ? 'DISMISS' : 'DELETE'}
                   </button>
                 </div>
@@ -284,7 +284,7 @@ export default function MemoryPage({ setAction }) {
                   </div>
                 </div>
               ) : (
-                <div className="rs-card-value" style={{ fontSize: '1rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                   {m.text}
                 </div>
               )}
@@ -292,7 +292,7 @@ export default function MemoryPage({ setAction }) {
               <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 {renderProvenance(m)}
                 {m._type === 'SUMMARY' && m.expires_at && (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--rs-status-warning)' }}>
+                  <span style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-warning)' }}>
                     Expires: {new Date(m.expires_at).toLocaleDateString()}
                   </span>
                 )}

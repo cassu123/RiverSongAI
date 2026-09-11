@@ -90,7 +90,7 @@ export default function ReadingPage({ setAction }) {
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
-                style={{ all: 'unset', width: '100%', fontSize: '0.95rem', fontWeight: 600 }} 
+                style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }} 
                 placeholder="SEARCH ARCHIVES..." 
                 value={search} 
                 onChange={e => setSearch(e.target.value)} 
@@ -180,10 +180,10 @@ export default function ReadingPage({ setAction }) {
                   )}
                 </div>
                 <div style={{ padding: 16 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.92rem', marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>{book.title}</div>
-                  <div className="rs-card-meta" style={{ marginTop: 6, fontSize: '0.7rem' }}>{book.author}</div>
+                  <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-small)', marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>{book.title}</div>
+                  <div className="rs-card-meta" style={{ marginTop: 6, fontSize: 'var(--rs-fs-nano)' }}>{book.author}</div>
                   <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <span className="rs-card-label" style={{ fontSize: '0.55rem' }}>{book.status.toUpperCase()}</span>
+                     <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{book.status.toUpperCase()}</span>
                      <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.3 }}>edit_note</span>
                   </div>
                 </div>
@@ -213,7 +213,7 @@ export default function ReadingPage({ setAction }) {
                   }}>
                     <div className="rs-card-inner" style={{ background: active ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'transparent', border: active ? '1px solid var(--primary)' : '1px solid transparent' }}>
                       <span className="material-symbols-rounded" style={{ fontSize: '1.8rem', color: s.color, marginBottom: 8 }}>{s.icon}</span>
-                      <div style={{ fontWeight: 700, fontSize: '0.75rem' }}>{s.label.toUpperCase()}</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)' }}>{s.label.toUpperCase()}</div>
                     </div>
                   </button>
                 )

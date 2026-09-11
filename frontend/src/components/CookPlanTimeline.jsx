@@ -47,7 +47,7 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
           <span
             title={lane.title}
             style={{
-              width: 74, flexShrink: 0, fontSize: '0.66rem', fontWeight: 700,
+              width: 74, flexShrink: 0, fontSize: 'var(--rs-fs-nano)', fontWeight: 700,
               letterSpacing: '0.04em', textTransform: 'uppercase',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               color: colorFor[lane.id],
@@ -81,11 +81,11 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
       ))}
 
       <div style={{ display: 'flex', gap: 14, marginTop: 2, paddingLeft: 82, flexWrap: 'wrap' }}>
-        <span className="rs-card-meta" style={{ fontSize: '0.66rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ width: 14, height: 8, borderRadius: 2, background: 'var(--md-on-surface)', opacity: 0.8 }} />
           you
         </span>
-        <span className="rs-card-meta" style={{ fontSize: '0.66rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{
             width: 14, height: 8, borderRadius: 2, background: 'var(--md-on-surface)', opacity: 0.42,
             backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.28) 3px, rgba(0,0,0,0.28) 6px)',

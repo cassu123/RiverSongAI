@@ -125,7 +125,7 @@ export default function ComparePage({ setAction }) {
           <ModelInput label="MODEL A" value={modelA} onChange={setModelA} />
           <ModelInput label="MODEL B" value={modelB} onChange={setModelB} />
         </div>
-        {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem', marginTop: 10 }}>{error.toUpperCase()}</div>}
+        {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)', marginTop: 10 }}>{error.toUpperCase()}</div>}
       </div>
 
       {run && (
@@ -159,7 +159,7 @@ export default function ComparePage({ setAction }) {
           <div className="rs-card-label" style={{ marginBottom: 8 }}>LEADERBOARD (YOUR VOTES)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {board.slice(0, 8).map((row, i) => (
-              <div key={`${row.provider}:${row.model}:${i}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div key={`${row.provider}:${row.model}:${i}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-micro)', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <span>{row.provider} · {row.model}</span>
                 <span style={{ opacity: 0.7 }}>{row.wins}W · {row.ties}T · {row.losses}L · {(row.win_rate * 100).toFixed(0)}%</span>
               </div>
@@ -173,8 +173,8 @@ export default function ComparePage({ setAction }) {
           <div className="rs-card-label" style={{ marginBottom: 8 }}>RECENT RUNS</div>
           {history.slice(0, 6).map(h => (
             <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>{h.prompt}</span>
-              <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>{h.winner ? h.winner.toUpperCase() : 'OPEN'}</span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--rs-fs-tiny)' }}>{h.prompt}</span>
+              <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>{h.winner ? h.winner.toUpperCase() : 'OPEN'}</span>
             </div>
           ))}
         </div>
@@ -186,7 +186,7 @@ export default function ComparePage({ setAction }) {
 function ModelInput({ label, value, onChange }) {
   return (
     <div>
-      <div className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 4 }}>{label}</div>
+      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>{label}</div>
       <div style={{ display: 'flex', gap: 6 }}>
         <input
           type="text"
@@ -211,7 +211,7 @@ function ResponseCard({ label, body, chosen }) {
   return (
     <div className="rs-card" style={{ padding: 14, border: chosen ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.08)' }}>
       <div className="rs-card-label" style={{ marginBottom: 8 }}>{label}</div>
-      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>{body || '(empty)'}</pre>
+      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 'var(--rs-fs-tiny)', lineHeight: 1.5, margin: 0 }}>{body || '(empty)'}</pre>
     </div>
   )
 }
@@ -224,7 +224,7 @@ const inputStyle = {
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
-  fontSize: '0.85rem',
+  fontSize: 'var(--rs-fs-tiny)',
   outline: 'none',
   fontFamily: 'inherit',
 }

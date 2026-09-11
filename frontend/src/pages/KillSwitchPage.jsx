@@ -130,7 +130,7 @@ export default function KillSwitchPage() {
             </p>
             {confirm ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ flex: '1 1 100%', marginBottom: 8, color: 'var(--warn)', fontSize: '0.85rem', fontWeight: 600 }}>Are you sure? This cannot be undone remotely.</span>
+                <span style={{ flex: '1 1 100%', marginBottom: 8, color: 'var(--warn)', fontSize: 'var(--rs-fs-tiny)', fontWeight: 600 }}>Are you sure? This cannot be undone remotely.</span>
                 <button
                   className="rs-btn-primary"
                   style={{ background: '#ff3322', color: 'white' }}
@@ -194,7 +194,7 @@ export default function KillSwitchPage() {
                 border: '1px solid',
                 borderColor: resetMsg.includes('denied') || resetMsg.includes('failed') ? 'rgba(255,51,34,0.3)' : 'rgba(0,255,204,0.3)',
                 color: resetMsg.includes('denied') || resetMsg.includes('failed') ? '#ff6655' : 'var(--secondary)',
-                fontSize: '0.85rem'
+                fontSize: 'var(--rs-fs-tiny)'
               }}>
                 {resetMsg}
               </div>
@@ -214,8 +214,8 @@ export default function KillSwitchPage() {
               "Reset requires the bcrypt password hash set in KILL_SWITCH_PASSWORD_HASH in your .env file.",
               "After reset, restart the server process to resume conversation handling."
             ].map((text, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, fontSize: '0.85rem' }}>
-                <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>0{i+1}</span>
+              <div key={i} style={{ display: 'flex', gap: 12, fontSize: 'var(--rs-fs-tiny)' }}>
+                <span style={{ opacity: 0.5, fontSize: 'var(--rs-fs-nano)' }}>0{i+1}</span>
                 <span className="rs-card-meta" style={{ color: 'inherit', opacity: 0.8 }}>{text}</span>
               </div>
             ))}

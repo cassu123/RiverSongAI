@@ -56,7 +56,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
         <SimulateButton program={program} onDone={refresh} />
-        <button className="rs-btn-ghost" style={{ fontSize: '0.78rem', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
           onClick={() => setShowClaim(true)}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add_link</span>
           Claim real unit
@@ -82,16 +82,16 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
                 className={`rs-card is-tappable ${selected?.unit_id === u.unit_id ? 'is-elev' : ''}`}
                 style={{ padding: 12, cursor: 'pointer', borderColor: selected?.unit_id === u.unit_id ? accent : undefined }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {u.name || u.unit_id}
                   </span>
                   <UnitStatusPill unit={u} />
                 </div>
                 {(u.metadata?.simulated || String(u.unit_id).startsWith('sim-')) && (
-                  <span className="rs-pill" style={{ fontSize: '0.55rem', padding: '1px 6px', marginTop: 6, display: 'inline-block' }}>SIM</span>
+                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', marginTop: 6, display: 'inline-block' }}>SIM</span>
                 )}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button className="rs-btn-ghost" style={{ fontSize: '0.62rem', padding: '3px 8px', color: 'var(--md-error)', borderColor: 'var(--md-error)' }}
+                  <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-nano)', padding: '3px 8px', color: 'var(--md-error)', borderColor: 'var(--md-error)' }}
                     onClick={(e) => { e.stopPropagation(); remove(u) }}>Remove</button>
                 </div>
               </div>

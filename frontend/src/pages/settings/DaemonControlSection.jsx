@@ -19,7 +19,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>WARDEN (Vision/Security)</div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>WARDEN (Vision/Security)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>RTSP Camera Monitoring</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -40,7 +40,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>MECHANIC (Telemetry)</div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>MECHANIC (Telemetry)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>MAVLink / ArduRover Link</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -67,7 +67,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>PULSE (Ambient Feeds)</div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>PULSE (Ambient Feeds)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>News, Markets, and Flights Poller</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -88,7 +88,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>SCRIBE (Chronos Heuristics)</div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>SCRIBE (Chronos Heuristics)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>Schedule & Chronobiology Heuristics</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -109,7 +109,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div style={{ padding: 16, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>SIFTER (RAG)</div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>SIFTER (RAG)</div>
                   <div className="rs-card-meta" style={{ margin: 0 }}>Background Document Indexing</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>

@@ -42,13 +42,13 @@ export default function HappeningsTab({ token, active }) {
               width: 24, height: 24, borderRadius: 4, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: t.source === 'hackernews' ? '#ff6600' : '#ff4500',
-              color: 'var(--fg)', fontSize: '14px', fontWeight: 800
+              color: 'var(--fg)', fontSize: 'var(--rs-fs-small)', fontWeight: 800
             }}>
               {t.source === 'hackernews' ? 'Y' : 'r'}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <a href={t.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>
+                <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>
                   {t.title}
                 </div>
               </a>
@@ -57,7 +57,7 @@ export default function HappeningsTab({ token, active }) {
                   <img src={t.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 </div>
               )}
-              <div className="rs-card-meta" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>arrow_upward</span>
                   {t.score.toLocaleString()}
@@ -78,7 +78,7 @@ export default function HappeningsTab({ token, active }) {
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>No trending discussions.</div>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No trending discussions.</div>
         )}
       </div>
 
@@ -99,18 +99,18 @@ export default function HappeningsTab({ token, active }) {
             )}
             <div style={{ minWidth: 0, flex: 1 }}>
               <a href={e.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>
+                <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>
                   {e.title}
                 </div>
               </a>
-              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--primary)', marginBottom: 4 }}>
+              <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--primary)', marginBottom: 4 }}>
                 {new Date(e.start_time).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
-              <div className="rs-card-meta" style={{ fontSize: '0.7rem', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.venue || e.city}</span>
                 <span style={{ whiteSpace: 'nowrap' }}>{e.distance_mi} mi</span>
               </div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, background: 'var(--md-surface-container-highest)', display: 'inline-block', padding: '2px 6px', borderRadius: 4 }}>
+              <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, background: 'var(--md-surface-container-highest)', display: 'inline-block', padding: '2px 6px', borderRadius: 4 }}>
                 {e.price_max > 0 ? (
                   e.price_min === e.price_max ? `$${e.price_min}` : `$${e.price_min} - $${e.price_max}`
                 ) : 'Free'}
@@ -118,7 +118,7 @@ export default function HappeningsTab({ token, active }) {
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>No local events found.</div>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No local events found.</div>
         )}
       </div>
 

@@ -143,7 +143,7 @@ export default function InventoryPage({ setAction }) {
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
-                style={{ all: 'unset', width: '100%', fontSize: '0.95rem', fontWeight: 600 }} 
+                style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }} 
                 placeholder="IDENTIFY ASSET..." 
                 value={query} 
                 onChange={e => setQuery(e.target.value)} 
@@ -324,10 +324,10 @@ export default function InventoryPage({ setAction }) {
                   <span className="rs-card-label">{(item.category || 'ASSET').toUpperCase()}</span>
                   <div className="rs-status-strip" style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 900 }}>{item.quantity}</span>
-                    <span style={{ fontSize: '0.6rem' }}>{(item.unit || 'UNIT').toUpperCase()}</span>
+                    <span style={{ fontSize: 'var(--rs-fs-nano)' }}>{(item.unit || 'UNIT').toUpperCase()}</span>
                   </div>
                 </div>
-                <div className="rs-card-value" style={{ fontSize: '1.3rem', marginBottom: 4 }}>{item.name}</div>
+                <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-h3)', marginBottom: 4 }}>{item.name}</div>
                 <div className="rs-card-meta" style={{ marginBottom: 12 }}>
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', verticalAlign: 'middle', marginRight: 6 }}>location_on</span>
                   {item.location || 'SECTOR UNKNOWN'}

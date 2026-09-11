@@ -34,7 +34,7 @@ export default function SetupPage() {
         
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center', marginBottom: 8 }}>
-            <span className="rs-pill is-active" style={{ fontSize: '1.2rem', padding: '12px 16px' }}>CORE</span>
+            <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-h3)', padding: '12px 16px' }}>CORE</span>
             <span style={{ fontFamily: 'var(--font-mood)', fontSize: '1.6rem', letterSpacing: '0.2em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
           <div className="rs-card-label" style={{ opacity: 0.5 }}>INITIAL SYSTEM BOOTSTRAP</div>
@@ -50,7 +50,7 @@ export default function SetupPage() {
             <input
               type="text"
               className="rs-pill"
-              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
+              style={{ width: '100%', padding: '14px 20px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               placeholder="Real name or call-sign"
@@ -64,7 +64,7 @@ export default function SetupPage() {
             <input
               type="email"
               className="rs-pill"
-              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
+              style={{ width: '100%', padding: '14px 20px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="admin@riversong.node"
@@ -77,7 +77,7 @@ export default function SetupPage() {
             <input
               type="password"
               className="rs-pill"
-              style={{ width: '100%', padding: '14px 20px', fontSize: '1rem', background: 'var(--md-surface-container)' }}
+              style={{ width: '100%', padding: '14px 20px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -85,7 +85,7 @@ export default function SetupPage() {
             />
           </div>
 
-          {error && <div style={{ color: 'var(--md-error)', fontSize: '0.8rem', textAlign: 'center' }}>{error.toUpperCase()}</div>}
+          {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)', textAlign: 'center' }}>{error.toUpperCase()}</div>}
 
           <button className="rs-btn-primary" type="submit" disabled={loading} style={{ marginTop: 8 }}>
             {loading ? 'INITIALIZING KERNEL...' : 'PROVISION NODE'}

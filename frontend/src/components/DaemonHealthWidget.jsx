@@ -123,7 +123,7 @@ export default function DaemonHealthWidget({ token }) {
           paddingTop: 8,
           borderTop: `1px solid ${C.divider}`,
           fontFamily: 'var(--font-mono)',
-          fontSize: '0.55rem',
+          fontSize: 'var(--rs-fs-nano)',
           letterSpacing: '0.06em',
           color: liveCount === names.length ? C.dim : C.amber,
           opacity: liveCount === names.length ? 0.7 : 1,
@@ -163,7 +163,7 @@ function DaemonRow({ name, alive, port, status, age, first }) {
       />
       <span
         style={{
-          fontSize: '0.58rem',
+          fontSize: 'var(--rs-fs-nano)',
           fontWeight: 800,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
@@ -183,7 +183,7 @@ function DaemonRow({ name, alive, port, status, age, first }) {
         <span
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.52rem',
+            fontSize: 'var(--rs-fs-nano)',
             letterSpacing: '0.04em',
             color: C.amber,
             flexShrink: 0,
@@ -196,7 +196,7 @@ function DaemonRow({ name, alive, port, status, age, first }) {
         <span
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.52rem',
+            fontSize: 'var(--rs-fs-nano)',
             letterSpacing: '0.04em',
             color: C.dim,
             opacity: 0.6,
@@ -209,7 +209,7 @@ function DaemonRow({ name, alive, port, status, age, first }) {
       <span
         style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: '0.58rem',
+          fontSize: 'var(--rs-fs-nano)',
           letterSpacing: '0.04em',
           color: alive ? C.dim : C.red,
           opacity: alive ? 0.75 : 1,
@@ -229,7 +229,7 @@ function Note({ children, tone = C.dim }) {
       style={{
         padding: '14px 0',
         fontFamily: 'var(--font-mono)',
-        fontSize: '0.58rem',
+        fontSize: 'var(--rs-fs-nano)',
         letterSpacing: '0.05em',
         color: tone,
       }}

@@ -54,38 +54,38 @@ export default function SpaceTab({ token, active }) {
                 {solar.kp_index?.toFixed(1) || '0.0'}
               </div>
               <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: solar.kp_color || '#888' }}>
+                <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, color: solar.kp_color || '#888' }}>
                   {solar.kp_label || 'Normal'}
                 </div>
-                <div className="rs-card-meta" style={{ fontSize: '0.7rem', marginTop: 2 }}>Kp Index</div>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: 2 }}>Kp Index</div>
               </div>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
               <div style={{ background: 'var(--md-surface-container-high)', padding: '10px 12px', borderRadius: 8 }}>
-                <div className="rs-card-meta" style={{ fontSize: '0.6rem', marginBottom: 4 }}>SOLAR WIND</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: 700 }}>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>SOLAR WIND</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-small)', fontWeight: 700 }}>
                   {solar.solar_wind_speed_kms != null ? `${solar.solar_wind_speed_kms} km/s` : '—'}
                 </div>
               </div>
               <div style={{ background: 'var(--md-surface-container-high)', padding: '10px 12px', borderRadius: 8 }}>
-                <div className="rs-card-meta" style={{ fontSize: '0.6rem', marginBottom: 4 }}>MAGNETIC FIELD</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: 700 }}>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>MAGNETIC FIELD</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-small)', fontWeight: 700 }}>
                   {solar.bz_nt != null ? `${solar.bz_nt} nT` : '—'}
                 </div>
               </div>
             </div>
 
-            <div className="rs-card-label" style={{ fontSize: '0.55rem', opacity: 0.5, marginBottom: 8 }}>FLARES (24H)</div>
+            <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5, marginBottom: 8 }}>FLARES (24H)</div>
             {solar.flares_24h?.length > 0 ? (
               solar.flares_24h.map((f, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < solar.flares_24h.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
-                  <span style={{ color: '#ff8800', fontWeight: 700, fontSize: '0.8rem' }}>{f.class}</span>
-                  <span className="rs-card-meta" style={{ fontSize: '0.75rem' }}>{f.region || 'Unknown Region'}</span>
+                  <span style={{ color: '#ff8800', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>{f.class}</span>
+                  <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>{f.region || 'Unknown Region'}</span>
                 </div>
               ))
             ) : (
-              <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>No significant flares reported.</div>
+              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No significant flares reported.</div>
             )}
           </div>
         )}
@@ -102,9 +102,9 @@ export default function SpaceTab({ token, active }) {
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container-high)', padding: '12px 16px', borderRadius: 8 }}>
-              <span className="rs-card-meta" style={{ fontSize: '0.75rem' }}>Visibility at your location:</span>
+              <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>Visibility at your location:</span>
               <span style={{ 
-                fontSize: '0.75rem', fontWeight: 700,
+                fontSize: 'var(--rs-fs-micro)', fontWeight: 700,
                 color: aurora.your_chance === 'none' ? 'var(--md-on-surface-variant)' : 'var(--primary)'
               }}>
                 {aurora.your_chance === 'none' ? 'None' : aurora.your_chance === 'low' ? 'Low' : 'Likely'}
@@ -127,14 +127,14 @@ export default function SpaceTab({ token, active }) {
               </div>
             )}
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: 4, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 4, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {l.name}
               </div>
-              <div className="rs-card-meta" style={{ fontSize: '0.65rem', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {l.provider} · {l.pad}
               </div>
               <div style={{ 
-                fontSize: '0.7rem', fontWeight: 600,
+                fontSize: 'var(--rs-fs-nano)', fontWeight: 600,
                 color: l.status === 'Go' ? 'var(--primary)' : 'var(--md-on-surface-variant)'
               }}>
                 {new Date(l.net).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -143,7 +143,7 @@ export default function SpaceTab({ token, active }) {
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>No upcoming launches found.</div>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No upcoming launches found.</div>
         )}
       </div>
 

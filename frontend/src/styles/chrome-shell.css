@@ -17,14 +17,18 @@
   --rs-motion-slow:   750ms;
   --rs-motion-curve:  cubic-bezier(0.25, 1, 0.5, 1);
 
-  /* Type scale — six steps, nothing between them. A dense instrument reads
-     because it has few sizes, not many. */
+  /* Type scale — eight steps, nothing between them. A dense instrument reads
+     because it has few sizes, not many. Nano is the floor: 11px is the
+     smallest size that stays legible on a phone, and nothing in the app may
+     go under it. */
   --rs-fs-h1:         clamp(2.5rem, 8vw, 4.5rem);
   --rs-fs-h2:         clamp(1.5rem, 4vw, 2.2rem);
   --rs-fs-h3:         1.25rem;
   --rs-fs-body:       1.05rem;
   --rs-fs-small:      0.9rem;
+  --rs-fs-tiny:       0.8125rem;
   --rs-fs-micro:      0.75rem;
+  --rs-fs-nano:       0.6875rem;
 
   /* Spacing — 4pt base. Use these instead of a new number. */
   --rs-space-1:  4px;

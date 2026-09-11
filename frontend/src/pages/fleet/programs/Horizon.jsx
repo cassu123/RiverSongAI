@@ -35,7 +35,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, commands, refresh
         </div>
         <BatteryBar pct={t.battery_pct} />
         <div style={{ marginTop: 14 }}>
-          <div className="rs-card-label" style={{ fontSize: '0.58rem', marginBottom: 4 }}>ALTITUDE (m)</div>
+          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>ALTITUDE (m)</div>
           <Sparkline data={telemetry} field="altitude_m" color="var(--primary)" />
         </div>
       </Panel>
@@ -54,7 +54,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, commands, refresh
         {commands?.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {commands.slice(0, 8).map(c => (
-              <div key={c.command_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+              <div key={c.command_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-micro)' }}>
                 <span>{c.payload?.command}</span>
                 <span style={{ opacity: 0.55 }}>{c.status} · {new Date(c.issued_at).toLocaleTimeString()}</span>
               </div>

@@ -161,7 +161,7 @@ export default function PresetsPage({ setAction }) {
                 </label>
               )}
             </div>
-            {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem' }}>{error.toUpperCase()}</div>}
+            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="rs-pill is-active" onClick={save}>{editId ? 'UPDATE' : 'CREATE'}</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
@@ -183,7 +183,7 @@ export default function PresetsPage({ setAction }) {
             </div>
             <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {Object.entries(p.config || {}).map(([k, v]) => (
-                <span key={k} className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
+                <span key={k} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>
                   {k.toUpperCase()}: {String(v).slice(0, 30).toUpperCase()}
                 </span>
               ))}
@@ -207,11 +207,11 @@ const inputStyle = {
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
-  fontSize: '0.85rem',
+  fontSize: 'var(--rs-fs-tiny)',
   outline: 'none',
   fontFamily: 'inherit',
 }
 
 const checkLabel = {
-  display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--rs-fs-micro)', cursor: 'pointer',
 }

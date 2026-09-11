@@ -84,15 +84,15 @@ export default function AdminModelFamiliesSection({ token }) {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>
                     {family.displayName}
                     {ov.quirky_name && (
-                      <span style={{ marginLeft: 8, fontWeight: 400, fontSize: '0.8rem', color: 'var(--md-primary)' }}>
+                      <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-primary)' }}>
                         → {ov.quirky_name}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--md-outline)' }}>
+                  <div style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--md-outline)' }}>
                     {family.provider} · {family.blurb}
                   </div>
                 </div>
@@ -103,7 +103,7 @@ export default function AdminModelFamiliesSection({ token }) {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-                <label style={{ fontSize: '0.72rem' }}>
+                <label style={{ fontSize: 'var(--rs-fs-micro)' }}>
                   <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
                     Quirky name
                   </span>
@@ -119,7 +119,7 @@ export default function AdminModelFamiliesSection({ token }) {
                 </label>
 
                 {TIER_ORDER.map(tier => (
-                  <label key={tier} style={{ fontSize: '0.72rem' }}>
+                  <label key={tier} style={{ fontSize: 'var(--rs-fs-micro)' }}>
                     <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
                       {TIER_META[tier].label} model_id
                     </span>

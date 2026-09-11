@@ -33,28 +33,28 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
         opacity: isDisabled ? 0.5 : 1
       }}
     >
-      <div className="rs-card-value" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.display_name}</div>
+      <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 600, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.display_name}</div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {model.vram_gb != null && (
           <>
-            <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
               {model.vram_gb <= 4 && <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>bolt</span>}
               {model.vram_gb <= 4 ? 'GPU' : 'RAM'} {model.vram_gb}GB
             </span>
             {model.vram_gb <= 4 && (
-              <span className="rs-pill is-active" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>SPEAK</span>
+              <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>SPEAK</span>
             )}
           </>
         )}
 
         {model.is_cloud && (
           (model.cost_per_1k_input_usd === 0 && model.cost_per_1k_output_usd === 0) ? (
-            <span className="rs-pill is-active" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>FREE</span>
+            <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>FREE</span>
           ) : (
             <>
-              {inputCost && <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>IN {inputCost}</span>}
-              {outputCost && <span className="rs-pill" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>OUT {outputCost}</span>}
+              {inputCost && <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>IN {inputCost}</span>}
+              {outputCost && <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>OUT {outputCost}</span>}
             </>
           )
         )}
@@ -114,7 +114,7 @@ export default function ModelSection({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'var(--primary)' }}>auto_awesome</span>
             <div style={{ flex: 1 }}>
-              <div className="rs-card-value" style={{ fontSize: '1rem', fontWeight: 600 }}>Let River Decide</div>
+              <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 600 }}>Let River Decide</div>
               <div className="rs-card-meta">
                 River picks the best engine per message — local first, then NVIDIA NIM (free)
                 or cloud, with an automatic local fallback if a cloud model is unavailable.
@@ -180,7 +180,7 @@ export default function ModelSection({
                 key={f}
                 onClick={() => setModelFilter(f)}
                 className={`rs-pill ${modelFilter === f ? 'is-active' : ''}`}
-                style={{ fontSize: '0.7rem' }}
+                style={{ fontSize: 'var(--rs-fs-nano)' }}
               >
                 {f}
               </button>
@@ -188,7 +188,7 @@ export default function ModelSection({
           </div>
 
           <div className="rs-card-label" style={{ marginBottom: 8 }}>
-            <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--primary)', color: 'black' }}>LOCAL</span>
+            <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', background: 'var(--primary)', color: 'black' }}>LOCAL</span>
             {llmRoutingFlags?.local_enabled
               ? 'Ollama — runs on your machine'
               : 'Disabled globally by admin switch above.'}
@@ -209,7 +209,7 @@ export default function ModelSection({
         {/* Cloud models */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 }}>
           <div className="rs-card-label">
-            <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'black' }}>CLOUD</span>
+            <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', background: 'var(--md-tertiary)', color: 'black' }}>CLOUD</span>
             {llmRoutingFlags?.cloud_enabled
               ? 'API providers — costs per token · requires API key in .env'
               : 'Disabled globally by admin switch above.'}
@@ -233,16 +233,16 @@ export default function ModelSection({
             return (
               <div key={providerKey} style={{ opacity: enabled ? 1 : 0.6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{providerNames[providerKey]}</span>
+                  <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>{providerNames[providerKey]}</span>
                   {!enabled && (
-                    <span className="rs-card-label" style={{ fontSize: '0.6rem', color: 'var(--md-error)' }}>
+                    <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--md-error)' }}>
                       {llmRoutingFlags?.cloud_enabled
                         ? 'LOCKED (MISSING KEY IN .ENV)'
                         : 'DISABLED GLOBALLY BY ADMIN SWITCH'}
                     </span>
                   )}
                   {enabled && (
-                    <span className="rs-card-label" style={{ fontSize: '0.6rem', color: 'var(--rs-status-nominal)' }}>ENABLED</span>
+                    <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-nominal)' }}>ENABLED</span>
                   )}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>

@@ -244,13 +244,13 @@ function TwoFactorCard({ token }) {
               style={{
                 display: 'block', padding: '8px 12px',
                 background: 'var(--md-surface-container)',
-                borderRadius: 6, fontSize: '0.85rem',
+                borderRadius: 6, fontSize: 'var(--rs-fs-tiny)',
                 wordBreak: 'break-all', marginBottom: 16,
               }}
             >
               {enrollment.secret}
             </code>
-            <div className="rs-card-label" style={{ fontSize: '0.6rem', marginBottom: 6 }}>VERIFY WITH FIRST CODE</div>
+            <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 6 }}>VERIFY WITH FIRST CODE</div>
             <input
               type="text"
               inputMode="numeric"
@@ -283,7 +283,7 @@ function TwoFactorCard({ token }) {
             }}
           >
             {recoveryCodes.map((c, i) => (
-              <code key={i} style={{ fontSize: '0.9rem', textAlign: 'center' }}>{c}</code>
+              <code key={i} style={{ fontSize: 'var(--rs-fs-small)', textAlign: 'center' }}>{c}</code>
             ))}
           </div>
           <button className="rs-btn-primary" onClick={dismissRecoveryCodes}>I'VE SAVED THEM</button>
@@ -449,25 +449,25 @@ export default function ProfilePage({
           </div>
           <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 240 }}>
-              <div className="rs-card-label" style={{ fontSize: '0.75rem', marginBottom: 8 }}>DISPLAY NAME</div>
+              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>DISPLAY NAME</div>
               <input 
                 type="text" 
                 className="rs-pill" 
-                style={{ width: '100%', padding: '12px 18px', fontSize: '1.05rem', background: 'var(--md-surface-container)' }}
+                style={{ width: '100%', padding: '12px 18px', fontSize: 'var(--rs-fs-body)', background: 'var(--md-surface-container)' }}
                 value={displayName} 
                 onChange={e => setDisplayName(e.target.value)} 
               />
             </div>
-            <button className="rs-btn-primary" style={{ padding: '12px 24px', fontSize: '0.95rem' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
+            <button className="rs-btn-primary" style={{ padding: '12px 24px', fontSize: 'var(--rs-fs-small)' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
           </div>
           <div className="rs-card-meta" style={{ marginTop: 20, display: 'flex', gap: 32 }}>
             <div>
-              <div className="rs-card-label" style={{ fontSize: '0.7rem' }}>ACCOUNT EMAIL</div>
-              <div style={{ fontSize: '1rem', marginTop: 4 }}>{user?.email}</div>
+              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ACCOUNT EMAIL</div>
+              <div style={{ fontSize: 'var(--rs-fs-body)', marginTop: 4 }}>{user?.email}</div>
             </div>
             <div>
-              <div className="rs-card-label" style={{ fontSize: '0.7rem' }}>ROLE & CLEARANCE</div>
-              <div style={{ fontSize: '1rem', marginTop: 4, color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)', fontWeight: 700 }}>
+              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ROLE & CLEARANCE</div>
+              <div style={{ fontSize: 'var(--rs-fs-body)', marginTop: 4, color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)', fontWeight: 700 }}>
                 {user?.role ? user.role.toUpperCase() : 'USER'}
               </div>
             </div>
@@ -487,8 +487,8 @@ export default function ProfilePage({
                 style={{ borderColor: universe === u.key ? 'var(--primary)' : undefined }}
                 onClick={() => onUniverseChange(u.key)}
               >
-                <div className="rs-card-value" style={{ fontSize: '1.1rem', letterSpacing: '0.06em' }}>{u.label}</div>
-                <div className="rs-card-meta" style={{ fontSize: '0.85rem' }}>{u.hint}</div>
+                <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', letterSpacing: '0.06em' }}>{u.label}</div>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-tiny)' }}>{u.hint}</div>
               </div>
             ))}
           </div>
@@ -505,7 +505,7 @@ export default function ProfilePage({
                 key={e.key} 
                 className={`rs-pill ${environment === e.key ? 'is-active' : ''}`}
                 onClick={() => onEnvironmentChange(e.key)}
-                style={{ justifyContent: 'space-between', padding: '10px 16px', fontSize: '0.95rem' }}
+                style={{ justifyContent: 'space-between', padding: '10px 16px', fontSize: 'var(--rs-fs-small)' }}
               >
                 <span>{e.label}</span>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: e.primary }} />
@@ -524,7 +524,7 @@ export default function ProfilePage({
                 key={m.key} 
                 className={`rs-pill ${mood === m.key ? 'is-active' : ''}`}
                 onClick={() => onMoodChange(m.key)}
-                style={{ justifyContent: 'space-between', padding: '10px 16px', fontSize: '0.95rem' }}
+                style={{ justifyContent: 'space-between', padding: '10px 16px', fontSize: 'var(--rs-fs-small)' }}
               >
                 <span>{m.label}</span>
                 {mood === m.key && <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>check</span>}
@@ -540,14 +540,14 @@ export default function ProfilePage({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
-              <div className="rs-card-value" style={{ fontSize: '1.15rem' }}>Device Push Alerts</div>
-              <div className="rs-card-meta" style={{ fontSize: '0.95rem' }}>Enable push notifications to receive system briefings, alerts, and smart home events directly on this device.</div>
+              <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)' }}>Device Push Alerts</div>
+              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)' }}>Enable push notifications to receive system briefings, alerts, and smart home events directly on this device.</div>
             </div>
             <button 
               className={`rs-btn-primary ${pushStatus === 'linked' ? 'is-active' : ''}`} 
               disabled={pushStatus === 'linked'}
               onClick={handlePushEnable}
-              style={{ padding: '12px 24px', fontSize: '0.95rem' }}
+              style={{ padding: '12px 24px', fontSize: 'var(--rs-fs-small)' }}
             >
               {pushStatus === 'linked' ? 'LINK ESTABLISHED' : 'AUTHORIZE LINK'}
             </button>
@@ -594,11 +594,11 @@ export default function ProfilePage({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                         <span className="material-symbols-rounded" style={{ fontSize: '24px', opacity: 0.8 }}>{service.icon}</span>
                         <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-base)', fontSize: '0.95rem' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-base)', fontSize: 'var(--rs-fs-small)' }}>
                             {service.name}
                           </div>
                           {isConnected && (
-                            <div style={{ fontSize: '0.75rem', color: 'var(--rs-status-nominal)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div style={{ fontSize: 'var(--rs-fs-micro)', color: 'var(--rs-status-nominal)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                               <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
                               Connected
                               {meta.email && ` as ${meta.email}`}
@@ -613,7 +613,7 @@ export default function ProfilePage({
                           className="rs-pill"
                           onClick={() => handleDisconnect(service.key)}
                           disabled={disconnecting === service.key}
-                          style={{ padding: '6px 16px', fontSize: '0.7rem', minWidth: '110px', justifyContent: 'center' }}
+                          style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px', justifyContent: 'center' }}
                         >
                           {disconnecting === service.key ? 'DISCONNECTING...' : 'DISCONNECT'}
                         </button>
@@ -622,7 +622,7 @@ export default function ProfilePage({
                           className="rs-pill"
                           disabled
                           title="This integration is not available yet."
-                          style={{ padding: '6px 16px', fontSize: '0.7rem', minWidth: '110px', justifyContent: 'center', opacity: 0.5 }}
+                          style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px', justifyContent: 'center', opacity: 0.5 }}
                         >
                           COMING SOON
                         </button>
@@ -630,7 +630,7 @@ export default function ProfilePage({
                         <button
                           className="rs-btn-primary"
                           onClick={() => handleConnect(service.key)}
-                          style={{ padding: '8px 16px', fontSize: '0.75rem', minWidth: '110px', justifyContent: 'center', borderRadius: '4px' }}
+                          style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-micro)', minWidth: '110px', justifyContent: 'center', borderRadius: '4px' }}
                         >
                           CONNECT
                         </button>

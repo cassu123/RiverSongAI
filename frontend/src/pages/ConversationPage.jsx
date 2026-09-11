@@ -82,7 +82,7 @@ export default function ConversationPage({ setAction }) {
       <div className="rs-chat-input-container">
         <div className="rs-chat-textarea" style={{ display: 'flex', alignItems: 'center', minHeight: 40 }}>
           <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 12 }} />
-          <span style={{ fontWeight: 600, letterSpacing: '0.1em', fontSize: '0.85rem' }}>
+          <span style={{ fontWeight: 600, letterSpacing: '0.1em', fontSize: 'var(--rs-fs-tiny)' }}>
             {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
           </span>
         </div>
@@ -121,13 +121,13 @@ export default function ConversationPage({ setAction }) {
       <div className="rs-speak-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
-          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: '1.2rem', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
+          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: 'var(--rs-fs-h3)', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
             {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}
           </span>
         </div>
         {convState === 'idle' && (
           <div style={{
-            marginTop: 12, fontSize: '0.75rem', fontFamily: 'var(--font-mono)', 
+            marginTop: 12, fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)', 
             color: 'var(--primary)', opacity: 0.7, textAlign: 'center', minHeight: 80,
             pointerEvents: 'none'
           }}>
@@ -159,7 +159,7 @@ export default function ConversationPage({ setAction }) {
 
       {error && (
         <div className="rs-speak-error">
-          <span style={{ color: 'var(--rs-status-critical)', fontSize: '0.8rem' }}>{error}</span>
+          <span style={{ color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-tiny)' }}>{error}</span>
         </div>
       )}
 
@@ -185,7 +185,7 @@ export default function ConversationPage({ setAction }) {
         }}>
         {messages.slice(-2).map((m, i) => (
           <div key={i} style={{ 
-            fontSize: '0.95rem', 
+            fontSize: 'var(--rs-fs-small)', 
             opacity: m.role === 'assistant' ? 1 : 0.7,
             color: m.role === 'assistant' ? 'var(--primary)' : 'inherit'
           }}>
@@ -193,12 +193,12 @@ export default function ConversationPage({ setAction }) {
           </div>
         ))}
         {streamingContent && (
-          <div style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>
+          <div style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--primary)' }}>
             <strong>RIVER:</strong> {streamingContent}
           </div>
         )}
         {messages.length === 0 && !streamingContent && convState === 'listening' && (
-          <div style={{ fontSize: '0.9rem', opacity: 0.5, textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
+          <div style={{ fontSize: 'var(--rs-fs-small)', opacity: 0.5, textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
         )}
       </div>
     </div>

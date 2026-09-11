@@ -76,7 +76,7 @@ function ListingBuilder({ product }) {
         padding: 12, 
         background: 'rgba(0,0,0,0.2)', 
         borderRadius: 8, 
-        fontSize: '0.8rem', 
+        fontSize: 'var(--rs-fs-tiny)', 
         maxHeight: 150, 
         overflowY: 'auto',
         border: '1px solid var(--md-outline-variant)'
@@ -206,7 +206,7 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
 
   return (
     <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 32, border: '1px solid var(--primary)' }}>
-      {error && <div style={{ color: 'var(--rs-status-critical)', marginBottom: 16, fontSize: '0.85rem' }}>{error}</div>}
+      {error && <div style={{ color: 'var(--rs-status-critical)', marginBottom: 16, fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
         <div style={{ width: 160 }}>
           <div 
@@ -320,22 +320,22 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
         </div>
       </div>
       <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>{product.sku}</div>
-        <div className="rs-card-value" style={{ fontSize: '1.1rem', marginBottom: 8 }}>{product.name}</div>
+        <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>{product.sku}</div>
+        <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', marginBottom: 8 }}>{product.name}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span className="rs-card-meta" style={{ margin: 0 }}>{product.category}</span>
           {product.unit_price != null && <span style={{ color: 'var(--primary)', fontWeight: 600 }}>${Number(product.unit_price).toFixed(2)}</span>}
         </div>
         
         <div style={{ marginTop: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => onEdit(product)}>EDIT</button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={handleGen} disabled={generating}>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={() => onEdit(product)}>EDIT</button>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={handleGen} disabled={generating}>
             {generating ? '...' : 'GEN'}
           </button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => setShowListing(!showListing)}>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={() => setShowListing(!showListing)}>
             {showListing ? 'HIDE' : 'LIST'}
           </button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }} onClick={() => onDelete(product.id)}>DEL</button>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }} onClick={() => onDelete(product.id)}>DEL</button>
         </div>
 
         {showListing && <ListingBuilder product={product} />}
@@ -404,7 +404,7 @@ export default function CommercePage({ setAction }) {
               width: '100%', background: 'rgba(255,255,255,0.08)', 
               border: '1px solid var(--md-outline-variant)', 
               borderRadius: 30, padding: '10px 12px 10px 40px', color: 'var(--fg)',
-              fontSize: '0.92rem'
+              fontSize: 'var(--rs-fs-small)'
             }} 
             placeholder="Search products..." 
             value={search} 
@@ -582,7 +582,7 @@ function CreateWorkspaceForm({ token, onCreate }) {
     <div className="rs-card animate-fade-in" style={{ maxWidth: 500 }}>
       <span className="rs-card-label" style={{ color: 'var(--primary)' }}>CREATE YOUR FIRST WORKSPACE</span>
       <p className="rs-card-meta" style={{ marginBottom: 20 }}>Workspaces organize your products, stock, and listings.</p>
-      {error && <div style={{ color: 'var(--rs-status-critical)', marginBottom: 12, fontSize: '0.8rem' }}>{error}</div>}
+      {error && <div style={{ color: 'var(--rs-status-critical)', marginBottom: 12, fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10 }}>
         <input 
           style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }}

@@ -86,7 +86,7 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
                   <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: it._from_stockroom ? 'rgba(255,184,108,0.1)' : 'var(--md-surface-container-low)' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, minWidth: 60, color: 'var(--primary)' }}>{it.qty} {it.unit}</span>
                     <span style={{ flex: 1 }}>{it.name}</span>
-                    {it._from_stockroom && <span className="rs-card-label" style={{ fontSize: '0.85rem', color: '#FFB86C' }}>STOCK LOW</span>}
+                    {it._from_stockroom && <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: '#FFB86C' }}>STOCK LOW</span>}
                   </div>
                 ))}
              </div>
@@ -107,7 +107,7 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
                          <div>No items were mapped to Walmart products.</div>
                       )}
                       {exportResult.unmapped?.length > 0 && (
-                         <div style={{ marginTop: 12, fontSize: '0.95rem', color: 'var(--rs-status-critical)' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
+                         <div style={{ marginTop: 12, fontSize: 'var(--rs-fs-small)', color: 'var(--rs-status-critical)' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
                       )}
                     </div>
                   ) : (
@@ -148,7 +148,7 @@ function PrepAdjuster({ entry, recipe, api, onUpdate }) {
           <option value="imperial">IMPERIAL</option>
           <option value="metric">METRIC</option>
        </select>
-       <button className="rs-btn-primary" style={{ height: 32, fontSize: '0.85rem' }} onClick={handleScale} disabled={scaling}>{scaling ? 'SCALING...' : 'APPLY'}</button>
+       <button className="rs-btn-primary" style={{ height: 32, fontSize: 'var(--rs-fs-tiny)' }} onClick={handleScale} disabled={scaling}>{scaling ? 'SCALING...' : 'APPLY'}</button>
     </div>
   )
 }
@@ -289,7 +289,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                   <div>
                     <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                       PROVISIONS
-                      <button className="rs-pill" style={{ fontSize: '0.85rem' }} onClick={addIngredient}>ADD PROVISION</button>
+                      <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }} onClick={addIngredient}>ADD PROVISION</button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {edited.ingredients?.map((ing, i) => (
@@ -306,7 +306,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                   <div>
                     <div className="rs-card-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                       EXECUTION SEQUENCE
-                      <button className="rs-pill" style={{ fontSize: '0.85rem' }} onClick={addStep}>ADD STEP</button>
+                      <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }} onClick={addStep}>ADD STEP</button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {edited.steps?.map((step, i) => (
@@ -359,13 +359,13 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                          <div className="rs-card-label" style={{ color: 'var(--md-error)', marginBottom: 12 }}>BANNED INGREDIENTS DETECTED</div>
                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {recipe.blacklisted.map((b, i) => (
-                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '1.05rem' }}>
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 'var(--rs-fs-body)' }}>
                                  <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>{b.name}</span>
                                  {b.substitute && (
                                    <>
                                      <span style={{ opacity: 0.7 }}>→</span>
                                      <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{b.substitute}</span>
-                                     <button className="rs-pill" style={{ padding: '2px 10px', fontSize: '0.85rem' }} onClick={() => applySubstitute(b.name, b.substitute)}>APPLY SUBSTITUTE</button>
+                                     <button className="rs-pill" style={{ padding: '2px 10px', fontSize: 'var(--rs-fs-tiny)' }} onClick={() => applySubstitute(b.name, b.substitute)}>APPLY SUBSTITUTE</button>
                                    </>
                                  )}
                               </div>
@@ -623,7 +623,7 @@ export default function CulinaryPage({ setAction }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             className={`gh-kitchen-nav-btn ${cookbookSubTab === 'recipes' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
             onClick={() => setCookbookSubTab('recipes')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>menu_book</span>
@@ -631,7 +631,7 @@ export default function CulinaryPage({ setAction }) {
           </button>
           <button
             className={`gh-kitchen-nav-btn ${cookbookSubTab === 'banned' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
             onClick={() => setCookbookSubTab('banned')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>block</span>
@@ -642,7 +642,7 @@ export default function CulinaryPage({ setAction }) {
         {cookbookSubTab === 'recipes' && (
           <button
             className="gh-cook-btn-next"
-            style={{ flex: 'none', height: 42, padding: '0 20px', fontSize: '0.88rem' }}
+            style={{ flex: 'none', height: 42, padding: '0 20px', fontSize: 'var(--rs-fs-small)' }}
             onClick={() => setShowAddRecipe(true)}
           >
             <span className="material-symbols-rounded">add</span>
@@ -659,21 +659,21 @@ export default function CulinaryPage({ setAction }) {
               <div style={{ flex: 2, minWidth: 220, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)' }}>
                 <span className="material-symbols-rounded" style={{ fontSize: 20, color: 'var(--text-muted)' }}>search</span>
                 <input
-                  style={{ all: 'unset', width: '100%', fontSize: '0.95rem', color: 'var(--fg)' }}
+                  style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)', color: 'var(--fg)' }}
                   placeholder="Search recipes, ingredients..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.85rem' }}>
+                <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 'var(--rs-fs-tiny)' }}>
                   <option value="ALL">ALL MEALS</option>
                   {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.85rem' }}>
+                <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 'var(--rs-fs-tiny)' }}>
                   {uniqueProteins.map(p => <option key={p} value={p}>{p === 'ALL' ? 'ALL PROTEINS' : p.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.85rem' }}>
+                <select className="rs-pill" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 'var(--rs-fs-tiny)' }}>
                   <option value="NEWEST">NEWEST</option>
                   <option value="RATING">TOP RATED</option>
                 </select>
@@ -706,12 +706,12 @@ export default function CulinaryPage({ setAction }) {
                   </div>
                   <div style={{ padding: 20 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--md-primary)', textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 800, color: 'var(--md-primary)', textTransform: 'uppercase' }}>
                         {r.meal_type}
                       </span>
                       <button
                         className="gh-glance-action"
-                        style={{ padding: '4px 12px', fontSize: '0.78rem' }}
+                        style={{ padding: '4px 12px', fontSize: 'var(--rs-fs-micro)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleCookRecipe(r);
@@ -722,7 +722,7 @@ export default function CulinaryPage({ setAction }) {
                       </button>
                     </div>
                     <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--fg)', lineHeight: 1.3 }}>{r.title}</div>
-                    <div style={{ marginTop: 14, display: 'flex', gap: 14, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+                    <div style={{ marginTop: 14, display: 'flex', gap: 14, fontSize: 'var(--rs-fs-small)', color: 'var(--text-muted)' }}>
                       <span>{r.primary_protein?.toUpperCase() || 'NO PROTEIN'}</span>
                       <span>·</span>
                       <span style={{ fontFamily: 'var(--font-mono)' }}>{r.servings} SERVINGS</span>
@@ -763,7 +763,7 @@ export default function CulinaryPage({ setAction }) {
                         fetchData('cookbook');
                       }}>
                         <span style={{ fontWeight: 700, color: 'var(--md-primary)', marginRight: 10 }}>{rec.name}</span>
-                        <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>{rec.reason}</span>
+                        <span style={{ fontSize: 'var(--rs-fs-tiny)', opacity: 0.8 }}>{rec.reason}</span>
                       </div>
                     ))}
                   </div>
@@ -799,7 +799,7 @@ export default function CulinaryPage({ setAction }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             className={`gh-kitchen-nav-btn ${planSubTab === 'dinner' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
             onClick={() => setPlanSubTab('dinner')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>calendar_month</span>
@@ -807,7 +807,7 @@ export default function CulinaryPage({ setAction }) {
           </button>
           <button
             className={`gh-kitchen-nav-btn ${planSubTab === 'prep' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
             onClick={() => setPlanSubTab('prep')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>set_meal</span>
@@ -822,8 +822,8 @@ export default function CulinaryPage({ setAction }) {
             <div className="gh-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--fg)' }}>This Week's Dinner Menu</h3>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Household dinner calendar and ingredient procurement</div>
+                  <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-h3)', fontWeight: 700, color: 'var(--fg)' }}>This Week's Dinner Menu</h3>
+                  <div style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)' }}>Household dinner calendar and ingredient procurement</div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="gh-glance-action" onClick={async () => {
@@ -861,27 +861,27 @@ export default function CulinaryPage({ setAction }) {
                       display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 120
                     }}>
                       <div>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: isToday ? '#00e5ff' : 'rgba(220,230,245,0.75)', marginBottom: 8 }}>
+                        <div style={{ fontSize: 'var(--rs-fs-small)', fontWeight: 800, color: isToday ? '#00e5ff' : 'rgba(220,230,245,0.75)', marginBottom: 8 }}>
                           {w.dayName.toUpperCase()} {isToday && '· TODAY'}
                         </div>
                         {w.entry ? (
                           <>
-                            <div style={{ fontWeight: 750, fontSize: '1.15rem', color: 'var(--fg)', lineHeight: 1.35 }}>
+                            <div style={{ fontWeight: 750, fontSize: 'var(--rs-fs-body)', color: 'var(--fg)', lineHeight: 1.35 }}>
                               {w.entry.recipe_title || w.entry.label || 'Planned'}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: w.entry.status === 'cooked' ? '#4ade80' : '#00e5ff', marginTop: 6, fontWeight: 700 }}>
+                            <div style={{ fontSize: 'var(--rs-fs-micro)', color: w.entry.status === 'cooked' ? '#4ade80' : '#00e5ff', marginTop: 6, fontWeight: 700 }}>
                               {w.entry.status.toUpperCase()}
                             </div>
                           </>
                         ) : (
-                          <div style={{ opacity: 0.4, fontSize: '0.85rem', fontStyle: 'italic' }}>Open</div>
+                          <div style={{ opacity: 0.4, fontSize: 'var(--rs-fs-tiny)', fontStyle: 'italic' }}>Open</div>
                         )}
                       </div>
 
                       {isToday && w.entry?.recipe_id && (
                         <button
                           className="gh-cook-btn-next"
-                          style={{ marginTop: 10, height: 34, fontSize: '0.78rem', width: '100%', justifyContent: 'center' }}
+                          style={{ marginTop: 10, height: 34, fontSize: 'var(--rs-fs-micro)', width: '100%', justifyContent: 'center' }}
                           onClick={() => handleCookTodayDinner(w.entry)}
                         >
                           <span className="material-symbols-rounded" style={{ fontSize: 15 }}>skillet</span>
@@ -897,7 +897,7 @@ export default function CulinaryPage({ setAction }) {
             {/* Dinner Proposals & Voting */}
             {proposals.length > 0 && (
               <div className="gh-card">
-                <h3 style={{ margin: '0 0 14px 0', fontSize: '1.15rem', fontWeight: 700, color: 'var(--fg)' }}>
+                <h3 style={{ margin: '0 0 14px 0', fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)' }}>
                   Household Dinner Proposals
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
@@ -905,23 +905,23 @@ export default function CulinaryPage({ setAction }) {
                     <div key={p.id} className="rs-card animate-page-in" style={{ padding: 18, border: p.status === 'approved' ? '1px solid #00e5ff' : '1px solid rgba(255,255,255,0.1)' }}>
                       <div className="rs-card-inner">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: p.status === 'approved' ? '#00e5ff' : 'inherit' }}>
+                          <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 800, color: p.status === 'approved' ? '#00e5ff' : 'inherit' }}>
                             {p.status.toUpperCase()} PROPOSAL
                           </span>
                           <div style={{ display: 'flex', gap: 6 }}>
-                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.75rem', color: 'var(--rs-status-nominal)', background: 'rgba(74,222,128,0.1)' }}>{p.votes_yes.length} YES</span>
-                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.75rem', color: 'var(--rs-status-critical)', background: 'rgba(248,113,113,0.1)' }}>{p.votes_no.length} NO</span>
+                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: 'var(--rs-fs-micro)', color: 'var(--rs-status-nominal)', background: 'rgba(74,222,128,0.1)' }}>{p.votes_yes.length} YES</span>
+                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: 'var(--rs-fs-micro)', color: 'var(--rs-status-critical)', background: 'rgba(248,113,113,0.1)' }}>{p.votes_no.length} NO</span>
                           </div>
                         </div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--fg)', marginBottom: 14 }}>
+                        <div style={{ fontSize: 'var(--rs-fs-h3)', fontWeight: 800, color: 'var(--fg)', marginBottom: 14 }}>
                           {p.recipe?.title}
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button className="rs-btn-primary" style={{ flex: 1, height: 36, fontSize: '0.82rem' }} onClick={async () => {
+                          <button className="rs-btn-primary" style={{ flex: 1, height: 36, fontSize: 'var(--rs-fs-tiny)' }} onClick={async () => {
                             await api.post(`/dinner/${p.id}/vote`, { vote: 'yes' });
                             fetchData('plan');
                           }}>APPROVE</button>
-                          <button className="rs-pill" style={{ flex: 1, height: 36, fontSize: '0.82rem', color: 'var(--md-error)' }} onClick={async () => {
+                          <button className="rs-pill" style={{ flex: 1, height: 36, fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-error)' }} onClick={async () => {
                             await api.post(`/dinner/${p.id}/vote`, { vote: 'no' });
                             fetchData('plan');
                           }}>VETO</button>
@@ -942,8 +942,8 @@ export default function CulinaryPage({ setAction }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {!activePrep ? (
               <div className="gh-card" style={{ textAlign: 'center', padding: 48 }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: 'var(--fg)' }}>No Active Prep Session</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: 20 }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-h3)', color: 'var(--fg)' }}>No Active Prep Session</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-small)', marginBottom: 20 }}>
                   Stage multiple dishes to cook concurrently with synchronized timing.
                 </p>
                 <button className="gh-cook-btn-next" style={{ display: 'inline-flex', padding: '0 24px' }} onClick={async () => {
@@ -955,17 +955,17 @@ export default function CulinaryPage({ setAction }) {
               <div className="gh-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--fg)' }}>
+                    <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-h3)', fontWeight: 800, color: 'var(--fg)' }}>
                       Active Prep: {activePrep.label || 'Multi-Dish Meal'}
                     </h3>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)' }}>
                       {activePrep.recipes?.length || 0} dishes staged
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button
                       className="gh-cook-btn-next"
-                      style={{ height: 42, padding: '0 20px', fontSize: '0.88rem' }}
+                      style={{ height: 42, padding: '0 20px', fontSize: 'var(--rs-fs-small)' }}
                       onClick={() => setActiveTab('cook')}
                     >
                       <span className="material-symbols-rounded">skillet</span>
@@ -984,7 +984,7 @@ export default function CulinaryPage({ setAction }) {
                   {(activePrep.recipes || []).map((pr, i) => (
                     <div key={i} style={{ padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--fg)' }}>{pr.recipe_title}</div>
+                        <div style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)' }}>{pr.recipe_title}</div>
                         <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={async () => {
                           await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
                           fetchData('plan');
@@ -999,7 +999,7 @@ export default function CulinaryPage({ setAction }) {
                 <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
                   <button
                     className={`gh-kitchen-nav-btn ${prepView === 'recipes' ? 'is-active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                    style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
                     onClick={() => setPrepView('recipes')}
                   >
                     <span className="material-symbols-rounded">list_alt</span>
@@ -1007,7 +1007,7 @@ export default function CulinaryPage({ setAction }) {
                   </button>
                   <button
                     className={`gh-kitchen-nav-btn ${prepView === 'list' ? 'is-active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                    style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
                     onClick={() => setPrepView('list')}
                   >
                     <span className="material-symbols-rounded">shopping_cart</span>
@@ -1047,7 +1047,7 @@ export default function CulinaryPage({ setAction }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             className={`gh-kitchen-nav-btn ${pantrySubTab === 'list' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
             onClick={() => setPantrySubTab('list')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>shopping_cart</span>
@@ -1055,7 +1055,7 @@ export default function CulinaryPage({ setAction }) {
           </button>
           <button
             className={`gh-kitchen-nav-btn ${pantrySubTab === 'stockroom' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
             onClick={() => setPantrySubTab('stockroom')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>inventory_2</span>
@@ -1082,7 +1082,7 @@ export default function CulinaryPage({ setAction }) {
               <div className="rs-card-inner">
                 <div className="rs-card-head">
                   <span className="rs-card-label" style={{ color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80', fontWeight: 900 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.2rem', fontWeight: 800 }}>{item.quantity.toFixed(2)}</span> IN STOCK
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-h3)', fontWeight: 800 }}>{item.quantity.toFixed(2)}</span> IN STOCK
                   </span>
                   <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>
                 </div>
@@ -1110,7 +1110,7 @@ export default function CulinaryPage({ setAction }) {
       {/* Header */}
       <div className="rs-foyer-head" style={{ marginBottom: 20 }}>
         <h1 className="rs-greeting" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--fg)', letterSpacing: '-0.02em' }}>Kitchen</h1>
-        <div className="rs-greeting-sub" style={{ fontSize: '1.15rem', color: 'var(--fg)', marginTop: 6 }}>Cookbook, meal plans, autonomous cooking guides & groceries.</div>
+        <div className="rs-greeting-sub" style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--fg)', marginTop: 6 }}>Cookbook, meal plans, autonomous cooking guides & groceries.</div>
       </div>
 
       {/* Top Google Home Category Nav Bar (Sub-navigation) */}

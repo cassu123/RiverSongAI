@@ -100,11 +100,11 @@ export default function StepTimer({ timer, api, onChanged }) {
       }}
     >
       <span style={{
-        fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '1.15rem',
+        fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 'var(--rs-fs-body)',
         minWidth: 66, color: done ? 'var(--md-error)' : 'var(--primary)',
       }}>{mmss(left)}</span>
 
-      <span className="rs-card-label" style={{ fontSize: '0.6rem', flex: 1, minWidth: 60 }}>
+      <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', flex: 1, minWidth: 60 }}>
         {done ? 'TIME' : paused ? 'PAUSED' : timer.label}
       </span>
 
@@ -126,7 +126,7 @@ export default function StepTimer({ timer, api, onChanged }) {
           you want having just looked in the oven, and the server counts that
           from now rather than from a deadline already in the past. */}
       <button
-        className="rs-pill" style={{ padding: '4px 10px', fontSize: '0.72rem' }}
+        className="rs-pill" style={{ padding: '4px 10px', fontSize: 'var(--rs-fs-micro)' }}
         aria-label="Add a minute"
         onClick={() => act('extend', 60)}
       >+1 MIN</button>
@@ -134,7 +134,7 @@ export default function StepTimer({ timer, api, onChanged }) {
       <button
         className="rs-pill"
         style={{
-          padding: '4px 10px', fontSize: '0.72rem',
+          padding: '4px 10px', fontSize: 'var(--rs-fs-micro)',
           color: done ? 'var(--md-error)' : undefined,
           borderColor: done ? 'var(--md-error)' : undefined,
         }}

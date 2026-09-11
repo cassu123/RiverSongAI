@@ -321,7 +321,7 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
             padding: '6px 14px', borderRadius: 8, pointerEvents: 'none', whiteSpace: 'nowrap',
             background: 'var(--md-surface-container-highest)',
             border: '1px solid var(--md-outline-variant)',
-            fontSize: '0.72rem', display: 'flex', gap: 8, alignItems: 'center',
+            fontSize: 'var(--rs-fs-micro)', display: 'flex', gap: 8, alignItems: 'center',
           }}>
             <span style={{ fontWeight: 600 }}>{n.title}</span>
             {n.virtual_path
@@ -336,16 +336,16 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
       <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
-          <span className="rs-card-meta" style={{ fontSize: '0.65rem' }}>Personal</span>
+          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Personal</span>
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--md-sys-color-tertiary)', display: 'inline-block', marginLeft: 8 }} />
-          <span className="rs-card-meta" style={{ fontSize: '0.65rem' }}>Household</span>
+          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Household</span>
           <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1px dashed var(--md-outline)', display: 'inline-block', marginLeft: 8 }} />
-          <span className="rs-card-meta" style={{ fontSize: '0.65rem' }}>Unlinked target</span>
+          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Unlinked target</span>
         </div>
       </div>
 
       <div style={{ position: 'absolute', top: 10, right: 12, pointerEvents: 'none' }}>
-        <span className="rs-card-meta" style={{ fontSize: '0.6rem', opacity: 0.35 }}>
+        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.35 }}>
           scroll · zoom  ·  drag canvas · pan  ·  drag node · reposition  ·  click node · open
         </span>
       </div>

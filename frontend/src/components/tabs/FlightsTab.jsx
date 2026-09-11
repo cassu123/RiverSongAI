@@ -47,7 +47,7 @@ function LocationSearch({ onSelect }) {
         placeholder="Search city to set radar origin…"
         value={q}
         onChange={e => setQ(e.target.value)}
-        style={{ width: '100%', fontSize: '0.82rem', boxSizing: 'border-box' }}
+        style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)', boxSizing: 'border-box' }}
         autoFocus
       />
       {(results.length > 0 || searching) && (
@@ -58,7 +58,7 @@ function LocationSearch({ onSelect }) {
           borderRadius: 8, marginTop: 4, overflow: 'hidden',
         }}>
           {searching && (
-            <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: '0.72rem' }}>Searching…</div>
+            <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: 'var(--rs-fs-micro)' }}>Searching…</div>
           )}
           {results.map((r, i) => (
             <button key={i} onClick={() => {
@@ -68,7 +68,7 @@ function LocationSearch({ onSelect }) {
               display: 'block', width: '100%', textAlign: 'left',
               padding: '9px 14px', background: 'none', border: 'none',
               borderTop: i > 0 ? '1px solid var(--md-outline-variant)' : 'none',
-              cursor: 'pointer', fontSize: '0.75rem',
+              cursor: 'pointer', fontSize: 'var(--rs-fs-micro)',
             }}>
               {r.display_name}
             </button>
@@ -159,26 +159,26 @@ function AircraftRow({ a, i, total }) {
       borderBottom: i < total - 1 ? '1px solid var(--md-outline-variant)' : 'none',
     }}>
       <div>
-        <div style={{ fontWeight: 800, fontSize: '0.76rem', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontWeight: 800, fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {a.callsign || '—'}
         </div>
-        <div className="rs-card-meta" style={{ fontSize: '0.55rem', marginTop: 1, opacity: 0.45 }}>
+        <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: 1, opacity: 0.45 }}>
           {a.icao24}
         </div>
       </div>
-      <div className="rs-card-meta rs-flight-country" style={{ fontSize: '0.64rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div className="rs-card-meta rs-flight-country" style={{ fontSize: 'var(--rs-fs-nano)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {a.origin_country || '—'}
       </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, whiteSpace: 'nowrap' }}>
         {a.altitude_ft != null ? `${a.altitude_ft.toLocaleString()} ft` : '—'}
       </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)', whiteSpace: 'nowrap' }}>
         {a.velocity_kts != null ? `${a.velocity_kts}` : '—'}
       </div>
-      <div className="rs-flight-hdg" style={{ fontSize: '0.85rem', textAlign: 'center' }}>
+      <div className="rs-flight-hdg" style={{ fontSize: 'var(--rs-fs-tiny)', textAlign: 'center' }}>
         {trackArrow(a.heading_deg)}
       </div>
-      <div style={{ fontSize: '0.6rem', fontWeight: 700, color: statusColor, textAlign: 'right' }}>
+      <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, color: statusColor, textAlign: 'right' }}>
         {a.on_ground ? 'GND' : 'AIR'}
       </div>
     </div>
@@ -329,8 +329,8 @@ export default function FlightsTab({ token, active }) {
             style={{ width: '100%', accentColor: 'var(--primary)' }}
           />
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span className="rs-card-meta" style={{ fontSize: '0.58rem', opacity: 0.5 }}>~11 km</span>
-            <span className="rs-card-meta" style={{ fontSize: '0.58rem', opacity: 0.5 }}>~222 km</span>
+            <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>~11 km</span>
+            <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>~222 km</span>
           </div>
         </SettingsRow>
         <SettingsRow label="FILTER">
@@ -358,7 +358,7 @@ export default function FlightsTab({ token, active }) {
         <SettingsRow label="RADAR ORIGIN">
           <LocationSearch onSelect={handleLocationSelect} />
           {wxSettings?.location_query && (
-            <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 6, opacity: 0.6 }}>
+            <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: 6, opacity: 0.6 }}>
               {wxSettings.location_query.split(',').slice(0, 2).join(',')}
             </div>
           )}
@@ -368,11 +368,11 @@ export default function FlightsTab({ token, active }) {
       {/* Status row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="rs-card-meta" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 700 }}>
             OVERHEAD RADAR
           </span>
           {!loading && !error && (
-            <span className="rs-card-label" style={{ fontSize: '0.55rem', opacity: 0.45 }}>
+            <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.45 }}>
               {aircraft.length} aircraft · {radiusDeg}° ≈ {radiusKm} km
             </span>
           )}
@@ -455,7 +455,7 @@ export default function FlightsTab({ token, active }) {
             }}>
               {['CALLSIGN', 'COUNTRY', 'ALT', 'KTS', 'HDG', 'STATUS'].map(h => (
                 <div key={h} className={'rs-card-label' + (h === 'COUNTRY' ? ' rs-flight-country' : h === 'HDG' ? ' rs-flight-hdg' : '')} style={{
-                  fontSize: '0.47rem', opacity: 0.45,
+                  fontSize: 'var(--rs-fs-nano)', opacity: 0.45,
                   textAlign: h === 'STATUS' ? 'right' : 'left',
                 }}>{h}</div>
               ))}
@@ -485,8 +485,8 @@ export default function FlightsTab({ token, active }) {
                   <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>
                     flight_land
                   </span>
-                  <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>CLEAR SKIES</div>
-                  <div className="rs-card-meta" style={{ fontSize: '0.62rem' }}>
+                  <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>CLEAR SKIES</div>
+                  <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
                     No aircraft in {radiusKm} km radius.
                   </div>
                 </div>
@@ -502,7 +502,7 @@ export default function FlightsTab({ token, active }) {
       {/* Footer: last updated */}
       {!error && !loading && agoText && (
         <div style={{ marginTop: 8, textAlign: 'right' }}>
-          <span className="rs-card-meta" style={{ fontSize: '0.6rem', opacity: 0.38 }}>
+          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.38 }}>
             Updated {agoText}
           </span>
         </div>

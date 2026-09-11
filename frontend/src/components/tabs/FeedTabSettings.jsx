@@ -101,7 +101,7 @@ export function WeatherSettings({ prefs, savePrefs }) {
       </button>
 
       <div style={{ marginBottom: 16 }}>
-        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: '0.6rem' }}>TEMPERATURE UNIT</div>
+        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>TEMPERATURE UNIT</div>
         <div style={{ display: 'flex', gap: 8 }}>
           {['celsius', 'fahrenheit'].map(u => (
             <button
@@ -116,7 +116,7 @@ export function WeatherSettings({ prefs, savePrefs }) {
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: '0.6rem' }}>AQI SOURCE</div>
+        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>AQI SOURCE</div>
         <div style={{ display: 'flex', gap: 8 }}>
           {['purpleair', 'openmeteo'].map(src => {
             const isActive = p.aqi_source === src || (p.aqi_source === undefined && src === 'purpleair')
@@ -161,7 +161,7 @@ export function StocksSettings({ prefs, savePrefs }) {
     <InlineSettingsSection title="WATCHLIST" icon="tune" subtitle={`${tickers.length} symbol${tickers.length === 1 ? '' : 's'}`}>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
         {tickers.map(t => (
-          <div key={t} className="rs-pill is-active" style={{ fontSize: '0.65rem', cursor: 'default', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div key={t} className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', cursor: 'default', display: 'flex', alignItems: 'center', gap: 6 }}>
             {t}
             <button
               onClick={() => savePrefs({ stock_tickers: tickers.filter(x => x !== t) })}
@@ -172,7 +172,7 @@ export function StocksSettings({ prefs, savePrefs }) {
           </div>
         ))}
         {tickers.length === 0 && (
-          <span className="rs-card-meta" style={{ fontSize: '0.72rem' }}>No tickers saved yet.</span>
+          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No tickers saved yet.</span>
         )}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
@@ -181,7 +181,7 @@ export function StocksSettings({ prefs, savePrefs }) {
           value={addSym}
           onChange={e => setAddSym(e.target.value.toUpperCase())}
           onKeyDown={e => { if (e.key === 'Enter') add() }}
-          style={{ flex: 1, fontSize: '0.85rem' }}
+          style={{ flex: 1, fontSize: 'var(--rs-fs-tiny)' }}
         />
         <button className="rs-pill" disabled={!addSym.trim() || tickers.includes(addSym.trim()) || tickers.length >= 15} onClick={add}>
           ADD
@@ -270,7 +270,7 @@ export function FeedTabsManager({ prefs, savePrefs }) {
   const p = prefs || {}
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="rs-card-label" style={{ fontSize: '0.58rem', opacity: 0.6 }}>SHOW THESE TABS</div>
+      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6 }}>SHOW THESE TABS</div>
       {OPTIONAL_TABS.map(t => (
         <Toggle
           key={t.key}

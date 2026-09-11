@@ -204,11 +204,11 @@ export default function DocumentsPage({ setAction }) {
             style={{ textAlign: 'left', padding: '8px 10px' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
-              {d.pinned && <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>★</span>}
-              <span style={{ fontWeight: 700, fontSize: '0.78rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {d.pinned && <span style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.7 }}>★</span>}
+              <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {d.title || 'Untitled'}
               </span>
-              <span className="rs-card-label" style={{ fontSize: '0.55rem', opacity: 0.5 }}>{d.kind?.toUpperCase()}</span>
+              <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>{d.kind?.toUpperCase()}</span>
             </div>
           </button>
         ))}
@@ -233,7 +233,7 @@ export default function DocumentsPage({ setAction }) {
                   borderRadius: 8,
                   padding: '10px 12px',
                   color: 'var(--md-on-surface)',
-                  fontSize: '0.95rem',
+                  fontSize: 'var(--rs-fs-small)',
                   fontWeight: 700,
                   outline: 'none',
                   fontFamily: 'inherit',
@@ -248,7 +248,7 @@ export default function DocumentsPage({ setAction }) {
                   borderRadius: 8,
                   padding: '9px 10px',
                   color: 'var(--md-on-surface)',
-                  fontSize: '0.7rem',
+                  fontSize: 'var(--rs-fs-nano)',
                   fontWeight: 700,
                   letterSpacing: '0.08em',
                   outline: 'none',
@@ -279,14 +279,14 @@ export default function DocumentsPage({ setAction }) {
                 fontFamily: activeDoc.kind === 'markdown' || activeDoc.kind === 'csv' || activeDoc.kind === 'html'
                   ? 'ui-monospace, SFMono-Regular, Menlo, monospace'
                   : 'inherit',
-                fontSize: '0.88rem',
+                fontSize: 'var(--rs-fs-small)',
                 lineHeight: 1.55,
                 outline: 'none',
                 resize: 'vertical',
               }}
             />
 
-            {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem' }}>{error.toUpperCase()}</div>}
+            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
           </>
         )}
       </div>

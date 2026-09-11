@@ -12,7 +12,7 @@ export default function PersonaSection({ personaSettings, setPersonaSettings, sa
     <Section title="PERSONALITY">
           <div style={{ marginBottom: 12, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
-            <span style={{ color: 'var(--rs-status-warning)', fontSize: '0.8rem' }}>Advanced — Keep "River Song" references intact or she will lose her identity.</span>
+            <span style={{ color: 'var(--rs-status-warning)', fontSize: 'var(--rs-fs-tiny)' }}>Advanced — Keep "River Song" references intact or she will lose her identity.</span>
           </div>
           
           <div style={{ position: 'relative' }}>
@@ -24,7 +24,7 @@ export default function PersonaSection({ personaSettings, setPersonaSettings, sa
               placeholder="River Song system prompt..."
               rows={12}
             />
-            <div style={{ position: 'absolute', bottom: 12, right: 16, fontSize: '0.65rem', opacity: 0.5, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', bottom: 12, right: 16, fontSize: 'var(--rs-fs-nano)', opacity: 0.5, pointerEvents: 'none' }}>
               {personaSettings.system_prompt.length} chars
             </div>
           </div>

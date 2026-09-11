@@ -70,7 +70,7 @@ export default function PresetSelector({ onApply, onManage }) {
         className="rs-pill"
         onClick={() => setOpen(o => !o)}
         title="Session presets"
-        style={{ fontSize: '0.7rem' }}
+        style={{ fontSize: 'var(--rs-fs-nano)' }}
       >
         <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', marginRight: 4 }}>tune</span>
         <span className="rs-speak-actions-label">Presets</span>
@@ -105,11 +105,11 @@ export default function PresetSelector({ onApply, onManage }) {
                 disabled={applying === p.id}
                 style={{ textAlign: 'left', width: '100%', padding: '8px 10px' }}
               >
-                <span style={{ fontWeight: 700, fontSize: '0.78rem', flex: 1 }}>
+                <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', flex: 1 }}>
                   {p.is_default && <span style={{ marginRight: 4, opacity: 0.7 }}>★</span>}
                   {p.name}
                 </span>
-                {applying === p.id && <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>APPLYING…</span>}
+                {applying === p.id && <span style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6 }}>APPLYING…</span>}
               </button>
             ))}
             {onManage && (
@@ -118,7 +118,7 @@ export default function PresetSelector({ onApply, onManage }) {
                 onClick={() => { setOpen(false); onManage() }}
                 style={{ textAlign: 'left', width: '100%', padding: '8px 10px', opacity: 0.7, borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }}
               >
-                <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>+ MANAGE PRESETS</span>
+                <span style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700 }}>+ MANAGE PRESETS</span>
               </button>
             )}
           </div>

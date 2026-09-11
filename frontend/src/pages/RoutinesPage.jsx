@@ -90,7 +90,7 @@ export default function RoutinesPage({ setAction }) {
               </div>
               <div className="rs-card-value">
                 {r.name}
-                <span className={`rs-badge ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 8, fontSize: '0.6rem' }}>
+                <span className={`rs-badge ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 8, fontSize: 'var(--rs-fs-nano)' }}>
                   {r.severity || 'info'}
                 </span>
               </div>
@@ -98,7 +98,7 @@ export default function RoutinesPage({ setAction }) {
                 {r.trigger === 'cron' || r.time ? `SCHEDULED: ${r.time} on ${r.days?.length ? r.days.join(', ') : 'every day'}` : `EVENT: ${r.trigger}`}
               </div>
               {r.last_run && (
-                <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
                   LAST EXECUTION: {new Date(r.last_run).toLocaleString()}
                 </div>
               )}
@@ -118,7 +118,7 @@ export default function RoutinesPage({ setAction }) {
       </div>
 
       <div className="rs-foyer-head" style={{ marginTop: '2rem' }}>
-        <h2 className="rs-greeting" style={{ fontSize: '1.2rem' }}>Execution History</h2>
+        <h2 className="rs-greeting" style={{ fontSize: 'var(--rs-fs-h3)' }}>Execution History</h2>
       </div>
       <RoutineHistory token={token} />
     </div>

@@ -116,9 +116,9 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
       <div className="rs-modal" style={{ width: 400, maxWidth: '90vw', padding: 24 }}>
         <h2 style={{ marginTop: 0, marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
           Room Sweep
-          <button className="rs-pill" onClick={handleFinish} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Done</button>
+          <button className="rs-pill" onClick={handleFinish} style={{ padding: '4px 12px', fontSize: 'var(--rs-fs-small)' }}>Done</button>
         </h2>
-        <p style={{ opacity: 0.7, margin: 0, marginBottom: 24, fontSize: '0.9rem' }}>Captured this session: <strong>{count}</strong> items</p>
+        <p style={{ opacity: 0.7, margin: 0, marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Captured this session: <strong>{count}</strong> items</p>
         
         <div className="rs-form-group" style={{ marginBottom: 24 }}>
           <label>Room / Location</label>
@@ -149,7 +149,7 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
                 if (!location) { alert("Set location first!"); return; }
                 fileInputRef.current?.click();
               }} 
-              style={{ width: '100%', height: 64, fontSize: '1.2rem', gap: 12 }}
+              style={{ width: '100%', height: 64, fontSize: 'var(--rs-fs-h3)', gap: 12 }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>photo_camera</span>
               SNAP NEXT ITEM

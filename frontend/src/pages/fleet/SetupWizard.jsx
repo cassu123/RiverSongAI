@@ -177,7 +177,7 @@ export default function SetupWizard() {
   return (
     <div className="rs-card p-5 md:p-8" style={{ maxWidth: 800, margin: '0 auto' }}>
       <h2 style={{ marginBottom: 8 }}>Setup Wizard: {id}</h2>
-      <div style={{ marginBottom: 24, fontSize: '0.9rem', opacity: 0.7 }}>Step {step} of 8</div>
+      <div style={{ marginBottom: 24, fontSize: 'var(--rs-fs-small)', opacity: 0.7 }}>Step {step} of 8</div>
 
       <form onSubmit={step === 8 ? (e)=>{e.preventDefault();handleSave()} : handleNext}>
         {step === 1 && (
@@ -287,7 +287,7 @@ export default function SetupWizard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
               <div><label><input type="checkbox" checked={formData.hardware.sensors.imu} onChange={e => updateField('hardware.sensors.imu', e.target.checked)} /> IMU Installed</label></div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 4 }}>Obstacle Sensors</label>
+                <label style={{ display: 'block', fontSize: 'var(--rs-fs-small)', marginBottom: 4 }}>Obstacle Sensors</label>
                 <select className="rs-input" value={formData.hardware.sensors.obstacle} onChange={e => updateField('hardware.sensors.obstacle', e.target.value)}>
                   <option value="none">None</option>
                   <option value="ultrasonic">Ultrasonic</option>
@@ -384,7 +384,7 @@ export default function SetupWizard() {
         {step === 8 && (
           <div>
             <h3>Review & Save</h3>
-            <pre style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 8, fontSize: '0.85rem', overflowX: 'auto' }}>
+            <pre style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 8, fontSize: 'var(--rs-fs-tiny)', overflowX: 'auto' }}>
               {JSON.stringify(formData, null, 2)}
             </pre>
             {error && <div style={{ color: 'var(--md-error)', marginTop: 16 }}>{error}</div>}

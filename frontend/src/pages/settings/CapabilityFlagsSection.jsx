@@ -19,11 +19,11 @@ export default function CapabilityFlagsSection({ data }) {
             borderRadius: 'var(--md-shape-md)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--md-on-surface)' }}>
+              <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)', color: 'var(--md-on-surface)' }}>
                 {flag.key}
               </div>
               <div style={{
-                fontSize: '0.75rem',
+                fontSize: 'var(--rs-fs-micro)',
                 fontWeight: 700,
                 padding: '2px 8px',
                 borderRadius: '12px',
@@ -34,12 +34,12 @@ export default function CapabilityFlagsSection({ data }) {
               </div>
             </div>
             
-            <p style={{ fontSize: '0.8rem', color: 'var(--md-on-surface-variant)', marginBottom: 12, lineHeight: 1.4 }}>
+            <p style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)', marginBottom: 12, lineHeight: 1.4 }}>
               {flag.description}
             </p>
             
             <div style={{
-              fontSize: '0.75rem',
+              fontSize: 'var(--rs-fs-micro)',
               fontFamily: 'var(--font-mono, monospace)',
               background: 'var(--md-surface-container)',
               padding: '6px 10px',
