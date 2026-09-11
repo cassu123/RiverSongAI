@@ -159,7 +159,7 @@ export default function Sessions() {
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                           <XAxis dataKey="timestamp" tickFormatter={(v) => new Date(v+'Z').toLocaleTimeString()} stroke="rgba(255,255,255,0.5)" />
                           <YAxis stroke="rgba(255,255,255,0.5)" domain={[0, 100]} />
-                          <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)' }} labelFormatter={(v) => new Date(v+'Z').toLocaleString()} />
+                          <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid var(--rs-hairline)' }} labelFormatter={(v) => new Date(v+'Z').toLocaleString()} />
                           <Legend />
                           <Line type="monotone" dataKey="battery_pct" stroke="#00d4b2" dot={false} />
                         </LineChart>

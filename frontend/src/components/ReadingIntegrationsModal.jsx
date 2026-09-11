@@ -124,7 +124,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             {connections.libby ? (
                <div>
                  <div className="rs-status-strip rs-mb-3">
-                    <span className="rs-status-dot" style={{ background: '#4ade80' }} />
+                    <span className="rs-status-dot" style={{ background: 'var(--rs-status-nominal)' }} />
                     <span>CONNECTED</span>
                  </div>
                  <button className="rs-pill btn-danger" onClick={handleLibbyDisconnect}>DISCONNECT</button>
@@ -157,7 +157,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             {connections.google_play ? (
                <div>
                  <div className="rs-status-strip rs-mb-3">
-                    <span className="rs-status-dot" style={{ background: '#4ade80' }} />
+                    <span className="rs-status-dot" style={{ background: 'var(--rs-status-nominal)' }} />
                     <span>CONNECTED</span>
                  </div>
                  <div className="rs-flex rs-gap-2">

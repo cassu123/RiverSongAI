@@ -451,12 +451,12 @@ export default function VehiclePage({ setAction, onNavigate }) {
                     className="hangar-status-badge"
                     style={isDue ? {
                       color: 'var(--rs-status-critical, #ff8b8b)',
-                      borderColor: 'rgba(255,139,139,0.3)',
-                      background: 'rgba(255,139,139,0.1)'
+                      borderColor: 'color-mix(in srgb, var(--rs-status-critical) 30%, transparent)',
+                      background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)'
                     } : {
                       color: 'var(--rs-status-nominal, #4ade80)',
-                      borderColor: 'rgba(74,222,128,0.3)',
-                      background: 'rgba(74,222,128,0.1)'
+                      borderColor: 'color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)',
+                      background: 'color-mix(in srgb, var(--rs-status-nominal) 10%, transparent)'
                     }}
                   >
                     <span

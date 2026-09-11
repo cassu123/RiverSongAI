@@ -266,7 +266,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
               padding: '2px 8px',
               border: `1px solid ${storeMeta ? storeMeta.color : 'rgba(255,255,255,0.18)'}`,
               color: storeMeta ? storeMeta.color : 'inherit',
-              background: storeMeta ? `color-mix(in srgb, ${storeMeta.color} 15%, transparent)` : 'rgba(255,255,255,0.05)',
+              background: storeMeta ? `color-mix(in srgb, ${storeMeta.color} 15%, transparent)` : 'var(--rs-veil-1)',
             }}
             title={item.store ? `Assigned to ${item.store} (click to change)` : 'Assign to a store'}
             onClick={() => setEditingStoreItemId(isEditingStore ? null : item.id)}
@@ -498,7 +498,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
       {/* Store Cart Export Results */}
       {exportResult && (
-        <div className="rs-card" style={{ borderColor: exportResult.cart_url ? '#4ade80' : 'var(--md-outline-variant)' }}>
+        <div className="rs-card" style={{ borderColor: exportResult.cart_url ? 'var(--rs-status-nominal)' : 'var(--md-outline-variant)' }}>
           <div className="rs-card-inner rs-flex rs-flex-col rs-gap-3">
             <div className="rs-card-head">
               <span className="rs-card-label rs-fw-800 rs-c-accent">

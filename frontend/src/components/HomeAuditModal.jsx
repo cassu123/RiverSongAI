@@ -142,7 +142,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
           <div>
             <div className="rs-flex rs-justify-between rs-mb-2">
               <div className="rs-status-strip">
-                <span className="rs-status-dot" style={{ background: '#facc15' }} />
+                <span className="rs-status-dot" style={{ background: 'var(--rs-status-warning)' }} />
                 <span>AUDIT IN PROGRESS</span>
               </div>
               <div className="rs-mono">
@@ -150,7 +150,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
               </div>
             </div>
             <div className="rs-w-full rs-mb-5 rs-clip" style={{ height: 8, background: 'var(--md-surface-container-highest)', borderRadius: 'var(--md-shape-xs)' }}>
-              <div className="rs-h-full" style={{ width: `${audit.total_items > 0 ? (audit.scanned_count / audit.total_items) * 100 : 0}%`, background: '#4ade80', transition: 'width 0.3s ease' }} />
+              <div className="rs-h-full" style={{ width: `${audit.total_items > 0 ? (audit.scanned_count / audit.total_items) * 100 : 0}%`, background: 'var(--rs-status-nominal)', transition: 'width 0.3s ease' }} />
             </div>
 
             <div className="rs-mb-6">

@@ -230,7 +230,7 @@ export default function MemoryPage({ setAction }) {
                 </span>
                 
                 {m._type === 'FACT' && (
-                  <span className="rs-pill rs-type-nano" style={{ padding: '2px 6px', background: m.source === 'explicit' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
+                  <span className="rs-pill rs-type-nano" style={{ padding: '2px 6px', background: m.source === 'explicit' ? 'var(--rs-veil-3)' : 'var(--rs-veil-1)' }}>
                     {m.source.toUpperCase()}
                   </span>
                 )}

@@ -855,9 +855,9 @@ export default function CulinaryPage({ setAction }) {
                   const isToday = w.dateStr === new Date().toISOString().split('T')[0];
                   return (
                     <div key={w.dateStr} className="rs-p-4 rs-flex rs-flex-col rs-justify-between" style={{
-                      background: isToday ? 'rgba(0, 229, 255, 0.08)' : (w.entry ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'),
+                      background: isToday ? 'rgba(0, 229, 255, 0.08)' : (w.entry ? 'var(--rs-veil-1)' : 'rgba(255,255,255,0.02)'),
                       borderRadius: 'var(--md-shape-lg)',
-                      border: isToday ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid rgba(255,255,255,0.08)',
+                      border: isToday ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid var(--rs-hairline)',
                       minHeight: 120,
                     }}>
                       <div>
@@ -869,7 +869,7 @@ export default function CulinaryPage({ setAction }) {
                             <div className="rs-type-body rs-c-fg" style={{ fontWeight: 750, lineHeight: 1.35 }}>
                               {w.entry.recipe_title || w.entry.label || 'Planned'}
                             </div>
-                            <div className="rs-mt-2 rs-type-micro rs-fw-700" style={{ color: w.entry.status === 'cooked' ? '#4ade80' : '#00e5ff' }}>
+                            <div className="rs-mt-2 rs-type-micro rs-fw-700" style={{ color: w.entry.status === 'cooked' ? 'var(--rs-status-nominal)' : '#00e5ff' }}>
                               {w.entry.status.toUpperCase()}
                             </div>
                           </>
@@ -902,7 +902,7 @@ export default function CulinaryPage({ setAction }) {
                 </h3>
                 <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
                   {proposals.map(p => (
-                    <div key={p.id} className="rs-card animate-page-in rs-p-5" style={{ border: p.status === 'approved' ? '1px solid #00e5ff' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div key={p.id} className="rs-card animate-page-in rs-p-5" style={{ border: p.status === 'approved' ? '1px solid #00e5ff' : '1px solid var(--rs-hairline)' }}>
                       <div className="rs-card-inner">
                         <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
                           <span className="rs-type-micro rs-fw-800" style={{ color: p.status === 'approved' ? '#00e5ff' : 'inherit' }}>
@@ -1081,7 +1081,7 @@ export default function CulinaryPage({ setAction }) {
             <div key={item.id} className="rs-card is-wide animate-page-in" style={{ animationDuration: '300ms' }}>
               <div className="rs-card-inner">
                 <div className="rs-card-head">
-                  <span className="rs-card-label rs-fw-900" style={{ color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80' }}>
+                  <span className="rs-card-label rs-fw-900" style={{ color: item.quantity <= item.min_quantity ? 'var(--rs-status-critical)' : 'var(--rs-status-nominal)' }}>
                     <span className="rs-mono rs-type-h3 rs-fw-800">{item.quantity.toFixed(2)}</span> IN STOCK
                   </span>
                   <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>

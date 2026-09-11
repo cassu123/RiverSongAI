@@ -66,7 +66,7 @@ export default function ForcePasswordChangePage() {
 
         {success ? (
           <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
-            <div className="rs-status-dot rs-flex rs-items-center rs-justify-center" style={{ width: 48, height: 48, margin: '0 auto 16px', background: '#4ade80', animation: 'none', borderRadius: '50%' }}>
+            <div className="rs-status-dot rs-flex rs-items-center rs-justify-center" style={{ width: 48, height: 48, margin: '0 auto 16px', background: 'var(--rs-status-nominal)', animation: 'none', borderRadius: '50%' }}>
               <span className="material-symbols-rounded" style={{ color: 'var(--bg-base)' }}>check</span>
             </div>
             <div className="rs-card-value rs-type-h3">Update Complete</div>

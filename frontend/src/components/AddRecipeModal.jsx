@@ -29,7 +29,7 @@ const inputStyle = {
   boxSizing: 'border-box',
   width: '100%',
   padding: '10px 12px',
-  background: 'rgba(0,0,0,0.25)',
+  background: 'var(--rs-scrim-1)',
   border: '1px solid var(--md-outline-variant)',
   borderRadius: 8,
   fontSize: 'var(--rs-fs-tiny)',

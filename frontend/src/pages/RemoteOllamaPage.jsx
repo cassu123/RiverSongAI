@@ -119,7 +119,7 @@ export default function RemoteOllamaPage({ setAction }) {
             <div className="rs-card-head">
               <span className="rs-card-label">{r.label?.toUpperCase()}</span>
               <span className="rs-pill rs-type-nano" style={{
-                background: r.last_health === 'ok' ? 'var(--md-secondary)' : r.last_health === 'down' ? 'var(--md-error)' : 'rgba(255,255,255,0.1)',
+                background: r.last_health === 'ok' ? 'var(--md-secondary)' : r.last_health === 'down' ? 'var(--md-error)' : 'var(--rs-veil-3)',
                 color: 'var(--bg-base)',
               }}>{r.last_health?.toUpperCase() || 'UNKNOWN'}</span>
             </div>
@@ -151,8 +151,8 @@ const inputStyle = {
   boxSizing: 'border-box',
   width: '100%',
   padding: '10px 12px',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'var(--rs-veil-1)',
+  border: '1px solid var(--rs-hairline-strong)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
   fontSize: 'var(--rs-fs-tiny)',

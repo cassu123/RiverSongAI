@@ -372,7 +372,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
           <span className="rs-card-label rs-muted rs-type-nano">
             {(event.league_id || '').toUpperCase()}
           </span>
-          <span className="rs-card-label rs-type-nano" style={{ color: statusText.toLowerCase().includes('final') ? '#4ade80' : '#f87171' }}>
+          <span className="rs-card-label rs-type-nano" style={{ color: statusText.toLowerCase().includes('final') ? 'var(--rs-status-nominal)' : 'var(--rs-status-critical)' }}>
             {statusText || (event.is_live ? 'LIVE' : 'FINAL')}
           </span>
         </div>
@@ -793,7 +793,7 @@ function ScoresView({
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                background: '#f87171',
+                background: 'var(--rs-status-critical)',
                 boxShadow: '0 0 6px #f87171',
               }} />
             )}
@@ -815,7 +815,7 @@ function ScoresView({
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#f87171',
+              background: 'var(--rs-status-critical)',
               boxShadow: '0 0 6px #f87171',
             }} />
           )}

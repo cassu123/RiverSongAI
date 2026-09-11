@@ -298,7 +298,7 @@ export default function InventoryPage({ setAction }) {
                </div>
                <div className="rs-grow rs-flex rs-items-center rs-justify-end" style={{ minWidth: 200 }}>
                   <div className="rs-status-strip">
-                    <span className="rs-status-dot" style={{ background: stats.missingDocs === 0 ? '#4ade80' : 'var(--warn)' }} />
+                    <span className="rs-status-dot" style={{ background: stats.missingDocs === 0 ? 'var(--rs-status-nominal)' : 'var(--warn)' }} />
                     <span>{stats.missingDocs === 0 ? 'CLAIM READY' : 'NEEDS ATTENTION'}</span>
                   </div>
                </div>

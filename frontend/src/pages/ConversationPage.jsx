@@ -81,7 +81,7 @@ export default function ConversationPage({ setAction }) {
     setAction(
       <div className="rs-chat-input-container">
         <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
-          <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
+          <span className="rs-status-dot" style={{ background: isActive ? 'var(--rs-status-nominal)' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
           <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.1em' }}>
             {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
           </span>

@@ -1426,12 +1426,12 @@ export default function MaintenancePulse({
                 className="rs-status-strip"
                 style={isOverdue ? {
                   color: 'var(--rs-status-critical, #ff8b8b)',
-                  borderColor: 'rgba(255,139,139,0.3)',
-                  background: 'rgba(255,139,139,0.1)'
+                  borderColor: 'color-mix(in srgb, var(--rs-status-critical) 30%, transparent)',
+                  background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)'
                 } : {
                   color: 'var(--rs-status-nominal, #4ade80)',
-                  borderColor: 'rgba(74,222,128,0.3)',
-                  background: 'rgba(74,222,128,0.1)'
+                  borderColor: 'color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)',
+                  background: 'color-mix(in srgb, var(--rs-status-nominal) 10%, transparent)'
                 }}
               >
                 <span className="rs-status-dot" style={{ background: isOverdue ? 'var(--rs-status-critical, #ff8b8b)' : 'var(--rs-status-nominal, #4ade80)' }} />
@@ -1710,7 +1710,7 @@ export default function MaintenancePulse({
                       <div
                         key={cp.id}
                         className={`cockpit-item-card ${isDone ? 'is-selected' : ''}`}
-                        style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', cursor: 'pointer', borderColor: isDone ? 'var(--primary)' : 'rgba(255,255,255,0.08)' }}
+                        style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', cursor: 'pointer', borderColor: isDone ? 'var(--primary)' : 'var(--rs-veil-2)' }}
                         onClick={() => {
                           setLogCheckedPoints(prev => ({
                             ...prev,
@@ -1809,7 +1809,7 @@ export default function MaintenancePulse({
                           <span
                             key={cr.id}
                             className="cp-spec-tag"
-                            style={failed ? { color: 'var(--rs-status-critical, #ff8b8b)', borderColor: 'rgba(255,139,139,0.35)' } : undefined}
+                            style={failed ? { color: 'var(--rs-status-critical, #ff8b8b)', borderColor: 'color-mix(in srgb, var(--rs-status-critical) 35%, transparent)' } : undefined}
                           >
                             {failed ? '✕' : '✓'} {cr.description} {cr.actual_value ? `(${cr.actual_value})` : ''}
                           </span>

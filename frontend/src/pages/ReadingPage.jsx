@@ -140,7 +140,7 @@ export default function ReadingPage({ setAction }) {
                </div>
                <div className="rs-grow rs-flex rs-items-center rs-justify-end" style={{ minWidth: 200 }}>
                   <div className="rs-status-strip">
-                    <span className="rs-status-dot" style={{ background: '#4ade80' }} />
+                    <span className="rs-status-dot" style={{ background: 'var(--rs-status-nominal)' }} />
                     <span>ARCHIVES NOMINAL</span>
                   </div>
                </div>

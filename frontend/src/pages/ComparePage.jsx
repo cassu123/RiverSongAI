@@ -209,7 +209,7 @@ function ModelInput({ label, value, onChange }) {
 
 function ResponseCard({ label, body, chosen }) {
   return (
-    <div className="rs-card rs-p-4" style={{ border: chosen ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rs-card rs-p-4" style={{ border: chosen ? '1px solid var(--primary)' : '1px solid var(--rs-hairline)' }}>
       <div className="rs-card-label rs-mb-2">{label}</div>
       <pre className="rs-m-0 rs-type-tiny" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', lineHeight: 1.5 }}>{body || '(empty)'}</pre>
     </div>
@@ -220,8 +220,8 @@ const inputStyle = {
   boxSizing: 'border-box',
   width: '100%',
   padding: '10px 12px',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'var(--rs-veil-1)',
+  border: '1px solid var(--rs-hairline-strong)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
   fontSize: 'var(--rs-fs-tiny)',

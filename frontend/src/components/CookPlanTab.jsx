@@ -670,12 +670,12 @@ export default function CookPlanTab({
                       className="rs-flex rs-items-center rs-gap-3 rs-pointer" style={{
                         padding: 'var(--rs-space-3) var(--rs-space-5)',
                         borderRadius: 'var(--md-shape-lg)',
-                        background: isDone ? 'rgba(74, 222, 128, 0.12)' : '#1a2230',
-                        border: isDone ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
+                        background: isDone ? 'color-mix(in srgb, var(--rs-status-nominal) 12%, transparent)' : '#1a2230',
+                        border: isDone ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid var(--rs-hairline)',
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      <span className="material-symbols-rounded" style={{ fontSize: 26, color: isDone ? '#4ade80' : 'rgba(220, 230, 245, 0.5)' }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 26, color: isDone ? 'var(--rs-status-nominal)' : 'rgba(220, 230, 245, 0.5)' }}>
                         {isDone ? 'check_circle' : 'radio_button_unchecked'}
                       </span>
                       <span className="rs-type-body rs-fw-800 rs-c-primary" style={{ fontFamily: 'JetBrains Mono', minWidth: 70 }}>
@@ -707,11 +707,11 @@ export default function CookPlanTab({
                       className="rs-flex rs-items-start rs-gap-3 rs-pointer" style={{
                         padding: 'var(--rs-space-3) var(--rs-space-4)',
                         borderRadius: 'var(--md-shape-lg)',
-                        background: isDone ? 'rgba(74, 222, 128, 0.12)' : '#1a2230',
-                        border: isDone ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
+                        background: isDone ? 'color-mix(in srgb, var(--rs-status-nominal) 12%, transparent)' : '#1a2230',
+                        border: isDone ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid var(--rs-hairline)',
                       }}
                     >
-                      <span className="material-symbols-rounded" style={{ fontSize: 20, color: isDone ? '#4ade80' : 'rgba(220, 230, 245, 0.4)', marginTop: 2 }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 20, color: isDone ? 'var(--rs-status-nominal)' : 'rgba(220, 230, 245, 0.4)', marginTop: 2 }}>
                         {isDone ? 'check_circle' : 'radio_button_unchecked'}
                       </span>
                       <div className="rs-grow">
@@ -1022,7 +1022,7 @@ export default function CookPlanTab({
                           toggle(s.key)
                         }}
                       >
-                        <span className="material-symbols-rounded" style={{ fontSize: 22, color: isDone ? '#4ade80' : '#00e5ff' }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 22, color: isDone ? 'var(--rs-status-nominal)' : '#00e5ff' }}>
                           {isDone ? 'check_circle' : 'radio_button_unchecked'}
                         </span>
                       </button>

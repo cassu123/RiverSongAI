@@ -156,7 +156,7 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
             {delta != null && (
               <span className="rs-type-micro rs-fw-900" style={{
                 marginLeft: 'auto',
-                color: delta >= 0 ? 'var(--rs-status-nominal, #4ade80)' : '#f87171',
+                color: delta >= 0 ? 'var(--rs-status-nominal, #4ade80)' : 'var(--rs-status-critical)',
               }}>
                 {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
               </span>
