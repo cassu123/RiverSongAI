@@ -56,7 +56,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
 
       <div className="rs-flex rs-gap-2 rs-mb-5 rs-flex-wrap">
         <SimulateButton program={program} onDone={refresh} />
-        <button className="rs-btn-ghost rs-items-center rs-gap-2 rs-type-micro" style={{ padding: '8px 14px', display: 'inline-flex' }}
+        <button className="rs-btn-ghost rs-items-center rs-gap-2 rs-type-micro" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', display: 'inline-flex' }}
           onClick={() => setShowClaim(true)}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add_link</span>
           Claim real unit
@@ -68,7 +68,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
       ) : !units.length ? (
         <div className="rs-card rs-p-7 rs-text-center">
           <span className="material-symbols-rounded" style={{ fontSize: '2.4rem', color: accent, opacity: 0.8 }}>{icon}</span>
-          <h3 style={{ margin: '12px 0 6px' }}>No {title} units yet</h3>
+          <h3 style={{ margin: 'var(--rs-space-3) 0 var(--rs-space-2)' }}>No {title} units yet</h3>
           <p className="rs-card-meta rs-mb-4">Add a simulated unit to watch it come online and stream live telemetry.</p>
           <SimulateButton program={program} onDone={refresh} />
         </div>
@@ -80,7 +80,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
               <div key={u.unit_id}
                 onClick={() => setSelectedId(u.unit_id)}
                 className={`rs-card is-tappable ${selected?.unit_id === u.unit_id ? 'is-elev' : ''}`}
-                style={{ padding: 12, cursor: 'pointer', borderColor: selected?.unit_id === u.unit_id ? accent : undefined }}>
+                style={{ padding: 'var(--rs-space-3)', cursor: 'pointer', borderColor: selected?.unit_id === u.unit_id ? accent : undefined }}>
                 <div className="rs-flex rs-items-center rs-justify-between rs-gap-2">
                   <span className="rs-type-tiny rs-clip rs-ellipsis rs-nowrap" style={{ fontWeight: 600 }}>
                     {u.name || u.unit_id}

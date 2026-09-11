@@ -74,7 +74,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
 
   return (
     <div className="rs-mt-4" style={{
-      paddingTop: 14,
+      paddingTop: 'var(--rs-space-4)',
       borderTop: '1px solid var(--rs-border, rgba(128,128,128,0.25))',
     }}>
       <div className="rs-card-label rs-mb-2">
@@ -94,7 +94,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
           {other.length > 0 && (
             <>
               <div className="rs-card-meta rs-muted rs-type-nano" style={{
-                margin: '14px 0 8px',
+                margin: 'var(--rs-space-4) 0 var(--rs-space-2)',
               }}>
                 ON THE MACHINE, NOT PART OF A PLAN
               </div>
@@ -147,7 +147,7 @@ function Group({ rows, on, toggle }) {
             aria-pressed={active}
             className="rs-type-micro rs-pointer" style={{
               padding: '7px 13px',
-              borderRadius: 999,
+              borderRadius: 'var(--md-shape-full)',
               fontWeight: 800,
               letterSpacing: '0.04em',
               border: active

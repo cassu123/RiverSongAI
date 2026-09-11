@@ -85,7 +85,7 @@ export default function ReadingPage({ setAction }) {
     setAction(
       <div className="rs-chat-input-controls rs-w-full">
         <div className="rs-flex rs-gap-3 rs-items-center rs-w-full">
-          <div className="rs-chat-input-container rs-grow" style={{ padding: '8px 16px', background: 'color-mix(in srgb, var(--md-surface-container-low) 60%, transparent)' }}>
+          <div className="rs-chat-input-container rs-grow" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', background: 'color-mix(in srgb, var(--md-surface-container-low) 60%, transparent)' }}>
             <div className="rs-flex rs-items-center rs-gap-3">
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
@@ -194,7 +194,7 @@ export default function ReadingPage({ setAction }) {
       </div>
 
       <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Archive Sources">
-        <div style={{ padding: '0 16px 24px' }}>
+        <div style={{ padding: '0 var(--rs-space-4) var(--rs-space-5)' }}>
            <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
              <p className="rs-card-meta rs-m-0">Toggle frequency bands for digital integrations.</p>
              <button className="rs-pill" onClick={() => setIntegrationsOpen(true)}>
@@ -206,7 +206,7 @@ export default function ReadingPage({ setAction }) {
               {ALL_SERVICES.map(s => {
                 const active = (selectedServiceKeys || []).includes(s.key)
                 return (
-                  <button key={s.key} className={`rs-card is-tappable ${active ? 'is-elev' : ''}`} style={{ padding: 16, textAlign: 'center' }} onClick={() => {
+                  <button key={s.key} className={`rs-card is-tappable ${active ? 'is-elev' : ''}`} style={{ padding: 'var(--rs-space-4)', textAlign: 'center' }} onClick={() => {
                      const next = active ? selectedServiceKeys.filter(k => k !== s.key) : [...selectedServiceKeys, s.key]
                      setSelectedServiceKeys(next)
                      localStorage.setItem(`rs-reading-services:${userId}`, JSON.stringify(next))

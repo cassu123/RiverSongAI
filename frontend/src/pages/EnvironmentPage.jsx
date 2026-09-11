@@ -144,8 +144,8 @@ export default function EnvironmentPage({ setAction }) {
         </div>
       </header>
 
-      <div className="rs-flex rs-gap-5 rs-mb-5" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
-        <Link to="/environment" style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 8, marginBottom: -9 }}>Property / Home</Link>
+      <div className="rs-flex rs-gap-5 rs-mb-5" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 'var(--rs-space-2)' }}>
+        <Link to="/environment" style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 'var(--rs-space-2)', marginBottom: -9 }}>Property / Home</Link>
         <Link to="/fleet" style={{ fontWeight: 400, color: 'var(--text-secondary)', textDecoration: 'none' }}>Fleet</Link>
       </div>
 
@@ -153,7 +153,7 @@ export default function EnvironmentPage({ setAction }) {
         <div className="rs-card rs-mb-4" style={{
           background: 'var(--md-primary-container)',
           color: 'var(--md-on-primary-container)',
-          padding: '12px 20px',
+          padding: 'var(--rs-space-3) var(--rs-space-5)',
           borderRadius: 'var(--md-shape-xl)',
         }}>
           {flash}
@@ -161,7 +161,7 @@ export default function EnvironmentPage({ setAction }) {
       )}
 
       <div className="rs-card-flow">
-        <div className="rs-card-label" style={{ marginBottom: -12, marginLeft: 12 }}>◉ ROOM PRESENCE</div>
+        <div className="rs-card-label" style={{ marginBottom: -12, marginLeft: 'var(--rs-space-3)' }}>◉ ROOM PRESENCE</div>
         
         {roomEntries.length === 0 ? (
           <div className="rs-card">
@@ -188,7 +188,7 @@ export default function EnvironmentPage({ setAction }) {
                   {r.stale && <div className="rs-pill rs-type-nano" style={{ position: 'absolute', top: 12, right: 12, background: 'var(--warn)', color: 'black' }}>STALE</div>}
                   <div className="rs-card-label">{key.replace('_', ' ').toUpperCase()}</div>
                   
-                  <div style={{ fontSize: '4rem', fontWeight: 300, lineHeight: 1, margin: '12px 0' }}>{r.persons}</div>
+                  <div style={{ fontSize: '4rem', fontWeight: 300, lineHeight: 1, margin: 'var(--rs-space-3) 0' }}>{r.persons}</div>
                   
                   <div className="rs-type-micro" style={{ color: act.color, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     {act.icon} {act.label}
@@ -229,7 +229,7 @@ export default function EnvironmentPage({ setAction }) {
 
         {isRoverActive && (
           <>
-            <div className="rs-card-label rs-mt-5" style={{ marginBottom: -12, marginLeft: 12 }}>◈ ROVER — ARDU MOWER</div>
+            <div className="rs-card-label rs-mt-5" style={{ marginBottom: -12, marginLeft: 'var(--rs-space-3)' }}>◈ ROVER — ARDU MOWER</div>
             <div className="rs-gap-4 rs-w-full" style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'start' }}>
               <div className="rs-card rs-grow" style={{ backdropFilter: 'var(--glass-blur)' }}>
                 <div className="rs-card-head">
@@ -241,12 +241,12 @@ export default function EnvironmentPage({ setAction }) {
                   </div>
                 </div>
 
-                <div style={{ margin: '20px 0' }}>
+                <div style={{ margin: 'var(--rs-space-5) 0' }}>
                   <div className="rs-flex rs-justify-between rs-mb-2 rs-muted rs-type-nano">
                     <span>BATTERY</span>
                     <span>{rover.battery_pct}% ({rover.battery_v}V)</span>
                   </div>
-                  <div className="rs-w-full rs-clip" style={{ height: 4, background: 'var(--md-surface-container-high)', borderRadius: 2 }}>
+                  <div className="rs-w-full rs-clip" style={{ height: 4, background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-xs)' }}>
                     <div className="rs-h-full" style={{ width: `${rover.battery_pct}%`, background: 'var(--md-primary)' }} />
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export default function EnvironmentPage({ setAction }) {
                   </div>
                 </div>
 
-                <div className="rs-mb-3 rs-flex rs-justify-between" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                <div className="rs-mb-3 rs-flex rs-justify-between" style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--rs-space-3)' }}>
                   <div className="rs-card-label rs-type-nano">MISSION STATUS</div>
                   <div className="rs-type-tiny">
                     {rover.mission_total > 0 

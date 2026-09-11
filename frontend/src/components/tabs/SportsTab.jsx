@@ -67,7 +67,7 @@ function StatusBadge({ game }) {
       fontWeight: 800,
       letterSpacing: '0.08em',
       padding: '3px 8px',
-      borderRadius: 4,
+      borderRadius: 'var(--md-shape-xs)',
     }}>
       LIVE · {game.status_detail}
     </span>
@@ -79,7 +79,7 @@ function StatusBadge({ game }) {
       fontWeight: 800,
       letterSpacing: '0.08em',
       padding: '3px 8px',
-      borderRadius: 4,
+      borderRadius: 'var(--md-shape-xs)',
     }}>
       FINAL
     </span>
@@ -91,7 +91,7 @@ function StatusBadge({ game }) {
       fontWeight: 700,
       letterSpacing: '0.06em',
       padding: '3px 8px',
-      borderRadius: 4,
+      borderRadius: 'var(--md-shape-xs)',
     }}>
       {fmtGameTime(game.date)}
     </span>
@@ -131,10 +131,10 @@ function GameCard({ game, onClick }) {
     <div
       onClick={clickable ? onClick : undefined}
       style={{
-        padding: '14px 12px',
+        padding: 'var(--rs-space-4) var(--rs-space-3)',
         borderBottom: '1px solid var(--md-outline-variant)',
         cursor: clickable ? 'pointer' : 'default',
-        borderRadius: 8,
+        borderRadius: 'var(--md-shape-sm)',
         transition: 'background 0.12s',
       }}
       onMouseEnter={e => { if (clickable) e.currentTarget.style.background = 'var(--md-surface-container)' }}
@@ -154,7 +154,7 @@ function GameCard({ game, onClick }) {
       <div className="rs-flex rs-items-center" style={{ gap: 0 }}>
         <TeamSide abbr={game.away_abbr} name={game.away_team} logo={game.away_logo}
           score={game.away_score} winner={game.away_winner} showScore={!isScheduled} />
-        <div className="rs-type-body rs-no-shrink" style={{ padding: '0 16px', fontWeight: 900, opacity: 0.2 }}>@</div>
+        <div className="rs-type-body rs-no-shrink" style={{ padding: '0 var(--rs-space-4)', fontWeight: 900, opacity: 0.2 }}>@</div>
         <TeamSide abbr={game.home_abbr} name={game.home_team} logo={game.home_logo}
           score={game.home_score} winner={game.home_winner} showScore={!isScheduled} align="right" />
       </div>
@@ -166,13 +166,13 @@ function SportsSkeleton() {
   return (
     <div className="rs-flex rs-flex-col">
       {[0, 1, 2].map(i => (
-        <div key={i} style={{ padding: '14px 12px', borderBottom: '1px solid var(--md-outline-variant)' }}>
-          <div className="rs-mb-3" style={{ height: 8, width: 60, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+        <div key={i} style={{ padding: 'var(--rs-space-4) var(--rs-space-3)', borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-mb-3" style={{ height: 8, width: 60, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
           <div className="rs-flex rs-justify-between">
             {[0, 1].map(j => (
               <div key={j} className="rs-flex rs-flex-col rs-gap-2" style={{ alignItems: j ? 'flex-end' : 'flex-start' }}>
-                <div style={{ height: 10, width: 48, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-                <div style={{ height: 24, width: 32, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                <div style={{ height: 10, width: 48, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+                <div style={{ height: 24, width: 32, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
               </div>
             ))}
           </div>
@@ -204,7 +204,7 @@ function LeagueGrid({ favorites, onToggle }) {
                   className="rs-flex rs-items-center rs-type-nano rs-pointer" style={{
                     gap: 5,
                     padding: '5px 10px',
-                    borderRadius: 20,
+                    borderRadius: 'var(--md-shape-xl)',
                     fontWeight: 700,
                     border: active ? '1px solid var(--primary)' : '1px solid var(--md-outline-variant)',
                     background: active ? 'rgba(var(--primary-rgb,100,100,255),0.12)' : 'transparent',
@@ -236,7 +236,7 @@ function NewsArticleCard({ a }) {
     <div
       onClick={() => window.open(a.url, '_blank')}
       className="rs-flex rs-gap-4 rs-pointer" style={{
-        padding: '14px 0',
+        padding: 'var(--rs-space-4) 0',
         borderBottom: '1px solid var(--md-outline-variant)',
       }}
     >
@@ -247,7 +247,7 @@ function NewsArticleCard({ a }) {
             width: 80,
             height: 64,
             objectFit: 'cover',
-            borderRadius: 6,
+            borderRadius: 'var(--md-shape-xs)',
             background: 'var(--md-surface-container-highest)',
           }}
           onError={e => { e.target.style.display = 'none' }}
@@ -295,12 +295,12 @@ function NewsSkeleton() {
   return (
     <div className="rs-flex rs-flex-col rs-gap-3">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} className="rs-flex rs-gap-4" style={{ padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
-          <div className="rs-no-shrink" style={{ width: 80, height: 64, borderRadius: 6, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+        <div key={i} className="rs-flex rs-gap-4" style={{ padding: 'var(--rs-space-4) 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-no-shrink" style={{ width: 80, height: 64, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
           <div className="rs-grow rs-flex rs-flex-col rs-gap-2">
-            <div style={{ height: 9, width: '35%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.5 }} />
-            <div style={{ height: 12, width: '85%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-            <div style={{ height: 12, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+            <div style={{ height: 9, width: '35%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.5 }} />
+            <div style={{ height: 12, width: '85%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+            <div style={{ height: 12, width: '70%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
           </div>
         </div>
       ))}
@@ -369,7 +369,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
         className="rs-pill rs-mb-4"
         style={{ padding: '5px 12px' }}
       >
-        <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4 }}>arrow_back</span>
+        <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 'var(--rs-space-1)' }}>arrow_back</span>
         Back to scores
       </button>
 
@@ -391,7 +391,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       </div>
 
       {loading && (
-        <div className="rs-text-center" style={{ padding: '32px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) 0' }}>
           <div className="rs-card-meta rs-muted rs-type-micro">Loading box score…</div>
         </div>
       )}
@@ -400,7 +400,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       {!loading && statNames.length > 0 && (
         <div className="rs-card rs-p-4 rs-mb-4">
           <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">TEAM STATS</div>
-          <div className="rs-items-center" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px 12px' }}>
+          <div className="rs-items-center" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 'var(--rs-space-2) var(--rs-space-3)' }}>
             <div className="rs-card-label rs-muted rs-type-nano rs-text-left">
               {away.team?.abbreviation || 'AWAY'}
             </div>
@@ -439,7 +439,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
                 if (!athleteEntry) return null
                 return (
                   <div key={ci} className="rs-flex rs-items-center rs-justify-between" style={{
-                    padding: '6px 0',
+                    padding: 'var(--rs-space-2) 0',
                     borderBottom: ci < (teamBlock.leaders.length - 1) ? '1px solid var(--md-outline-variant)' : 'none',
                   }}>
                     <div>
@@ -460,7 +460,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       )}
 
       {!loading && statNames.length === 0 && leaders.length === 0 && (
-        <div className="rs-card rs-text-center" style={{ padding: '32px 16px' }}>
+        <div className="rs-card rs-text-center" style={{ padding: 'var(--rs-space-6) var(--rs-space-4)' }}>
           <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>sports</span>
           <div className="rs-card-meta">Detailed stats not yet published for this event.</div>
         </div>
@@ -723,7 +723,7 @@ export default function SportsTab({ token, active }) {
             onClick={() => setSubTab(t.key)}
             style={{ fontSize: 'var(--rs-fs-nano)' }}
           >
-            <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 4 }}>{t.icon}</span>
+            <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 'var(--rs-space-1)' }}>{t.icon}</span>
             {t.label}
           </button>
         ))}
@@ -786,7 +786,7 @@ function ScoresView({
                   onClick={() => setActiveLeague(id)}
                   style={{ fontSize: 'var(--rs-fs-nano)' }}
                 >
-                  <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 4, verticalAlign: '-2px' }}>{meta.icon}</span>
+                  <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 'var(--rs-space-1)', verticalAlign: '-2px' }}>{meta.icon}</span>
                   {meta.label}
                 </button>
               )
@@ -814,7 +814,7 @@ function ScoresView({
               onClick={() => setMyTeamsMode(m => !m)}
               style={{ fontSize: 'var(--rs-fs-nano)' }}
             >
-              <span className="material-symbols-rounded" style={{ fontSize: '0.85rem', marginRight: 4 }}>favorite</span>
+              <span className="material-symbols-rounded" style={{ fontSize: '0.85rem', marginRight: 'var(--rs-space-1)' }}>favorite</span>
               My Teams
             </button>
           )}
@@ -831,7 +831,7 @@ function ScoresView({
       </div>
 
       {myTeamsMode && myTeams.length === 0 && (
-        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
           <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>group</span>
           <div className="rs-card-label rs-mb-2">NO FAVORITE TEAMS</div>
           <div className="rs-card-meta">Add teams in Feed Preferences to use this view.</div>
@@ -841,12 +841,12 @@ function ScoresView({
       {!(myTeamsMode && myTeams.length === 0) && (
         loading ? <SportsSkeleton /> :
         error ? (
-          <div className="rs-text-center" style={{ padding: '24px 0' }}>
+          <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
             <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>sports</span>
             <div className="rs-card-meta">{error}</div>
           </div>
         ) : allGames.length === 0 ? (
-          <div className="rs-text-center" style={{ padding: '24px 0' }}>
+          <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
             <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>event_available</span>
             <div className="rs-card-label rs-mb-2">NO GAMES TODAY</div>
             <div className="rs-card-meta">Check back on game day or switch leagues above.</div>
@@ -859,7 +859,7 @@ function ScoresView({
             {games.map(g => <GameCard key={g.id} game={g} onClick={() => openEvent(g)} />)}
             {myTeamsMode && fixtures.length > 0 && (
               <>
-                <div className="rs-card-label rs-muted rs-type-nano" style={{ margin: '16px 0 8px' }}>UPCOMING</div>
+                <div className="rs-card-label rs-muted rs-type-nano" style={{ margin: 'var(--rs-space-4) 0 var(--rs-space-2)' }}>UPCOMING</div>
                 {fixtures.map(g => <GameCard key={g.id} game={g} onClick={() => openEvent(g)} />)}
               </>
             )}
@@ -888,7 +888,7 @@ function NewsView({
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: '14px 24px',
+          gap: 'var(--rs-space-4) var(--rs-space-5)',
         }}
       >
         {Object.entries(newsCatMeta).map(([cat, meta]) => {
@@ -939,13 +939,13 @@ function NewsView({
 
       {loading ? <NewsSkeleton /> :
        error ? (
-        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
           <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.3, display: 'block' }}>wifi_off</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={onRetry}>RETRY</button>
         </div>
        ) : !articles.length ? (
-        <div className="rs-text-center" style={{ padding: '32px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) 0' }}>
           <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>newspaper</span>
           <div className="rs-card-meta">No articles right now. Try expanding the sources panel above.</div>
         </div>

@@ -198,7 +198,7 @@ export default function Programs() {
                 <label>Zones</label>
                 <div className="rs-flex rs-flex-wrap rs-gap-3" style={{ marginTop: 5 }}>
                   {zones.map(z => (
-                    <label key={z.zone_id || z.id} className="rs-flex rs-items-center" style={{ gap: 5, background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: 4 }}>
+                    <label key={z.zone_id || z.id} className="rs-flex rs-items-center" style={{ gap: 5, background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: 'var(--md-shape-xs)' }}>
                       <input type="checkbox" checked={formData.zone_ids.includes(z.zone_id || z.id)} onChange={() => toggleZone(z.zone_id || z.id)} />
                       {z.name}
                     </label>

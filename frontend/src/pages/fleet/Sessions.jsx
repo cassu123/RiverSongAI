@@ -116,7 +116,7 @@ export default function Sessions() {
                     <td className="rs-p-3">{duration}</td>
                     <td className="rs-p-3">
                       <span style={{ 
-                        padding: '2px 8px', borderRadius: 4, fontSize: '0.8em',
+                        padding: '2px 8px', borderRadius: 'var(--md-shape-xs)', fontSize: '0.8em',
                         background: s.status === 'completed' ? 'rgba(0,255,0,0.2)' : 
                                     s.status === 'aborted' ? 'rgba(255,0,0,0.2)' : 'rgba(255,255,255,0.2)'
                       }}>{s.status}</span>
@@ -138,7 +138,7 @@ export default function Sessions() {
               <button className="rs-btn-ghost" onClick={() => setSelectedSession(null)}>Close</button>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" style={{ margin: '20px 0', padding: 15, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" style={{ margin: 'var(--rs-space-5) 0', padding: 15, background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--md-shape-sm)' }}>
               <div><strong>Status:</strong> {selectedSession.status}</div>
               <div><strong>Area Mowed:</strong> {selectedSession.area_mowed_sqm ?? '--'} m&sup2;</div>
               <div><strong>Battery Used:</strong> {selectedSession.battery_used_pct ?? '--'} %</div>
@@ -153,7 +153,7 @@ export default function Sessions() {
                 {sessionDetails.telemetry && sessionDetails.telemetry.length > 0 && (
                   <div>
                     <h4>Telemetry Over Time (Battery %)</h4>
-                    <div className="rs-p-3" style={{ height: 300, background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
+                    <div className="rs-p-3" style={{ height: 300, background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-sm)' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={sessionDetails.telemetry}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -171,12 +171,12 @@ export default function Sessions() {
                 {sessionDetails.events && sessionDetails.events.length > 0 && (
                   <div>
                     <h4>Event Timeline</h4>
-                    <div className="rs-p-3" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, maxHeight: 300, overflowY: 'auto' }}>
+                    <div className="rs-p-3" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-sm)', maxHeight: 300, overflowY: 'auto' }}>
                       {sessionDetails.events.map((e, idx) => (
                         <div key={idx} style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9em' }}>
-                          <span className="rs-muted" style={{ marginRight: 10 }}>{new Date(e.timestamp + 'Z').toLocaleTimeString()}</span>
+                          <span className="rs-muted" style={{ marginRight: 'var(--rs-space-3)' }}>{new Date(e.timestamp + 'Z').toLocaleTimeString()}</span>
                           <strong>{e.event}</strong>
-                          <span className="rs-muted" style={{ marginLeft: 10 }}>{e.data}</span>
+                          <span className="rs-muted" style={{ marginLeft: 'var(--rs-space-3)' }}>{e.data}</span>
                         </div>
                       ))}
                     </div>

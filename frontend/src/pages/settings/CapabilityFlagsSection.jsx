@@ -10,10 +10,10 @@ export default function CapabilityFlagsSection({ data }) {
         These core capabilities are hard-toggled via <code>.env</code> on the server and require a system restart to take effect. <strong>They are read-only here.</strong>
       </p>
 
-      <div className="rs-flex rs-flex-col" style={{ gap: '16px' }}>
+      <div className="rs-flex rs-flex-col" style={{ gap: 'var(--rs-space-4)' }}>
         {data.flags.map(flag => (
           <div key={flag.key} style={{
-            padding: '12px 16px',
+            padding: 'var(--rs-space-3) var(--rs-space-4)',
             background: 'var(--md-surface-container-lowest)',
             border: '1px solid var(--md-outline-variant)',
             borderRadius: 'var(--md-shape-md)'
@@ -25,7 +25,7 @@ export default function CapabilityFlagsSection({ data }) {
               <div className="rs-type-micro" style={{
                 fontWeight: 700,
                 padding: '2px 8px',
-                borderRadius: '12px',
+                borderRadius: 'var(--md-shape-md)',
                 background: flag.enabled ? 'color-mix(in srgb, var(--rs-status-success) 15%, transparent)' : 'color-mix(in srgb, var(--md-outline) 15%, transparent)',
                 color: flag.enabled ? 'var(--rs-status-success)' : 'var(--md-on-surface-variant)',
               }}>
@@ -40,7 +40,7 @@ export default function CapabilityFlagsSection({ data }) {
             <div className="rs-type-micro" style={{
               fontFamily: 'var(--font-mono, monospace)',
               background: 'var(--md-surface-container)',
-              padding: '6px 10px',
+              padding: 'var(--rs-space-2) var(--rs-space-3)',
               borderRadius: 'var(--md-shape-sm)',
               color: 'var(--md-on-surface)',
               userSelect: 'all',

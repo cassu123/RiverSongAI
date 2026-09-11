@@ -236,7 +236,7 @@ export default function ChronosPage({ setAction }) {
       {showQuickSwitcher && (
         <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }} onClick={() => setShowQuickSwitcher(false)}>
           <div className="rs-card is-elev rs-w-full" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-            <div className="rs-flex rs-gap-3 rs-items-center" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 12 }}>
+            <div className="rs-flex rs-gap-3 rs-items-center" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 'var(--rs-space-3)' }}>
                <span className="material-symbols-rounded">search</span>
                <input autoFocus type="text" className="rs-grow" style={{ all: 'unset' }} placeholder="JUMP TO NOTE..." onChange={handleSearch} />
             </div>
@@ -267,7 +267,7 @@ export default function ChronosPage({ setAction }) {
 
       {/* Center: Editor/Viewer/Graph */}
       <div className="rs-card rs-flex rs-flex-col" style={{ padding: 0 }}>
-        <div className="rs-flex rs-items-center rs-gap-3" style={{ padding: '12px 20px', borderBottom: '1px solid var(--md-outline-variant)' }}>
+        <div className="rs-flex rs-items-center rs-gap-3" style={{ padding: 'var(--rs-space-3) var(--rs-space-5)', borderBottom: '1px solid var(--md-outline-variant)' }}>
           {/* View mode toggle */}
           <div className="rs-flex rs-gap-1">
             <button
@@ -357,7 +357,7 @@ export default function ChronosPage({ setAction }) {
                         return (
                           <button
                             className="rs-pill rs-type-tiny"
-                            style={{ padding: '0 8px', height: '1.4rem' }}
+                            style={{ padding: '0 var(--rs-space-2)', height: '1.4rem' }}
                             onClick={async () => {
                               const exists = await loadNote(targetPath)
                               if (!exists) {
@@ -426,7 +426,7 @@ function TreeItem({ item, onSelect, activePath }) {
           <span className="material-symbols-rounded">{expanded ? 'expand_more' : 'chevron_right'}</span>
           <span className="rs-grow rs-text-left">{item.name}</span>
         </button>
-        {expanded && <div style={{ paddingLeft: 12 }}><TreeList items={item.children} onSelect={onSelect} activePath={activePath} /></div>}
+        {expanded && <div style={{ paddingLeft: 'var(--rs-space-3)' }}><TreeList items={item.children} onSelect={onSelect} activePath={activePath} /></div>}
       </div>
     )
   }

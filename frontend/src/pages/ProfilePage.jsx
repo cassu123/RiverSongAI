@@ -233,7 +233,7 @@ function TwoFactorCard({ token }) {
             <img
               src={`data:image/png;base64,${enrollment.qr_png_b64}`}
               alt="2FA QR code"
-              className="rs-p-3" style={{ width: 180, height: 180, background: 'white', borderRadius: 8 }}
+              className="rs-p-3" style={{ width: 180, height: 180, background: 'white', borderRadius: 'var(--md-shape-sm)' }}
             />
           )}
           <div className="rs-grow" style={{ minWidth: 240 }}>
@@ -243,9 +243,9 @@ function TwoFactorCard({ token }) {
             <code
               className="rs-mb-4 rs-type-tiny" style={{
                 display: 'block',
-                padding: '8px 12px',
+                padding: 'var(--rs-space-2) var(--rs-space-3)',
                 background: 'var(--md-surface-container)',
-                borderRadius: 6,
+                borderRadius: 'var(--md-shape-xs)',
                 wordBreak: 'break-all',
               }}
             >
@@ -257,7 +257,7 @@ function TwoFactorCard({ token }) {
               inputMode="numeric"
               maxLength={6}
               className="rs-pill rs-w-full"
-              style={{ padding: '12px 16px', background: 'var(--md-surface-container)', letterSpacing: '0.2em' }}
+              style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container)', letterSpacing: '0.2em' }}
               value={verifyCode}
               onChange={e => setVerifyCode(e.target.value.replace(/\D/g, ''))}
               placeholder="000000"
@@ -281,7 +281,7 @@ function TwoFactorCard({ token }) {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
               background: 'var(--md-surface-container)',
-              borderRadius: 8,
+              borderRadius: 'var(--md-shape-sm)',
             }}
           >
             {recoveryCodes.map((c, i) => (
@@ -298,7 +298,7 @@ function TwoFactorCard({ token }) {
           <input
             type="password"
             className="rs-pill"
-            style={{ padding: '12px 16px', background: 'var(--md-surface-container)' }}
+            style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container)' }}
             placeholder="Password"
             value={disablePwd}
             onChange={e => setDisablePwd(e.target.value)}
@@ -308,7 +308,7 @@ function TwoFactorCard({ token }) {
             inputMode="numeric"
             maxLength={6}
             className="rs-pill"
-            style={{ padding: '12px 16px', background: 'var(--md-surface-container)', letterSpacing: '0.2em' }}
+            style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container)', letterSpacing: '0.2em' }}
             placeholder="000000"
             value={disableCode}
             onChange={e => setDisableCode(e.target.value.replace(/\D/g, ''))}
@@ -455,12 +455,12 @@ export default function ProfilePage({
               <input 
                 type="text" 
                 className="rs-pill rs-w-full rs-type-body" 
-                style={{ padding: '12px 18px', background: 'var(--md-surface-container)' }}
+                style={{ padding: 'var(--rs-space-3) var(--rs-space-5)', background: 'var(--md-surface-container)' }}
                 value={displayName} 
                 onChange={e => setDisplayName(e.target.value)} 
               />
             </div>
-            <button className="rs-btn-primary rs-type-small" style={{ padding: '12px 24px' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
+            <button className="rs-btn-primary rs-type-small" style={{ padding: 'var(--rs-space-3) var(--rs-space-5)' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
           </div>
           <div className="rs-card-meta rs-mt-5 rs-flex rs-gap-6">
             <div>
@@ -507,7 +507,7 @@ export default function ProfilePage({
                 key={e.key} 
                 className={`rs-pill ${environment === e.key ? 'is-active' : ''}`}
                 onClick={() => onEnvironmentChange(e.key)}
-                style={{ justifyContent: 'space-between', padding: '10px 16px', fontSize: 'var(--rs-fs-small)' }}
+                style={{ justifyContent: 'space-between', padding: 'var(--rs-space-3) var(--rs-space-4)', fontSize: 'var(--rs-fs-small)' }}
               >
                 <span>{e.label}</span>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: e.primary }} />
@@ -526,7 +526,7 @@ export default function ProfilePage({
                 key={m.key} 
                 className={`rs-pill ${mood === m.key ? 'is-active' : ''}`}
                 onClick={() => onMoodChange(m.key)}
-                style={{ justifyContent: 'space-between', padding: '10px 16px', fontSize: 'var(--rs-fs-small)' }}
+                style={{ justifyContent: 'space-between', padding: 'var(--rs-space-3) var(--rs-space-4)', fontSize: 'var(--rs-fs-small)' }}
               >
                 <span>{m.label}</span>
                 {mood === m.key && <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>check</span>}
@@ -549,7 +549,7 @@ export default function ProfilePage({
               className={`rs-btn-primary ${pushStatus === 'linked' ? 'is-active' : ''}`} 
               disabled={pushStatus === 'linked'}
               onClick={handlePushEnable}
-              style={{ padding: '12px 24px', fontSize: 'var(--rs-fs-small)' }}
+              style={{ padding: 'var(--rs-space-3) var(--rs-space-5)', fontSize: 'var(--rs-fs-small)' }}
             >
               {pushStatus === 'linked' ? 'LINK ESTABLISHED' : 'AUTHORIZE LINK'}
             </button>
@@ -584,9 +584,9 @@ export default function ProfilePage({
                       key={service.key}
                       className="rs-input-group rs-flex rs-items-center rs-justify-between"
                       style={{
-                        padding: '12px 16px',
+                        padding: 'var(--rs-space-3) var(--rs-space-4)',
                         background: 'var(--md-surface-container)',
-                        borderRadius: '8px',
+                        borderRadius: 'var(--md-shape-sm)',
                         border: '1px solid var(--md-outline-variant)',
                       }}
                     >
@@ -612,7 +612,7 @@ export default function ProfilePage({
                           className="rs-pill rs-justify-center rs-type-nano"
                           onClick={() => handleDisconnect(service.key)}
                           disabled={disconnecting === service.key}
-                          style={{ padding: '6px 16px', minWidth: '110px' }}
+                          style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', minWidth: '110px' }}
                         >
                           {disconnecting === service.key ? 'DISCONNECTING...' : 'DISCONNECT'}
                         </button>
@@ -621,7 +621,7 @@ export default function ProfilePage({
                           className="rs-pill rs-justify-center rs-muted rs-type-nano"
                           disabled
                           title="This integration is not available yet."
-                          style={{ padding: '6px 16px', minWidth: '110px' }}
+                          style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', minWidth: '110px' }}
                         >
                           COMING SOON
                         </button>
@@ -629,7 +629,7 @@ export default function ProfilePage({
                         <button
                           className="rs-btn-primary rs-justify-center rs-type-micro"
                           onClick={() => handleConnect(service.key)}
-                          style={{ padding: '8px 16px', minWidth: '110px', borderRadius: '4px' }}
+                          style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', minWidth: '110px', borderRadius: 'var(--md-shape-xs)' }}
                         >
                           CONNECT
                         </button>

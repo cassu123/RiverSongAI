@@ -18,7 +18,7 @@ function Gauge({ label, pct, color }) {
         <span className="rs-card-label rs-type-nano">{label}</span>
         <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 700, color }}>{v}%</span>
       </div>
-      <div className="rs-clip" style={{ height: 8, borderRadius: 4, background: 'var(--md-surface-container-high,#2a2a2a)' }}>
+      <div className="rs-clip" style={{ height: 8, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-surface-container-high,#2a2a2a)' }}>
         <div className="rs-h-full" style={{ width: `${v}%`, background: color, transition: 'width .4s ease' }} />
       </div>
     </div>

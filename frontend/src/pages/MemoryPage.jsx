@@ -140,7 +140,7 @@ export default function MemoryPage({ setAction }) {
   useEffect(() => {
     setAction(
       <div className="rs-flex rs-gap-3 rs-items-center">
-        <div className="rs-card rs-grow" style={{ padding: '8px 16px', background: 'var(--md-surface-container-low)' }}>
+        <div className="rs-card rs-grow" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', background: 'var(--md-surface-container-low)' }}>
           <input 
             type="text" 
             className="rs-w-full rs-type-small" style={{ all: 'unset' }} 
@@ -174,7 +174,7 @@ export default function MemoryPage({ setAction }) {
         <h1 className="rs-greeting">Memory Hub</h1>
         <div className="rs-greeting-sub">Inspect, edit, and control everything River Song knows about you.</div>
         
-        <div className="rs-flex rs-flex-wrap" style={{ gap: '8px', marginTop: '16px' }}>
+        <div className="rs-flex rs-flex-wrap" style={{ gap: 'var(--rs-space-2)', marginTop: 'var(--rs-space-4)' }}>
           {['ALL', 'FACT', 'PREFERENCE', 'SUMMARY', 'SUGGESTION'].map(t => (
             <button 
               key={t}
@@ -202,7 +202,7 @@ export default function MemoryPage({ setAction }) {
           <span className="rs-card-label rs-no-shrink" style={{ color: 'var(--rs-status-warning)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD PREF</span>
           <input className="rs-card" placeholder="Category" value={newPref.category} onChange={e => setNewPref({...newPref, category: e.target.value})} style={addInput(1)} />
           <input className="rs-card" placeholder="Value" value={newPref.value} onChange={e => setNewPref({...newPref, value: e.target.value})} style={addInput(2)} />
-          <select className="rs-card" value={newPref.confidence} onChange={e => setNewPref({...newPref, confidence: e.target.value})} style={{ ...addInput('0 0 auto'), padding: 8 }}>
+          <select className="rs-card" value={newPref.confidence} onChange={e => setNewPref({...newPref, confidence: e.target.value})} style={{ ...addInput('0 0 auto'), padding: 'var(--rs-space-2)' }}>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
@@ -219,7 +219,7 @@ export default function MemoryPage({ setAction }) {
         ) : (
           filtered.map((m, i) => (
             <div key={m.id || i} className="rs-card is-wide animate-page-in">
-              <div className="rs-card-head rs-mb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 8 }}>
+              <div className="rs-card-head rs-mb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 'var(--rs-space-2)' }}>
                 <span className="rs-card-label" style={{ 
                   color: m._type === 'FACT' ? 'var(--primary)' 
                        : m._type === 'PREFERENCE' ? 'var(--rs-status-warning)' 
@@ -242,14 +242,14 @@ export default function MemoryPage({ setAction }) {
                 
                 <div className="rs-flex rs-gap-2" style={{ marginLeft: 'auto' }}>
                   {m._type === 'SUGGESTION' && (
-                    <button className="rs-pill rs-type-nano" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: '4px 8px', background: 'var(--rs-status-success)' }}>
+                    <button className="rs-pill rs-type-nano" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', background: 'var(--rs-status-success)' }}>
                       APPROVE
                     </button>
                   )}
                   {editingId !== m.id && m._type !== 'SUGGESTION' && (
-                    <button className="rs-pill rs-type-nano" onClick={() => startEdit(m)} style={{ padding: '4px 8px' }}>EDIT</button>
+                    <button className="rs-pill rs-type-nano" onClick={() => startEdit(m)} style={{ padding: 'var(--rs-space-1) var(--rs-space-2)' }}>EDIT</button>
                   )}
-                  <button className="rs-pill rs-type-nano" onClick={() => handleDelete(m.id, m._type)} style={{ padding: '4px 8px', color: 'var(--rs-status-error)' }}>
+                  <button className="rs-pill rs-type-nano" onClick={() => handleDelete(m.id, m._type)} style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', color: 'var(--rs-status-error)' }}>
                     {m._type === 'SUGGESTION' ? 'DISMISS' : 'DELETE'}
                   </button>
                 </div>

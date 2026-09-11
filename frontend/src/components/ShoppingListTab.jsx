@@ -229,7 +229,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         className="rs-pill rs-gap-3 rs-flex-wrap rs-relative"
         style={{
           justifyContent: 'flex-start',
-          padding: '10px 14px',
+          padding: 'var(--rs-space-3) var(--rs-space-4)',
           opacity: item.checked ? 0.45 : 1,
           background: 'var(--md-surface-container-low)',
         }}
@@ -293,7 +293,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
             >
               <button
                 className="rs-mpop-row rs-type-small"
-                style={{ padding: '6px 8px' }}
+                style={{ padding: 'var(--rs-space-2) var(--rs-space-2)' }}
                 onClick={() => handleQuickStoreChange(item.id, null)}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>remove_circle_outline</span>
@@ -305,7 +305,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                   <button
                     key={st}
                     className="rs-mpop-row rs-type-small"
-                    style={{ padding: '6px 8px' }}
+                    style={{ padding: 'var(--rs-space-2) var(--rs-space-2)' }}
                     onClick={() => handleQuickStoreChange(item.id, st)}
                   >
                     <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', color: meta.color }}>
@@ -345,11 +345,11 @@ export default function ShoppingListTab({ api, refreshKey }) {
   return (
     <div className="rs-flex rs-flex-col rs-gap-4 rs-w-full" style={{ maxWidth: 740, margin: '0 auto' }}>
       {/* Store Filter Tabs */}
-      <div className="rs-flex rs-gap-2" style={{ overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+      <div className="rs-flex rs-gap-2" style={{ overflowX: 'auto', paddingBottom: 'var(--rs-space-1)', scrollbarWidth: 'none' }}>
         <button
           className="rs-pill rs-type-small"
           style={{
-            padding: '6px 12px',
+            padding: 'var(--rs-space-2) var(--rs-space-3)',
             background: activeStoreFilter === 'all' ? 'var(--primary)' : 'var(--md-surface-container-low)',
             color: activeStoreFilter === 'all' ? '#000' : 'inherit',
             fontWeight: activeStoreFilter === 'all' ? 800 : 500,
@@ -367,7 +367,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
               key={st}
               className="rs-pill rs-type-small"
               style={{
-                padding: '6px 12px',
+                padding: 'var(--rs-space-2) var(--rs-space-3)',
                 gap: 5,
                 background: isActive ? (meta ? meta.color : 'var(--primary)') : 'var(--md-surface-container-low)',
                 color: isActive ? '#fff' : 'inherit',
@@ -600,7 +600,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                     key={st}
                     className="rs-pill rs-type-small"
                     style={{
-                      padding: '4px 10px',
+                      padding: 'var(--rs-space-1) var(--rs-space-3)',
                       background: isSelected ? meta.color : 'var(--md-surface-container-low)',
                       color: isSelected ? '#fff' : 'inherit',
                       fontWeight: isSelected ? 800 : 500,

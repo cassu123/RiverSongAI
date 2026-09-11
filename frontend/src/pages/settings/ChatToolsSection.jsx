@@ -114,13 +114,13 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         <div className="rs-flex rs-flex-wrap rs-items-center rs-justify-between rs-gap-3">
           <p className="rs-card-meta rs-m-0">
             Configure which skills, integrations, and tools River can access during voice and chat sessions.
-            {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
+            {saving && <span style={{ marginLeft: 'var(--rs-space-2)', color: 'var(--primary)' }}>SAVING…</span>}
           </p>
           <div className="rs-flex rs-items-center rs-gap-2">
             <span className="rs-type-micro" style={{
               fontWeight: 700,
               padding: '3px 10px',
-              borderRadius: 12,
+              borderRadius: 'var(--md-shape-md)',
               background: 'color-mix(in srgb, var(--rs-status-nominal) 15%, transparent)',
               color: 'var(--rs-status-nominal)',
               border: '1px solid color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)',
@@ -131,7 +131,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
               <span className="rs-type-micro" style={{
                 fontWeight: 700,
                 padding: '3px 10px',
-                borderRadius: 12,
+                borderRadius: 'var(--md-shape-md)',
                 background: 'color-mix(in srgb, var(--md-error) 15%, transparent)',
                 color: 'var(--md-error)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 30%, transparent)',
@@ -146,7 +146,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         <div className="rs-flex rs-flex-wrap rs-items-center rs-gap-3 rs-mt-1">
           <div className="rs-grow rs-flex rs-items-center rs-gap-2" style={{
             minWidth: 220,
-            padding: '8px 12px',
+            padding: 'var(--rs-space-2) var(--rs-space-3)',
             background: 'var(--md-surface-container)',
             border: '1px solid var(--md-outline-variant)',
             borderRadius: 'var(--md-shape-sm)',
@@ -172,7 +172,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
           <button
             type="button"
             className="rs-pill rs-type-micro"
-            style={{ padding: '6px 12px' }}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}
             onClick={() => handleToggleAll(true)}
           >
             ENABLE ALL
@@ -180,7 +180,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
           <button
             type="button"
             className="rs-pill rs-type-micro"
-            style={{ padding: '6px 12px' }}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}
             onClick={() => handleToggleAll(false)}
           >
             DISABLE ALL
@@ -188,14 +188,14 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {/* Category Filter Chips */}
-        <div className="rs-flex rs-gap-2 rs-flex-wrap" style={{ marginBlock: 4 }}>
+        <div className="rs-flex rs-gap-2 rs-flex-wrap" style={{ marginBlock: 'var(--rs-space-1)' }}>
           {categories.map(cat => (
             <button
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
               className={`rs-pill ${selectedCategory === cat ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-micro)', padding: '4px 10px' }}
+              style={{ fontSize: 'var(--rs-fs-micro)', padding: 'var(--rs-space-1) var(--rs-space-3)' }}
             >
               {cat}
             </button>
@@ -230,7 +230,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                     <span className="rs-type-nano" style={{
                       fontFamily: 'var(--font-mono, monospace)',
                       padding: '2px 6px',
-                      borderRadius: 4,
+                      borderRadius: 'var(--md-shape-xs)',
                       background: 'var(--md-surface-container)',
                       color: 'var(--md-outline)',
                     }}>
@@ -250,7 +250,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                 </div>
 
                 <div className="rs-flex rs-items-center rs-justify-between" style={{
-                  paddingTop: 8,
+                  paddingTop: 'var(--rs-space-2)',
                   borderTop: '1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)',
                 }}>
                   <span className="rs-type-micro" style={{

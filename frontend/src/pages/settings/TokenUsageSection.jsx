@@ -160,8 +160,8 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
                     <div key={src.source}
                       onClick={() => setOpenSource(open ? null : src.source)}
                       className="rs-pointer" style={{
-                        padding: '10px 12px',
-                        borderRadius: 10,
+                        padding: 'var(--rs-space-3) var(--rs-space-3)',
+                        borderRadius: 'var(--md-shape-sm)',
                         background: 'var(--md-surface-container-low)',
                         border: '1px solid var(--md-outline-variant)',
                       }}>
@@ -175,8 +175,8 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
                           {fmtCostUsd(src.estimated_cost_usd)}
                         </span>
                       </div>
-                      <div className="rs-mt-2" style={{ height: 4, borderRadius: 2, background: 'var(--md-surface-container-high)' }}>
-                        <div className="rs-h-full" style={{ width: `${pct}%`, borderRadius: 2, background: 'var(--primary)', opacity: 0.85 }} />
+                      <div className="rs-mt-2" style={{ height: 4, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-surface-container-high)' }}>
+                        <div className="rs-h-full" style={{ width: `${pct}%`, borderRadius: 'var(--md-shape-xs)', background: 'var(--primary)', opacity: 0.85 }} />
                       </div>
                       {open && (
                         <div className="rs-mt-3 rs-flex rs-flex-col rs-gap-1">
@@ -202,24 +202,24 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           ) : (
             <>
               <div className="rs-card-label rs-mb-2 rs-type-nano">BY MODEL</div>
-              <div className="rs-table-wrap" style={{ padding: 0, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+              <div className="rs-table-wrap" style={{ padding: 0, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
                 <table className="rs-w-full rs-type-tiny" style={{ borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--md-surface-container-high)' }}>
-                      <th style={{ textAlign: 'left', padding: '12px 16px' }} className="rs-card-label">MODEL</th>
-                      <th style={{ textAlign: 'right', padding: '12px 16px' }} className="rs-card-label">CALLS</th>
-                      <th style={{ textAlign: 'right', padding: '12px 16px' }} className="rs-card-label">COST</th>
+                      <th style={{ textAlign: 'left', padding: 'var(--rs-space-3) var(--rs-space-4)' }} className="rs-card-label">MODEL</th>
+                      <th style={{ textAlign: 'right', padding: 'var(--rs-space-3) var(--rs-space-4)' }} className="rs-card-label">CALLS</th>
+                      <th style={{ textAlign: 'right', padding: 'var(--rs-space-3) var(--rs-space-4)' }} className="rs-card-label">COST</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.by_model.map((row, i) => (
                       <tr key={i} style={{ borderTop: '1px solid var(--md-outline-variant)' }}>
-                        <td style={{ padding: '12px 16px' }}>
+                        <td style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                           <div style={{ fontWeight: 600 }}>{row.model}</div>
                           <div className="rs-muted rs-type-nano">{row.provider.toUpperCase()}</div>
                         </td>
-                        <td className="rs-text-right" style={{ padding: '12px 16px', fontVariantNumeric: 'tabular-nums' }}>{row.calls}</td>
-                        <td className="rs-text-right" style={{ padding: '12px 16px', color: row.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)', fontWeight: 600 }}>
+                        <td className="rs-text-right" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', fontVariantNumeric: 'tabular-nums' }}>{row.calls}</td>
+                        <td className="rs-text-right" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', color: row.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)', fontWeight: 600 }}>
                           {fmtCostUsd(row.estimated_cost_usd)}
                         </td>
                       </tr>

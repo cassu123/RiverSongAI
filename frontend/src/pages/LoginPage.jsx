@@ -121,7 +121,7 @@ export default function LoginPage({ onSwitchToSignup }) {
   }
 
   return (
-    <div className="rs-flex rs-items-center rs-justify-center rs-relative" style={{ zIndex: 1, minHeight: '100dvh', padding: '16px' }}>
+    <div className="rs-flex rs-items-center rs-justify-center rs-relative" style={{ zIndex: 1, minHeight: '100dvh', padding: 'var(--rs-space-4)' }}>
       <div className="rs-card is-elev rs-w-full" style={{ maxWidth: 400, padding: '2.25rem 1.75rem' }}>
 
         <div className="rs-text-center" style={{ marginBottom: '2rem' }}>

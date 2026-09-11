@@ -101,7 +101,7 @@ export default function SlaePage({ setAction }) {
         {(roles.roles || []).length === 0 ? (
           <div className="rs-card-meta">No roles registered yet.</div>
         ) : (
-          <div className="rs-type-micro" style={{ display: 'grid', gridTemplateColumns: '110px 1fr auto', columnGap: 12, rowGap: 6 }}>
+          <div className="rs-type-micro" style={{ display: 'grid', gridTemplateColumns: '110px 1fr auto', columnGap: 'var(--rs-space-3)', rowGap: 'var(--rs-space-2)' }}>
             {roles.roles.map((r) => {
               const inv = r.last_invocation
               const dot = inv ? (inv.success ? 'var(--md-secondary)' : 'var(--md-error)') : 'rgba(255,255,255,0.18)'
@@ -110,8 +110,8 @@ export default function SlaePage({ setAction }) {
                   <span style={{ opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{r.name}</span>
                   <span style={{ opacity: 0.7 }}>
                     {r.provider}/{r.model}
-                    {r.json_mode && <span className="rs-muted rs-type-nano" style={{ marginLeft: 6 }}>JSON</span>}
-                    <span className="rs-muted rs-type-nano" style={{ marginLeft: 8 }}>T={r.temperature}</span>
+                    {r.json_mode && <span className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-2)' }}>JSON</span>}
+                    <span className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-2)' }}>T={r.temperature}</span>
                   </span>
                   <span title={inv ? `${inv.ts} (${inv.elapsed_ms ?? '—'} ms)` : 'No invocations yet'} style={{
                     width: 8, height: 8, borderRadius: '50%', background: dot, alignSelf: 'center',

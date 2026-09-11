@@ -125,7 +125,7 @@ export default function WebhookTokensPage({ setAction }) {
       {freshlyMinted && (
         <div className="rs-card is-wide rs-p-4 rs-mb-4" style={{ borderLeft: '3px solid var(--md-secondary)' }}>
           <div className="rs-card-label rs-mb-2">NEW TOKEN — COPY NOW</div>
-          <div className="rs-p-3" style={{ fontFamily: 'var(--font-mono, monospace)', wordBreak: 'break-all', background: 'rgba(0,0,0,0.35)', borderRadius: 6 }}>
+          <div className="rs-p-3" style={{ fontFamily: 'var(--font-mono, monospace)', wordBreak: 'break-all', background: 'rgba(0,0,0,0.35)', borderRadius: 'var(--md-shape-xs)' }}>
             {freshlyMinted.token}
           </div>
           <div className="rs-mt-3 rs-flex rs-gap-2">
@@ -261,7 +261,7 @@ export default function WebhookTokensPage({ setAction }) {
             {!audit.loading && audit.entries.map(e => (
               <div key={e.id} className="rs-p-3 rs-mb-2 rs-type-micro" style={{
                 background: 'rgba(255,255,255,0.04)',
-                borderRadius: 6,
+                borderRadius: 'var(--md-shape-xs)',
               }}>
                 <div className="rs-flex rs-justify-between rs-mb-1">
                   <span style={{ fontWeight: 600 }}>{e.action?.toUpperCase()}</span>
@@ -273,7 +273,7 @@ export default function WebhookTokensPage({ setAction }) {
                 )}
                 {e.detail && (
                   <pre className="rs-muted rs-type-nano" style={{
-                    margin: '4px 0 0',
+                    margin: 'var(--rs-space-1) 0 0',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
                   }}>{e.detail}</pre>

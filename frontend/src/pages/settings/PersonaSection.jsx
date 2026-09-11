@@ -10,7 +10,7 @@ import { Section } from './shared.jsx'
 export default function PersonaSection({ personaSettings, setPersonaSettings, savePersona, resetPersona }) {
   return (
     <Section title="PERSONALITY">
-          <div className="rs-mb-3 rs-flex rs-items-center rs-gap-2" style={{ padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)' }}>
+          <div className="rs-mb-3 rs-flex rs-items-center rs-gap-2" style={{ padding: 'var(--rs-space-3)', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)' }}>
             <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)' }}>warning</span>
             <span className="rs-type-tiny" style={{ color: 'var(--rs-status-warning)' }}>Advanced — Keep "River Song" references intact or she will lose her identity.</span>
           </div>

@@ -53,7 +53,7 @@ function relTime(iso) {
 
 function NewsList({ items }) {
   if (!items.length) return (
-    <div className="rs-card-meta rs-muted rs-type-micro" style={{ padding: '12px 0' }}>No recent news.</div>
+    <div className="rs-card-meta rs-muted rs-type-micro" style={{ padding: 'var(--rs-space-3) 0' }}>No recent news.</div>
   )
   return (
     <div className="rs-flex rs-flex-col" style={{ gap: 0 }}>
@@ -64,7 +64,7 @@ function NewsList({ items }) {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            display: 'block', padding: '10px 0',
+            display: 'block', padding: 'var(--rs-space-3) 0',
             borderBottom: i < items.length - 1 ? '1px solid var(--md-outline-variant)' : 'none',
             textDecoration: 'none', color: 'inherit',
           }}
@@ -100,7 +100,7 @@ function QuoteRow({ quote, selected, onSelect, onRemove }) {
     <div
       onClick={() => onSelect(quote.ticker)}
       className="rs-flex rs-items-center rs-gap-3 rs-pointer" style={{
-        padding: '12px 0',
+        padding: 'var(--rs-space-3) 0',
         borderBottom: '1px solid var(--md-outline-variant)',
         background: selected ? 'rgba(var(--primary-rgb,100,100,255),0.06)' : 'transparent',
         borderRadius: selected ? 4 : 0,
@@ -319,13 +319,13 @@ export default function StocksTab({ token, active }) {
               right: 0,
               background: 'var(--md-surface-container-high)',
               border: '1px solid var(--md-outline-variant)',
-              borderRadius: 8,
+              borderRadius: 'var(--md-shape-sm)',
               zIndex: 50,
             }}>
-              {searching && <div className="rs-card-meta rs-type-micro" style={{ padding: '10px 16px' }}>Searching…</div>}
+              {searching && <div className="rs-card-meta rs-type-micro" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>Searching…</div>}
               {searchResults.slice(0, 5).map(r => (
                 <button key={r.ticker} onClick={() => addTicker(r.ticker)} className="rs-flex rs-w-full rs-gap-3 rs-items-center rs-pointer rs-text-left" style={{
-                  padding: '10px 16px',
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
                   background: 'none',
                   border: 'none',
                   borderTop: '1px solid var(--md-outline-variant)',
@@ -343,7 +343,7 @@ export default function StocksTab({ token, active }) {
 
       {/* Column headers */}
       {quotes.length > 0 && (
-        <div className="rs-flex rs-items-center rs-gap-3" style={{ paddingBottom: 8, borderBottom: '1px solid var(--md-outline-variant)' }}>
+        <div className="rs-flex rs-items-center rs-gap-3" style={{ paddingBottom: 'var(--rs-space-2)', borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div style={{ minWidth: 52 }}>{colHeader('SYMBOL')}</div>
           <div style={{ minWidth: 56 }}>{colHeader('TREND')}</div>
           <div className="rs-grow rs-text-right">{colHeader('PRICE', 'right')}</div>
@@ -353,13 +353,13 @@ export default function StocksTab({ token, active }) {
       )}
 
       {loading ? <StocksSkeleton /> : error ? (
-        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
           <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>trending_flat</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchQuotes}>RETRY</button>
         </div>
       ) : quotes.length === 0 ? (
-        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
           <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>candlestick_chart</span>
           <div className="rs-card-label rs-mb-2">EMPTY WATCHLIST</div>
           <div className="rs-card-meta">Search for a ticker symbol above to start tracking.</div>
@@ -384,7 +384,7 @@ export default function StocksTab({ token, active }) {
             {selectedTicker} · 30-DAY CHART
           </div>
           {chartLoading ? (
-            <div style={{ height: 72, background: 'var(--md-outline-variant)', borderRadius: 8, opacity: 0.2 }} />
+            <div style={{ height: 72, background: 'var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', opacity: 0.2 }} />
           ) : chart?.length ? (
             <LineChart data={chart} />
           ) : (
@@ -414,18 +414,18 @@ function StocksSkeleton() {
   return (
     <div className="rs-flex rs-flex-col">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} className="rs-flex rs-gap-3 rs-items-center" style={{ padding: '12px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+        <div key={i} className="rs-flex rs-gap-3 rs-items-center" style={{ padding: 'var(--rs-space-3) 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div className="rs-flex rs-flex-col rs-gap-1" style={{ minWidth: 52 }}>
-            <div style={{ height: 10, width: 40, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-            <div style={{ height: 8, width: 32, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
+            <div style={{ height: 10, width: 40, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+            <div style={{ height: 8, width: 32, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.25 }} />
           </div>
-          <div style={{ height: 8, width: 56, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+          <div style={{ height: 8, width: 56, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
           <div className="rs-grow rs-flex" style={{ justifyContent: 'flex-end' }}>
-            <div style={{ height: 14, width: 64, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.35 }} />
+            <div style={{ height: 14, width: 64, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.35 }} />
           </div>
           <div className="rs-flex rs-flex-col rs-gap-1" style={{ minWidth: 80, alignItems: 'flex-end' }}>
-            <div style={{ height: 10, width: 48, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-            <div style={{ height: 8, width: 36, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.2 }} />
+            <div style={{ height: 10, width: 48, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+            <div style={{ height: 8, width: 36, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.2 }} />
           </div>
           <div style={{ width: 28 }} />
         </div>

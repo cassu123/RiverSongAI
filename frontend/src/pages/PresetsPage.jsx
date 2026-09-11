@@ -176,7 +176,7 @@ export default function PresetsPage({ setAction }) {
           <div key={p.id} className="rs-card is-wide rs-p-4">
             <div className="rs-card-head">
               <span className="rs-card-label">
-                {p.is_default && <span style={{ marginRight: 4 }}>★</span>}
+                {p.is_default && <span style={{ marginRight: 'var(--rs-space-1)' }}>★</span>}
                 {p.name?.toUpperCase()}
               </span>
               <span className="rs-card-label" style={{ opacity: 0.4 }}>{new Date(p.updated_at).toLocaleDateString()}</span>

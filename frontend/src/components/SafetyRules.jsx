@@ -147,7 +147,7 @@ export default function SafetyRules() {
             <div key={rule.id} className="rs-p-4" style={{
               border: '1px solid var(--border)',
               borderLeft: `3px solid ${tone}`,
-              borderRadius: 10,
+              borderRadius: 'var(--md-shape-sm)',
               opacity: rule.enabled ? 1 : 0.55,
             }}>
               <div className="rs-flex rs-gap-3 rs-flex-wrap" style={{ alignItems: 'baseline' }}>
@@ -189,7 +189,7 @@ export default function SafetyRules() {
 
               {showing && (
                 <div className="rs-mt-3 rs-p-3 rs-type-small" style={{
-                  borderRadius: 8,
+                  borderRadius: 'var(--md-shape-sm)',
                   background: 'rgba(0,0,0,0.22)',
                   border: `1px solid ${result.ok ? 'var(--secondary)' : 'var(--warn)'}`,
                 }}>

@@ -100,10 +100,10 @@ function LocationSearch({ onSelect, autoFocus = true }) {
           zIndex: 200,
           background: 'var(--md-surface-container-high)',
           border: '1px solid var(--md-outline-variant)',
-          borderRadius: 8,
+          borderRadius: 'var(--md-shape-sm)',
         }}>
           {searching && (
-            <div className="rs-card-meta rs-type-micro" style={{ padding: '8px 14px' }}>Searching…</div>
+            <div className="rs-card-meta rs-type-micro" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}>Searching…</div>
           )}
           {results.map((r, i) => (
             <button key={i} onClick={() => {
@@ -268,7 +268,7 @@ export default function WeatherTab({ token, active }) {
 
       {/* No-location state */}
       {noLocation && (
-        <div className="rs-text-center" style={{ padding: '40px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-7) 0' }}>
           <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '3rem', opacity: 0.2, display: 'block' }}>location_off</span>
           <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
           <div className="rs-card-meta rs-mb-5">Search for your city to get started.</div>
@@ -280,7 +280,7 @@ export default function WeatherTab({ token, active }) {
 
       {/* Generic error */}
       {error && error !== 'location' && (
-        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
           <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>cloud_off</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchWeather}>RETRY</button>
@@ -298,8 +298,8 @@ export default function WeatherTab({ token, active }) {
                 <div key={a.id} className="rs-flex rs-gap-3 rs-items-start" style={{
                   background: (ALERT_COLORS[a.severity] || '#88888822') + '22',
                   border: `1px solid ${ALERT_COLORS[a.severity] || '#88888888'}55`,
-                  borderRadius: 8,
-                  padding: '12px 16px',
+                  borderRadius: 'var(--md-shape-sm)',
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
                 }}>
                   <span className="material-symbols-rounded rs-no-shrink" style={{ color: ALERT_COLORS[a.severity], marginTop: 2 }}>warning</span>
                   <div>
@@ -390,7 +390,7 @@ function DetailCard({ label, value, sub, color, badge }) {
       <div className="rs-flex rs-justify-between rs-items-start">
         <div className="rs-card-label rs-mb-1 rs-muted rs-type-nano">{label}</div>
         {badge && (
-          <div className="rs-muted rs-type-nano rs-nowrap" style={{ padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 4 }}>
+          <div className="rs-muted rs-type-nano rs-nowrap" style={{ padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 'var(--md-shape-xs)' }}>
             {badge}
           </div>
         )}
@@ -474,7 +474,7 @@ function HourlyStrip({ hourly, unit }) {
   return (
     <div className="rs-wx-panel">
       <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">NEXT 24 HOURS</div>
-      <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 4 }}>
+      <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 'var(--rs-space-1)' }}>
         <div className="rs-relative" style={{ width: W }}>
           {/* Curve overlay */}
           <svg
@@ -536,7 +536,7 @@ function HourlyStrip({ hourly, unit }) {
                     width: 14,
                     height: barH,
                     background: PRECIP_COLOR,
-                    borderRadius: 3,
+                    borderRadius: 'var(--md-shape-xs)',
                     opacity: p > 0 ? 0.7 : 0,
                   }} />
                 </div>
@@ -599,7 +599,7 @@ function DailyForecast({ daily, unit }) {
           const isLast = i === daily.length - 1
           return (
             <div key={d.date} className="rs-weather-row" style={{
-              padding: '12px 0',
+              padding: 'var(--rs-space-3) 0',
               borderBottom: isLast ? 'none' : '1px solid var(--md-outline-variant)',
             }}>
               {/* Day labels are short and must never split — "TODAY" was
@@ -614,19 +614,19 @@ function DailyForecast({ daily, unit }) {
                 {d.condition || '—'}
               </span>
               {/* Range bar */}
-              <div className="rs-weather-bar rs-relative" style={{ height: 6, background: 'var(--md-surface-container-high)', borderRadius: 3 }}>
+              <div className="rs-weather-bar rs-relative" style={{ height: 6, background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-xs)' }}>
                 <div style={{
                   position: 'absolute',
                   left: `${minPct}%`,
                   width: `${widthPct}%`,
                   top: 0, bottom: 0,
                   background: 'linear-gradient(90deg, oklch(70% 0.12 240), oklch(75% 0.15 60))',
-                  borderRadius: 3,
+                  borderRadius: 'var(--md-shape-xs)',
                 }} />
               </div>
               <span className="rs-mono rs-type-micro rs-text-right" style={{ fontWeight: 700 }}>
                 <span style={{ opacity: 0.5 }}>{d.temp_min != null ? Math.round(d.temp_min) : '--'}°</span>
-                <span style={{ margin: '0 4px', opacity: 0.3 }}>·</span>
+                <span style={{ margin: '0 var(--rs-space-1)', opacity: 0.3 }}>·</span>
                 {d.temp_max != null ? Math.round(d.temp_max) : '--'}°
               </span>
             </div>
@@ -768,24 +768,24 @@ function RadarMap({ lat, lon, radarTs }) {
 
 function WeatherSkeleton() {
   const bar = (w, h = 10) => (
-    <div style={{ height: h, width: w, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+    <div style={{ height: h, width: w, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
   )
   return (
     <div className="rs-flex rs-flex-col rs-gap-5">
       <div className="rs-flex rs-gap-4 rs-items-center">
-        <div style={{ width: 80, height: 80, borderRadius: 16, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+        <div style={{ width: 80, height: 80, borderRadius: 'var(--md-shape-lg)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
         <div className="rs-flex rs-flex-col rs-gap-3">
           {bar('120px', 50)}{bar('160px', 12)}{bar('100px', 10)}
         </div>
       </div>
       <div className="rs-flex rs-gap-3">
         {[0, 1, 2, 3].map(i => (
-          <div key={i} className="rs-grow" style={{ height: 60, borderRadius: 12, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+          <div key={i} className="rs-grow" style={{ height: 60, borderRadius: 'var(--md-shape-md)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
         ))}
       </div>
       <div className="rs-flex rs-gap-2">
         {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
-          <div key={i} style={{ width: 52, height: 110, borderRadius: 8, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
+          <div key={i} style={{ width: 52, height: 110, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-outline-variant)', opacity: 0.25 }} />
         ))}
       </div>
     </div>

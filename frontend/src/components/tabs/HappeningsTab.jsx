@@ -34,14 +34,14 @@ export default function HappeningsTab({ token, active }) {
     <div className="rs-gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}>
       
       {/* Trending (HN + Reddit) */}
-      <div className="rs-card" style={{ padding: '20px', maxHeight: '800px', overflowY: 'auto' }}>
+      <div className="rs-card" style={{ padding: 'var(--rs-space-5)', maxHeight: '800px', overflowY: 'auto' }}>
         <div className="rs-card-label rs-mb-4">TRENDING DISCUSSIONS</div>
         {trending.length > 0 ? trending.map((t, i) => (
-          <div key={i} className="rs-mb-4 rs-flex rs-gap-3" style={{ borderBottom: i < trending.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 16 }}>
+          <div key={i} className="rs-mb-4 rs-flex rs-gap-3" style={{ borderBottom: i < trending.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 'var(--rs-space-4)' }}>
             <div className="rs-flex rs-items-center rs-justify-center rs-no-shrink rs-type-small" style={{
               width: 24,
               height: 24,
-              borderRadius: 4,
+              borderRadius: 'var(--md-shape-xs)',
               background: t.source === 'hackernews' ? '#ff6600' : '#ff4500',
               color: 'var(--fg)',
               fontWeight: 800,
@@ -55,7 +55,7 @@ export default function HappeningsTab({ token, active }) {
                 </div>
               </a>
               {t.image_url && (
-                <div className="rs-mb-2 rs-clip" style={{ borderRadius: 6, border: '1px solid var(--md-outline-variant)', maxHeight: 120 }}>
+                <div className="rs-mb-2 rs-clip" style={{ borderRadius: 'var(--md-shape-xs)', border: '1px solid var(--md-outline-variant)', maxHeight: 120 }}>
                   <img src={t.image_url} alt="" className="rs-w-full rs-h-full" style={{ objectFit: 'cover', display: 'block' }} />
                 </div>
               )}
@@ -69,7 +69,7 @@ export default function HappeningsTab({ token, active }) {
                   {t.comments.toLocaleString()}
                 </span>
                 {t.subreddit && (
-                  <span style={{ background: 'var(--md-surface-container-high)', padding: '2px 6px', borderRadius: 4 }}>
+                  <span style={{ background: 'var(--md-surface-container-high)', padding: '2px 6px', borderRadius: 'var(--md-shape-xs)' }}>
                     r/{t.subreddit}
                   </span>
                 )}
@@ -85,17 +85,17 @@ export default function HappeningsTab({ token, active }) {
       </div>
 
       {/* Events Nearby */}
-      <div className="rs-card" style={{ padding: '20px', maxHeight: '800px', overflowY: 'auto' }}>
+      <div className="rs-card" style={{ padding: 'var(--rs-space-5)', maxHeight: '800px', overflowY: 'auto' }}>
         <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>EVENTS NEARBY</span>
           <span style={{ opacity: 0.5 }}>Eventbrite</span>
         </div>
         {events_nearby.length > 0 ? events_nearby.map((e, i) => (
-          <div key={i} className="rs-mb-4 rs-flex rs-gap-3" style={{ borderBottom: i < events_nearby.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 16 }}>
+          <div key={i} className="rs-mb-4 rs-flex rs-gap-3" style={{ borderBottom: i < events_nearby.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 'var(--rs-space-4)' }}>
             {e.image_url ? (
-              <img src={e.image_url} alt="" className="rs-no-shrink" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
+              <img src={e.image_url} alt="" className="rs-no-shrink" style={{ width: 64, height: 64, borderRadius: 'var(--md-shape-sm)', objectFit: 'cover' }} />
             ) : (
-              <div className="rs-flex rs-items-center rs-justify-center rs-no-shrink" style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--md-surface-container-high)' }}>
+              <div className="rs-flex rs-items-center rs-justify-center rs-no-shrink" style={{ width: 64, height: 64, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container-high)' }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.5rem', opacity: 0.3 }}>event</span>
               </div>
             )}
@@ -112,7 +112,7 @@ export default function HappeningsTab({ token, active }) {
                 <span className="rs-nowrap rs-clip rs-ellipsis">{e.venue || e.city}</span>
                 <span className="rs-nowrap">{e.distance_mi} mi</span>
               </div>
-              <div className="rs-type-nano" style={{ fontWeight: 700, background: 'var(--md-surface-container-highest)', display: 'inline-block', padding: '2px 6px', borderRadius: 4 }}>
+              <div className="rs-type-nano" style={{ fontWeight: 700, background: 'var(--md-surface-container-highest)', display: 'inline-block', padding: '2px 6px', borderRadius: 'var(--md-shape-xs)' }}>
                 {e.price_max > 0 ? (
                   e.price_min === e.price_max ? `$${e.price_min}` : `$${e.price_min} - $${e.price_max}`
                 ) : 'Free'}

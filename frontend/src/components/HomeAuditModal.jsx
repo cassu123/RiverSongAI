@@ -149,7 +149,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                 {audit.scanned_count} / {audit.total_items} VERIFIED
               </div>
             </div>
-            <div className="rs-w-full rs-mb-5 rs-clip" style={{ height: 8, background: 'var(--md-surface-container-highest)', borderRadius: 4 }}>
+            <div className="rs-w-full rs-mb-5 rs-clip" style={{ height: 8, background: 'var(--md-surface-container-highest)', borderRadius: 'var(--md-shape-xs)' }}>
               <div className="rs-h-full" style={{ width: `${audit.total_items > 0 ? (audit.scanned_count / audit.total_items) * 100 : 0}%`, background: '#4ade80', transition: 'width 0.3s ease' }} />
             </div>
 
@@ -170,7 +170,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                   <div key={loc} className="rs-mb-4">
                     <div className="rs-mb-2 rs-muted rs-type-tiny" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>{loc}</div>
                     {scannedByLoc[loc].map(i => (
-                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: '8px 12px', background: 'rgba(74,222,128,0.05)', borderRadius: 4 }}>
+                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(74,222,128,0.05)', borderRadius: 'var(--md-shape-xs)' }}>
                         <span>{i.name}</span>
                         <span className="rs-muted rs-type-tiny rs-mono">{i.ein}</span>
                       </div>
@@ -187,7 +187,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                   <div key={loc} className="rs-mb-4">
                     <div className="rs-mb-2 rs-muted rs-type-tiny" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>{loc}</div>
                     {missingByLoc[loc].map(i => (
-                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: '8px 12px', background: 'rgba(248,113,113,0.05)', borderRadius: 4 }}>
+                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(248,113,113,0.05)', borderRadius: 'var(--md-shape-xs)' }}>
                         <span>{i.name}</span>
                         <span className="rs-muted rs-type-tiny rs-mono">{i.ein}</span>
                       </div>
@@ -197,10 +197,10 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
               </div>
             </div>
 
-            <div className="rs-mt-6 rs-p-5" style={{ background: 'var(--md-surface-container)', borderRadius: 12 }}>
+            <div className="rs-mt-6 rs-p-5" style={{ background: 'var(--md-surface-container)', borderRadius: 'var(--md-shape-md)' }}>
               <textarea 
                 className="rs-chat-input rs-w-full rs-p-3 rs-mb-4"
-                style={{ height: 80, borderRadius: 8, background: 'var(--md-surface-container-high)', border: 'none', color: 'var(--fg)' }}
+                style={{ height: 80, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container-high)', border: 'none', color: 'var(--fg)' }}
                 placeholder="Audit completion notes (optional)..."
                 value={notes}
                 onChange={e => setNotes(e.target.value)}

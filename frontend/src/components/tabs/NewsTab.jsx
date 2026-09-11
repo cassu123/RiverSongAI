@@ -89,7 +89,7 @@ export default function NewsTab({ token, active }) {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-          gap: '16px 28px',
+          gap: 'var(--rs-space-4) var(--rs-space-6)',
         }}
       >
         {Object.entries(catMeta).map(([cat, meta]) => {
@@ -155,7 +155,7 @@ export default function NewsTab({ token, active }) {
       ) : error ? (
         <ErrorState message={error} onRetry={fetchArticles} />
       ) : !articles.length ? (
-        <div className="rs-text-center" style={{ padding: '32px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) 0' }}>
           <span
             className="material-symbols-rounded rs-mb-3"
             style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}
@@ -219,12 +219,12 @@ function NewsSkeletons() {
   return (
     <div className="rs-flex rs-flex-col rs-gap-3">
       {[0, 1, 2, 3, 4].map(i => (
-        <div key={i} className="rs-flex rs-gap-4" style={{ padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
-          <div className="rs-no-shrink" style={{ width: 80, height: 64, borderRadius: 6, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+        <div key={i} className="rs-flex rs-gap-4" style={{ padding: 'var(--rs-space-4) 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-no-shrink" style={{ width: 80, height: 64, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
           <div className="rs-grow rs-flex rs-flex-col rs-gap-2">
-            <div style={{ height: 9, width: '35%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.5 }} />
-            <div style={{ height: 12, width: '85%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-            <div style={{ height: 12, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+            <div style={{ height: 9, width: '35%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.5 }} />
+            <div style={{ height: 12, width: '85%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+            <div style={{ height: 12, width: '70%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
           </div>
         </div>
       ))}
@@ -234,7 +234,7 @@ function NewsSkeletons() {
 
 function ErrorState({ message, onRetry }) {
   return (
-    <div className="rs-text-center" style={{ padding: '32px 0' }}>
+    <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) 0' }}>
       <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.3, display: 'block' }}>wifi_off</span>
       <div className="rs-card-meta rs-mb-3">{message}</div>
       <button className="rs-pill" onClick={onRetry}>RETRY</button>

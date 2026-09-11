@@ -109,7 +109,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
 
   return (
     <Sheet open={open} onClose={onClose} title="Data Sources">
-      <div className="rs-flex rs-flex-col rs-gap-5" style={{ padding: '0 24px 24px' }}>
+      <div className="rs-flex rs-flex-col rs-gap-5" style={{ padding: '0 var(--rs-space-5) var(--rs-space-5)' }}>
         
         {/* Libby */}
         <div className="rs-card">

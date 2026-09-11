@@ -16,7 +16,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
 
           <div className="rs-flex rs-flex-col rs-gap-3">
             {/* WARDEN */}
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
                   <div className="rs-type-tiny" style={{ fontWeight: 600 }}>WARDEN (Vision/Security)</div>
@@ -37,7 +37,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             </div>
 
             {/* MECHANIC */}
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
                   <div className="rs-type-tiny" style={{ fontWeight: 600 }}>MECHANIC (Telemetry)</div>
@@ -64,7 +64,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             </div>
 
             {/* PULSE */}
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
                   <div className="rs-type-tiny" style={{ fontWeight: 600 }}>PULSE (Ambient Feeds)</div>
@@ -85,7 +85,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             </div>
 
             {/* SCRIBE */}
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
                   <div className="rs-type-tiny" style={{ fontWeight: 600 }}>SCRIBE (Chronos Heuristics)</div>
@@ -106,7 +106,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             </div>
 
             {/* SIFTER */}
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
                   <div className="rs-type-tiny" style={{ fontWeight: 600 }}>SIFTER (RAG)</div>

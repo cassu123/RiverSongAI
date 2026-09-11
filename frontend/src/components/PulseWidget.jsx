@@ -99,7 +99,7 @@ export default function PulseWidget({ token }) {
                 color: C.muted,
                 background: 'oklch(20% 0.01 265)',
                 padding: '2px 8px',
-                borderRadius: 4,
+                borderRadius: 'var(--md-shape-xs)',
               }}>
                 {currentNews.source}
               </span>
@@ -219,7 +219,7 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
           <span className="rs-mono rs-type-nano" style={{
             letterSpacing: '0.04em',
             color: C.dim,
-            marginRight: 4,
+            marginRight: 'var(--rs-space-1)',
           }}>
             {badge}
           </span>
@@ -231,7 +231,7 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
           {time}
         </span>
       </div>
-      <div className="rs-min-w-0" style={{ paddingLeft: 20 }}>
+      <div className="rs-min-w-0" style={{ paddingLeft: 'var(--rs-space-5)' }}>
         {children}
       </div>
     </div>
@@ -243,7 +243,7 @@ function PulseSkeleton() {
     <div style={{
       height: 9,
       width: w,
-      borderRadius: 5,
+      borderRadius: 'var(--md-shape-xs)',
       background: C.divider,
       opacity: 0.9,
     }} />

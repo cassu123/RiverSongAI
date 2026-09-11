@@ -28,7 +28,7 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
       onClick={() => !isDisabled && onSelect(model)}
       style={{
         flex: '1 1 200px',
-        padding: '16px',
+        padding: 'var(--rs-space-4)',
         borderColor: isSelected ? 'var(--primary)' : undefined,
         opacity: isDisabled ? 0.5 : 1
       }}
@@ -103,8 +103,8 @@ export default function ModelSection({
           className={`rs-card is-tappable ${autoSelected ? 'is-elev' : ''}`}
           onClick={() => selectModel({ provider: 'auto', model_id: 'auto' })}
           style={{
-            padding: '16px',
-            marginBottom: 20,
+            padding: 'var(--rs-space-4)',
+            marginBottom: 'var(--rs-space-5)',
             borderColor: autoSelected ? 'var(--primary)' : undefined,
             background: autoSelected
               ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
@@ -127,7 +127,7 @@ export default function ModelSection({
         </div>
 
         {showAdmin && (
-          <div className="rs-mb-5" style={{ paddingBottom: 16, borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-mb-5" style={{ paddingBottom: 'var(--rs-space-4)', borderBottom: '1px solid var(--md-outline-variant)' }}>
             <div className="rs-card-label rs-mb-2" style={{ color: 'var(--md-primary)' }}>ADMIN MASTER SWITCHES</div>
             <Toggle
               id="llm-routing-local"

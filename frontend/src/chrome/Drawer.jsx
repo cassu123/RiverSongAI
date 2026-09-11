@@ -101,13 +101,13 @@ export default function Drawer({
         </div>
 
         {/* Account & Quick Controls Footer */}
-        <div className="rs-drawer-footer rs-mt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 14 }}>
+        <div className="rs-drawer-footer rs-mt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 'var(--rs-space-4)' }}>
           <div className="rs-flex rs-items-center rs-justify-between rs-gap-3">
             <button
               className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
               onClick={() => navigate('profile')}
               aria-current={currentPage === 'profile' ? 'page' : undefined}
-              style={{ flex: 1, padding: '8px 10px', borderRadius: 16 }}
+              style={{ flex: 1, padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-lg)' }}
             >
               <span className="rs-drawer-avatar" aria-hidden="true">{initials}</span>
               <span className="rs-drawer-profile-body">
@@ -140,7 +140,7 @@ export default function Drawer({
           </div>
 
           {userIsAdmin && (
-            <div className="rs-mt-3 rs-flex rs-items-center rs-justify-between" style={{ padding: '6px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
+            <div className="rs-mt-3 rs-flex rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-md)', background: 'rgba(255,255,255,0.04)' }}>
               <span className="rs-type-tiny rs-muted" style={{ fontWeight: 500 }}>Admin Mode</span>
               <button
                 className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}

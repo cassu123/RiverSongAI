@@ -60,7 +60,7 @@ function NimTelemetry({ token }) {
   return (
     <div>
       <div className="rs-card-label">NIM TRAFFIC</div>
-      <div className="rs-card-value">{rpm !== null ? rpm : '—'}<small className="rs-muted rs-type-nano" style={{ marginLeft: 4 }}>RPM</small></div>
+      <div className="rs-card-value">{rpm !== null ? rpm : '—'}<small className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-1)' }}>RPM</small></div>
       <div className="rs-card-meta">Global request rate</div>
     </div>
   )
@@ -212,12 +212,12 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                 </div>
                 <div>
                   <div className="rs-card-label">NEURAL LATENCY</div>
-                  <div className="rs-card-value">12<small className="rs-muted rs-type-nano" style={{ marginLeft: 4 }}>MS</small></div>
+                  <div className="rs-card-value">12<small className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-1)' }}>MS</small></div>
                   <div className="rs-card-meta">Link speed</div>
                 </div>
                 <div>
                   <div className="rs-card-label">SECTOR SYNC</div>
-                  <div className="rs-card-value">1.2<small className="rs-muted rs-type-nano" style={{ marginLeft: 4 }}>GB/S</small></div>
+                  <div className="rs-card-value">1.2<small className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-1)' }}>GB/S</small></div>
                   <div className="rs-card-meta">Data throughput</div>
                 </div>
                 <NimTelemetry token={token} />

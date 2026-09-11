@@ -64,7 +64,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                 <button
                   key={n}
                   className={`rs-pill is-tappable${intentRouterSettings.min_hits === n ? ' is-active' : ''}`}
-                  style={{ fontSize: 'var(--rs-fs-micro)', minHeight: 44, minWidth: 44, padding: '0 14px', cursor: 'pointer' }}
+                  style={{ fontSize: 'var(--rs-fs-micro)', minHeight: 44, minWidth: 44, padding: '0 var(--rs-space-4)', cursor: 'pointer' }}
                   onClick={() => saveIntentRouter({ min_hits: n })}
                   aria-pressed={intentRouterSettings.min_hits === n}
                 >
@@ -86,7 +86,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                 : r.provider === 'nvidia_nim' ? 'NIM'
                   : r.provider ? 'cloud' : null
               return (
-                <div key={r.intent} className="rs-flex rs-flex-col rs-gap-1" style={{ padding: '10px 12px', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10, opacity: r.reachable ? 1 : 0.6 }}>
+                <div key={r.intent} className="rs-flex rs-flex-col rs-gap-1" style={{ padding: 'var(--rs-space-3) var(--rs-space-3)', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', opacity: r.reachable ? 1 : 0.6 }}>
                   <div className="rs-flex rs-items-center rs-gap-2">
                     <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.75 }}>{INTENT_ICONS[r.intent] || 'chat'}</span>
                     <span className="rs-type-micro" style={{ fontWeight: 600 }}>{r.label}</span>

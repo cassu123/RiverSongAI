@@ -84,7 +84,7 @@ export default class ErrorBoundary extends React.Component {
                 lineHeight: 1.4,
                 background: 'rgba(0,0,0,0.4)',
                 border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: 6,
+                borderRadius: 'var(--md-shape-xs)',
                 maxHeight: 240,
                 overflow: 'auto',
                 opacity: 0.85,

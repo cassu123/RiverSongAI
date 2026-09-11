@@ -90,7 +90,7 @@ export default function RoutinesPage({ setAction }) {
               </div>
               <div className="rs-card-value">
                 {r.name}
-                <span className={`rs-badge ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 8, fontSize: 'var(--rs-fs-nano)' }}>
+                <span className={`rs-badge ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 'var(--rs-space-2)', fontSize: 'var(--rs-fs-nano)' }}>
                   {r.severity || 'info'}
                 </span>
               </div>
@@ -103,7 +103,7 @@ export default function RoutinesPage({ setAction }) {
                 </div>
               )}
               {r.last_output && (
-                <div className="rs-card-meta" style={{ marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', whiteSpace: 'pre-wrap', color: '#fff' }}>
+                <div className="rs-card-meta" style={{ marginTop: 'var(--rs-space-2)', padding: 'var(--rs-space-2)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)', whiteSpace: 'pre-wrap', color: '#fff' }}>
                   {r.last_output}
                 </div>
               )}

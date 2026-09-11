@@ -33,7 +33,7 @@ function Dashboard({ unit, sendCmd, latest, alerts, commands, refresh, program }
         </div>
         <div className="rs-mb-3">
           <div className="rs-card-label rs-mb-1 rs-type-nano">CHORE PROGRESS</div>
-          <div className="rs-clip" style={{ height: 10, borderRadius: 5, background: 'var(--md-surface-container-high,#2a2a2a)' }}>
+          <div className="rs-clip" style={{ height: 10, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-surface-container-high,#2a2a2a)' }}>
             <div className="rs-h-full" style={{ width: `${progress}%`, background: '#34d399', transition: 'width .4s ease' }} />
           </div>
           <div className="rs-card-meta rs-mt-1 rs-type-nano">{progress}%</div>

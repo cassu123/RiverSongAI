@@ -65,8 +65,8 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
             <button key={idx} className="rs-type-tiny rs-pointer" style={{
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '20px',
-              padding: '10px 16px',
+              borderRadius: 'var(--md-shape-xl)',
+              padding: 'var(--rs-space-3) var(--rs-space-4)',
               color: 'var(--md-on-surface-variant)',
               transition: 'all 0.2s',
               backdropFilter: 'blur(10px)',
@@ -114,7 +114,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                 </div>
               )}
               {msg.meta && msg.meta.receipts && msg.meta.receipts.length > 0 && (
-                <div className="rs-mt-3 rs-p-3" style={{ background: 'var(--bg-elev)', borderRadius: 8, border: '1px solid var(--md-outline-variant)' }}>
+                <div className="rs-mt-3 rs-p-3" style={{ background: 'var(--bg-elev)', borderRadius: 'var(--md-shape-sm)', border: '1px solid var(--md-outline-variant)' }}>
                   <div className="rs-mb-2 rs-type-micro" style={{ color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>
                     Agent Tasks Completed
                   </div>
@@ -132,7 +132,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                 </div>
               )}
               {msg.chunks && msg.chunks.length > 0 && (
-                <div className="rs-mt-3 rs-flex rs-flex-wrap rs-gap-2" style={{ borderTop: '1px solid var(--md-outline-variant)', paddingTop: 8 }}>
+                <div className="rs-mt-3 rs-flex rs-flex-wrap rs-gap-2" style={{ borderTop: '1px solid var(--md-outline-variant)', paddingTop: 'var(--rs-space-2)' }}>
                   {msg.chunks.map((chunk, i) => (
                     <span key={i} className="rs-pill rs-type-nano" style={{ padding: '2px 8px', opacity: 0.8 }} title={chunk.text}>
                       SOURCE: {chunk.source?.toUpperCase() || 'DOCUMENT'}

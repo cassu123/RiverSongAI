@@ -91,8 +91,8 @@ export default function StepTimer({ timer, api, onChanged }) {
       role="timer"
       aria-live={done ? 'assertive' : 'off'}
       className="rs-flex rs-items-center rs-gap-2 rs-flex-wrap rs-mt-2" style={{
-        padding: '8px 10px',
-        borderRadius: 8,
+        padding: 'var(--rs-space-2) var(--rs-space-3)',
+        borderRadius: 'var(--md-shape-sm)',
         background: done
           ? 'color-mix(in srgb, var(--md-error) 18%, transparent)'
           : 'var(--md-surface-container-high)',
@@ -113,7 +113,7 @@ export default function StepTimer({ timer, api, onChanged }) {
           it can usefully do. */}
       {!done && (
         <button
-          className="rs-pill" style={{ padding: '4px 10px' }}
+          className="rs-pill" style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
           aria-label={paused ? 'Resume timer' : 'Pause timer'}
           onClick={() => act(paused ? 'resume' : 'pause')}
         >
@@ -127,7 +127,7 @@ export default function StepTimer({ timer, api, onChanged }) {
           you want having just looked in the oven, and the server counts that
           from now rather than from a deadline already in the past. */}
       <button
-        className="rs-pill rs-type-micro" style={{ padding: '4px 10px' }}
+        className="rs-pill rs-type-micro" style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
         aria-label="Add a minute"
         onClick={() => act('extend', 60)}
       >+1 MIN</button>
@@ -135,7 +135,7 @@ export default function StepTimer({ timer, api, onChanged }) {
       <button
         className="rs-pill rs-type-micro"
         style={{
-          padding: '4px 10px',
+          padding: 'var(--rs-space-1) var(--rs-space-3)',
           color: done ? 'var(--md-error)' : undefined,
           borderColor: done ? 'var(--md-error)' : undefined,
         }}

@@ -116,7 +116,7 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
       <div className="rs-modal rs-p-5" style={{ width: 400, maxWidth: '90vw' }}>
         <h2 className="rs-mb-2 rs-flex rs-justify-between" style={{ marginTop: 0 }}>
           Room Sweep
-          <button className="rs-pill rs-type-small" onClick={handleFinish} style={{ padding: '4px 12px' }}>Done</button>
+          <button className="rs-pill rs-type-small" onClick={handleFinish} style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}>Done</button>
         </h2>
         <p className="rs-muted rs-m-0 rs-mb-5 rs-type-small">Captured this session: <strong>{count}</strong> items</p>
         
@@ -157,10 +157,10 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
           </div>
         ) : (
           <div className="rs-card rs-p-4" style={{ background: 'var(--md-surface-container)' }}>
-             <img src={preview} alt="Preview" className="rs-w-full rs-mb-4" style={{ height: 200, objectFit: 'cover', borderRadius: 8 }} />
+             <img src={preview} alt="Preview" className="rs-w-full rs-mb-4" style={{ height: 200, objectFit: 'cover', borderRadius: 'var(--md-shape-sm)' }} />
              
              {analyzing ? (
-               <div className="rs-text-center" style={{ opacity: 0.7, padding: '24px 0' }}>
+               <div className="rs-text-center" style={{ opacity: 0.7, padding: 'var(--rs-space-5) 0' }}>
                  <span className="material-symbols-rounded" style={{ animation: 'spin 2s linear infinite', fontSize: '2rem' }}>sync</span>
                  <p>Analyzing image...</p>
                </div>

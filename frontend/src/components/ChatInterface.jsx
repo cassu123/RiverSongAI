@@ -305,7 +305,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
   }, [])
 
   const ActionSlot = useMemo(() => (
-    <div className="rs-chat-input-container" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(16px)', borderRadius: '24px', padding: '6px 12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rs-chat-input-container" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(16px)', borderRadius: '24px', padding: 'var(--rs-space-2) var(--rs-space-3)', border: '1px solid rgba(255,255,255,0.08)' }}>
       <textarea
         ref={inputRef}
         rows={1}
@@ -367,7 +367,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       {!embedded && (
         <div className="rs-flex rs-gap-2 rs-mb-5 rs-items-center" style={{ justifyContent: 'flex-end' }}>
           <RateIndicator activeModel={selectedModel} token={token} />
-          {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginRight: 12 }}>SYNCING…</span>}
+          {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginRight: 'var(--rs-space-3)' }}>SYNCING…</span>}
           <button className="rs-pill" onClick={() => setShowSystem(!showSystem)}>
             <span className="material-symbols-rounded">settings_input_component</span>
           </button>
@@ -404,7 +404,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
                 <div className="rs-card-inner">
                   <div className="rs-card-head">
                     <span className="rs-card-label">{fmtDate(s.updated_at)}</span>
-                    <span className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '2px 8px', borderRadius: 4 }}>{s.title}</span>
+                    <span className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '2px 8px', borderRadius: 'var(--md-shape-xs)' }}>{s.title}</span>
                   </div>
                 </div>
               </div>
@@ -423,8 +423,8 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           )}
           {modelNotice && (
             <div className="rs-model-notice animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4 rs-type-small" style={{
-              padding: '10px 16px',
-              borderRadius: 10,
+              padding: 'var(--rs-space-3) var(--rs-space-4)',
+              borderRadius: 'var(--md-shape-sm)',
               background: 'rgba(230,170,60,0.13)',
               border: '1px solid rgba(230,170,60,0.3)',
               color: '#e6c07b',
@@ -441,8 +441,8 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           )}
           {error && (
             <div className="rs-error-banner animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4 rs-type-small" style={{
-              padding: '10px 16px',
-              borderRadius: 10,
+              padding: 'var(--rs-space-3) var(--rs-space-4)',
+              borderRadius: 'var(--md-shape-sm)',
               background: 'rgba(220,60,60,0.15)',
               border: '1px solid rgba(220,60,60,0.3)',
               color: 'var(--rs-status-critical)',
@@ -580,7 +580,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       )}
 
       {embedded && (
-        <div style={{ marginTop: 'auto', paddingTop: 16 }}>
+        <div style={{ marginTop: 'auto', paddingTop: 'var(--rs-space-4)' }}>
           {ActionSlot}
         </div>
       )}

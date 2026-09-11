@@ -59,10 +59,10 @@ function LocationSearch({ onSelect }) {
           zIndex: 200,
           background: 'var(--md-surface-container-high)',
           border: '1px solid var(--md-outline-variant)',
-          borderRadius: 8,
+          borderRadius: 'var(--md-shape-sm)',
         }}>
           {searching && (
-            <div className="rs-card-meta rs-type-micro" style={{ padding: '8px 14px' }}>Searching…</div>
+            <div className="rs-card-meta rs-type-micro" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}>Searching…</div>
           )}
           {results.map((r, i) => (
             <button key={i} onClick={() => {
@@ -152,7 +152,7 @@ function FlightMap({ lat, lon, radiusDeg, aircraft }) {
   }, [aircraft, radiusDeg, lat, lon, mapReady])
 
   return (
-    <div ref={mapRef} className="rs-w-full rs-h-full rs-clip" style={{ borderRadius: 8 }} />
+    <div ref={mapRef} className="rs-w-full rs-h-full rs-clip" style={{ borderRadius: 'var(--md-shape-sm)' }} />
   )
 }
 
@@ -160,7 +160,7 @@ function AircraftRow({ a, i, total }) {
   const statusColor = a.on_ground ? 'var(--md-on-surface-variant)' : 'oklch(71% 0.17 145)'
   return (
     <div className="rs-flights-row" style={{
-      padding: '8px 12px',
+      padding: 'var(--rs-space-2) var(--rs-space-3)',
       borderBottom: i < total - 1 ? '1px solid var(--md-outline-variant)' : 'none',
     }}>
       <div>
@@ -394,7 +394,7 @@ export default function FlightsTab({ token, active }) {
 
       {/* No-location state */}
       {error === 'location' && (
-        <div style={{ padding: '16px 0' }}>
+        <div style={{ padding: 'var(--rs-space-4) 0' }}>
           <div className="rs-text-center rs-mb-5">
             <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>
               flight
@@ -410,7 +410,7 @@ export default function FlightsTab({ token, active }) {
 
       {/* Generic error */}
       {error && error !== 'location' && (
-        <div className="rs-text-center" style={{ padding: '24px 0' }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
           <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>
             flight_off
           </span>
@@ -430,7 +430,7 @@ export default function FlightsTab({ token, active }) {
                 position: 'absolute',
                 inset: 0,
                 zIndex: 10,
-                borderRadius: 8,
+                borderRadius: 'var(--md-shape-sm)',
                 background: 'var(--md-surface-container)',
               }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2 }}>flight</span>
@@ -440,7 +440,7 @@ export default function FlightsTab({ token, active }) {
               <FlightMap lat={lat} lon={lon} radiusDeg={radiusDeg} aircraft={loading ? [] : sortedAircraft} />
             ) : (
               <div className="rs-w-full rs-flex rs-items-center rs-justify-center rs-h-full" style={{
-                borderRadius: 8,
+                borderRadius: 'var(--md-shape-sm)',
                 background: 'var(--md-surface-container)',
               }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.15 }}>map</span>
@@ -452,7 +452,7 @@ export default function FlightsTab({ token, active }) {
           <div className="rs-flex rs-flex-col rs-min-w-0 rs-clip" style={{
             flex: '2 1 0',
             border: '1px solid var(--md-outline-variant)',
-            borderRadius: 8,
+            borderRadius: 'var(--md-shape-sm)',
           }}>
             {/* Column headers */}
             <div className="rs-flights-row rs-no-shrink" style={{
@@ -473,21 +473,21 @@ export default function FlightsTab({ token, active }) {
                 <div>
                   {[0,1,2,3,4,5].map(i => (
                     <div key={i} className="rs-flights-row" style={{
-                      padding: '8px 12px',
+                      padding: 'var(--rs-space-2) var(--rs-space-3)',
                       borderBottom: '1px solid var(--md-outline-variant)',
                     }}>
-                      <div style={{ height: 9, width: '80%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-                      <div style={{ height: 8, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-                      <div style={{ height: 8, width: '75%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-                      <div style={{ height: 8, width: '60%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-                      <div style={{ height: 8, width: '80%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
-                      <div style={{ height: 8, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3, marginLeft: 'auto' }} />
+                      <div style={{ height: 9, width: '80%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+                      <div style={{ height: 8, width: '70%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '75%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '60%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '80%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.25 }} />
+                      <div style={{ height: 8, width: '70%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3, marginLeft: 'auto' }} />
                     </div>
                   ))}
                 </div>
               )}
               {!loading && sortedAircraft.length === 0 && (
-                <div className="rs-text-center" style={{ padding: '32px 16px' }}>
+                <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) var(--rs-space-4)' }}>
                   <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>
                     flight_land
                   </span>

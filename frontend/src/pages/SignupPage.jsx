@@ -29,12 +29,12 @@ export default function SignupPage({ onSwitchToLogin }) {
   }
 
   return (
-    <div className="rs-flex rs-items-center rs-justify-center rs-relative" style={{ zIndex: 1, minHeight: '100dvh', padding: '16px' }}>
+    <div className="rs-flex rs-items-center rs-justify-center rs-relative" style={{ zIndex: 1, minHeight: '100dvh', padding: 'var(--rs-space-4)' }}>
       <div className="rs-card is-elev rs-w-full" style={{ maxWidth: 420, padding: '2.5rem 1.5rem' }}>
         
         <div className="rs-text-center" style={{ marginBottom: '2rem' }}>
           <div className="rs-flex rs-items-center rs-gap-3 rs-justify-center rs-mb-2">
-            <span className="rs-pill is-active rs-type-body" style={{ padding: '8px 12px' }}>RS</span>
+            <span className="rs-pill is-active rs-type-body" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}>RS</span>
             <span className="rs-type-h3" style={{ fontFamily: 'var(--font-mood)', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
           <div className="rs-card-label rs-muted rs-type-nano">NEW OPERATOR REGISTRATION</div>
@@ -42,11 +42,11 @@ export default function SignupPage({ onSwitchToLogin }) {
 
         <form onSubmit={handleSubmit} className="rs-flex rs-flex-col rs-gap-4">
           <div>
-            <div className="rs-card-label rs-mb-2 rs-type-nano" style={{ paddingLeft: 4 }}>CALL-SIGN</div>
+            <div className="rs-card-label rs-mb-2 rs-type-nano" style={{ paddingLeft: 'var(--rs-space-1)' }}>CALL-SIGN</div>
             <input
               type="text"
               className="rs-pill rs-w-full rs-type-small"
-              style={{ padding: '12px 16px', background: 'var(--md-surface-container)' }}
+              style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container)' }}
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               placeholder="Your name"
@@ -56,11 +56,11 @@ export default function SignupPage({ onSwitchToLogin }) {
           </div>
 
           <div>
-            <div className="rs-card-label rs-mb-2 rs-type-nano" style={{ paddingLeft: 4 }}>IDENTIFIER (EMAIL)</div>
+            <div className="rs-card-label rs-mb-2 rs-type-nano" style={{ paddingLeft: 'var(--rs-space-1)' }}>IDENTIFIER (EMAIL)</div>
             <input
               type="email"
               className="rs-pill rs-w-full rs-type-small"
-              style={{ padding: '12px 16px', background: 'var(--md-surface-container)' }}
+              style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container)' }}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -69,11 +69,11 @@ export default function SignupPage({ onSwitchToLogin }) {
           </div>
 
           <div>
-            <div className="rs-card-label rs-mb-2 rs-type-nano" style={{ paddingLeft: 4 }}>ENCRYPTION KEY</div>
+            <div className="rs-card-label rs-mb-2 rs-type-nano" style={{ paddingLeft: 'var(--rs-space-1)' }}>ENCRYPTION KEY</div>
             <input
               type="password"
               className="rs-pill rs-w-full rs-type-small"
-              style={{ padding: '12px 16px', background: 'var(--md-surface-container)' }}
+              style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container)' }}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"

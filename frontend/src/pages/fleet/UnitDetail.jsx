@@ -134,19 +134,19 @@ export default function UnitDetail() {
       <div className="rs-flex rs-justify-between rs-items-center">
         <h2>{unit.name || unit.unit_id}</h2>
         <div className="rs-flex rs-gap-3 rs-items-center">
-          <span style={{ padding: '4px 8px', borderRadius: 4, background: unit.online ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)' }}>
+          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: unit.online ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)' }}>
             {unit.online ? 'Online' : 'Offline'}
           </span>
-          <span style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.1)' }}>
+          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'rgba(255,255,255,0.1)' }}>
             Mode: {unit.operating_mode || 'idle'}
           </span>
-          <span style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.1)' }}>
+          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'rgba(255,255,255,0.1)' }}>
             Tier: {unit.connectivity_tier || 'lan'}
           </span>
         </div>
       </div>
 
-      <div className="rs-flex rs-gap-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', margin: '20px 0', paddingBottom: 10 }}>
+      <div className="rs-flex rs-gap-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', margin: 'var(--rs-space-5) 0', paddingBottom: 'var(--rs-space-3)' }}>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'live' ? 'bold' : 'normal' }} onClick={() => setTab('live')}>Live</button>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'history' ? 'bold' : 'normal' }} onClick={() => setTab('history')}>History</button>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'settings' ? 'bold' : 'normal' }} onClick={() => setTab('settings')}>Settings</button>
@@ -275,7 +275,7 @@ export default function UnitDetail() {
             Re-run Setup Wizard
           </button>
           
-          <div className="rs-mt-5" style={{ paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="rs-mt-5" style={{ paddingTop: 'var(--rs-space-5)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <h3>Danger Zone</h3>
             <button className="rs-btn-danger" onClick={async () => {
               if (confirm('Delete this unit? This cannot be undone.')) {

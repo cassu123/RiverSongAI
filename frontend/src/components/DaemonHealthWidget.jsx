@@ -119,7 +119,7 @@ export default function DaemonHealthWidget({ token }) {
       })}
       <div
         className="rs-mt-3 rs-mono rs-type-nano" style={{
-          paddingTop: 8,
+          paddingTop: 'var(--rs-space-2)',
           borderTop: `1px solid ${C.divider}`,
           letterSpacing: '0.06em',
           color: liveCount === names.length ? C.dim : C.amber,
@@ -203,7 +203,7 @@ function Note({ children, tone = C.dim }) {
   return (
     <div
       className="rs-mono rs-type-nano" style={{
-        padding: '14px 0',
+        padding: 'var(--rs-space-4) 0',
         letterSpacing: '0.05em',
         color: tone,
       }}

@@ -57,12 +57,12 @@ function ListingBuilder({ product }) {
   };
 
   return (
-    <div className="rs-mt-4" style={{ paddingTop: 16, borderTop: '1px solid var(--md-outline-variant)' }}>
+    <div className="rs-mt-4" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid var(--md-outline-variant)' }}>
       <div className="rs-card-label rs-mb-3" style={{ color: 'var(--primary)' }}>LIST ON PLATFORM</div>
       <div className="rs-flex rs-gap-2 rs-mb-3">
         <select 
           className="rs-pill" 
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', color: 'var(--fg)', padding: '0 12px' }}
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', color: 'var(--fg)', padding: '0 var(--rs-space-3)' }}
           value={platform} 
           onChange={(e) => setPlatform(e.target.value)}
         >
@@ -74,7 +74,7 @@ function ListingBuilder({ product }) {
       </div>
       <div className="rs-p-3 rs-type-tiny" style={{
         background: 'rgba(0,0,0,0.2)',
-        borderRadius: 8,
+        borderRadius: 'var(--md-shape-sm)',
         maxHeight: 150,
         overflowY: 'auto',
         border: '1px solid var(--md-outline-variant)',
@@ -239,42 +239,42 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">PRODUCT NAME *</label>
-              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }} value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
+              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)' }} value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">SKU *</label>
-              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }} value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
+              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)' }} value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
             </div>
           </div>
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">CATEGORY</label>
-              <select className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }} value={form.category} onChange={set('category')}>
+              <select className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)' }} value={form.category} onChange={set('category')}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">STOCK QTY</label>
-              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }} type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
+              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)' }} type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">THRESHOLD</label>
-              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }} type="number" min="0" value={form.threshold} onChange={set('threshold')} />
+              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)' }} type="number" min="0" value={form.threshold} onChange={set('threshold')} />
             </div>
           </div>
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">SALE PRICE ($)</label>
-              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }} type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
+              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)' }} type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">COST PRICE ($)</label>
-              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }} type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
+              <input className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)' }} type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
             </div>
           </div>
           <div>
             <label className="rs-card-label">DESCRIPTION</label>
-            <textarea className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)', resize: 'vertical' }} value={form.description} onChange={set('description')} rows={2} placeholder="Optional notes..." />
+            <textarea className="rs-w-full rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)', resize: 'vertical' }} value={form.description} onChange={set('description')} rows={2} placeholder="Optional notes..." />
           </div>
         </div>
       </div>
@@ -325,14 +325,14 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
         </div>
         
         <div className="rs-flex rs-gap-2 rs-flex-wrap" style={{ marginTop: 'auto' }}>
-          <button className="rs-pill rs-type-nano" style={{ padding: '4px 8px' }} onClick={() => onEdit(product)}>EDIT</button>
-          <button className="rs-pill rs-type-nano" style={{ padding: '4px 8px' }} onClick={handleGen} disabled={generating}>
+          <button className="rs-pill rs-type-nano" style={{ padding: 'var(--rs-space-1) var(--rs-space-2)' }} onClick={() => onEdit(product)}>EDIT</button>
+          <button className="rs-pill rs-type-nano" style={{ padding: 'var(--rs-space-1) var(--rs-space-2)' }} onClick={handleGen} disabled={generating}>
             {generating ? '...' : 'GEN'}
           </button>
-          <button className="rs-pill rs-type-nano" style={{ padding: '4px 8px' }} onClick={() => setShowListing(!showListing)}>
+          <button className="rs-pill rs-type-nano" style={{ padding: 'var(--rs-space-1) var(--rs-space-2)' }} onClick={() => setShowListing(!showListing)}>
             {showListing ? 'HIDE' : 'LIST'}
           </button>
-          <button className="rs-pill rs-type-nano" style={{ padding: '4px 8px', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }} onClick={() => onDelete(product.id)}>DEL</button>
+          <button className="rs-pill rs-type-nano" style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }} onClick={() => onDelete(product.id)}>DEL</button>
         </div>
 
         {showListing && <ListingBuilder product={product} />}
@@ -401,7 +401,7 @@ export default function CommercePage({ setAction }) {
               background: 'rgba(255,255,255,0.08)',
               border: '1px solid var(--md-outline-variant)',
               borderRadius: 30,
-              padding: '10px 12px 10px 40px',
+              padding: 'var(--rs-space-3) var(--rs-space-3) var(--rs-space-3) var(--rs-space-7)',
               color: 'var(--fg)',
             }} 
             placeholder="Search products..." 
@@ -499,7 +499,7 @@ export default function CommercePage({ setAction }) {
         </div>
       ) : (
         <>
-          <div className="rs-flex rs-gap-3 rs-mb-5" style={{ overflowX: 'auto', paddingBottom: 8 }}>
+          <div className="rs-flex rs-gap-3 rs-mb-5" style={{ overflowX: 'auto', paddingBottom: 'var(--rs-space-2)' }}>
             {['PRODUCTS', 'SALES', 'CUSTOMERS', 'SUPPLIERS', 'MEMBERS'].map(tab => (
               <button 
                 key={tab}
@@ -583,7 +583,7 @@ function CreateWorkspaceForm({ token, onCreate }) {
       {error && <div className="rs-mb-3 rs-type-tiny" style={{ color: 'var(--rs-status-critical)' }}>{error}</div>}
       <div className="rs-flex rs-gap-3">
         <input 
-          className="rs-grow rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, color: 'var(--fg)' }}
+          className="rs-grow rs-p-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', color: 'var(--fg)' }}
           placeholder="e.g. My Boutique" 
           value={name} 
           onChange={e => setName(e.target.value)} 

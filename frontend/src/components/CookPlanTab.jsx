@@ -359,7 +359,7 @@ export default function CookPlanTab({
     return (
       <div className="rs-flex rs-flex-col rs-gap-5 rs-w-full" style={{ maxWidth: 840, margin: '0 auto' }}>
         {/* Launcher Banner */}
-        <div className="gh-card gh-glance-bar rs-flex rs-flex-col" style={{ padding: '24px 28px', alignItems: 'stretch' }}>
+        <div className="gh-card gh-glance-bar rs-flex rs-flex-col" style={{ padding: 'var(--rs-space-5) var(--rs-space-6)', alignItems: 'stretch' }}>
           <div className="rs-flex rs-items-center rs-justify-between rs-gap-4">
             <div className="rs-flex rs-items-center rs-gap-4">
               <div className="gh-glance-orb-wrap" style={{ width: 48, height: 48 }}>
@@ -382,7 +382,7 @@ export default function CookPlanTab({
           </div>
 
           {showAppliances && (
-            <div className="rs-mt-5" style={{ paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div className="rs-mt-5" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
               {availableEquipment.length === 0 ? (
                 <div className="rs-p-3 rs-type-tiny rs-muted">
                   No kitchen equipment registered. Add your appliances in settings.
@@ -396,7 +396,7 @@ export default function CookPlanTab({
                           key={eq.id}
                           type="button"
                           className={`gh-kitchen-nav-btn ${activeEquipmentId === eq.id ? 'is-active' : ''}`}
-                          style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
+                          style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
                           onClick={() => setSelectedEquipmentId(eq.id)}
                         >
                           <span>{eq.label || eq.make || 'Appliance'}</span>
@@ -438,7 +438,7 @@ export default function CookPlanTab({
               </div>
               <button
                 className="gh-cook-btn-next"
-                style={{ flex: 'none', height: 48, padding: '0 24px' }}
+                style={{ flex: 'none', height: 48, padding: '0 var(--rs-space-5)' }}
                 disabled={busy}
                 onClick={() => handleCookDinnerPlan(todayDinner)}
               >
@@ -456,7 +456,7 @@ export default function CookPlanTab({
               <h3 className="rs-m-0 rs-type-body" style={{ fontWeight: 700, color: 'var(--fg)' }}>Choose from Cookbook</h3>
               <div className="rs-type-tiny rs-muted">Select any recipe to start guided cooking immediately</div>
             </div>
-            <div className="rs-flex rs-items-center rs-gap-2" style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '6px 14px', borderRadius: 999, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <div className="rs-flex rs-items-center rs-gap-2" style={{ background: 'rgba(255, 255, 255, 0.06)', padding: 'var(--rs-space-2) var(--rs-space-4)', borderRadius: 'var(--md-shape-full)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
               <span className="material-symbols-rounded rs-muted" style={{ fontSize: 18 }}>search</span>
               <input
                 type="text"
@@ -476,7 +476,7 @@ export default function CookPlanTab({
                 <div
                   key={r.id}
                   className="rs-flex rs-flex-col rs-justify-between rs-p-4 rs-gap-3" style={{
-                    borderRadius: 18,
+                    borderRadius: 'var(--md-shape-xl)',
                     background: 'rgba(255, 255, 255, 0.03)',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
                   }}
@@ -529,7 +529,7 @@ export default function CookPlanTab({
     <div className="rs-flex rs-flex-col rs-gap-5 rs-w-full" style={{ maxWidth: 840, margin: '0 auto' }}>
 
       {/* Top Banner: Meal Metadata & Controls */}
-      <div className="gh-card" style={{ padding: '20px 24px' }}>
+      <div className="gh-card" style={{ padding: 'var(--rs-space-5) var(--rs-space-5)' }}>
         <div className="rs-flex rs-items-center rs-justify-between rs-flex-wrap rs-gap-4">
           <div>
             <div className="rs-flex rs-items-center rs-gap-3">
@@ -560,7 +560,7 @@ export default function CookPlanTab({
             ) : (
               <button
                 className="gh-cook-btn-next"
-                style={{ flex: 'none', height: 46, padding: '0 24px' }}
+                style={{ flex: 'none', height: 46, padding: '0 var(--rs-space-5)' }}
                 onClick={startMealCook}
                 disabled={busy}
               >
@@ -572,12 +572,12 @@ export default function CookPlanTab({
         </div>
 
         {/* Eat At Time Picker */}
-        <div className="rs-flex rs-items-center rs-gap-3 rs-mt-4 rs-flex-wrap" style={{ paddingTop: 14, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <div className="rs-flex rs-items-center rs-gap-3 rs-mt-4 rs-flex-wrap" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <span className="rs-type-tiny rs-muted" style={{ fontWeight: 700 }}>TARGET SERVE TIME:</span>
           <input
             type="time"
             className="rs-pill"
-            style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.12)', color: '#fff', padding: '4px 12px' }}
+            style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.12)', color: '#fff', padding: 'var(--rs-space-1) var(--rs-space-3)' }}
             value={serveTime}
             onChange={e => reschedule(e.target.value)}
           />
@@ -629,13 +629,13 @@ export default function CookPlanTab({
       {/* PHASE 1: MISE EN PLACE */}
       {guidePhase === 'prep' && (
         <div className="rs-flex rs-flex-col rs-gap-5">
-          <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: '0 4px' }}>
+          <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: '0 var(--rs-space-1)' }}>
             <span className="rs-type-tiny rs-muted">
               Gather provisions and prepare equipment before heat goes on:
             </span>
             <button
               className="gh-cook-btn-next rs-type-small"
-              style={{ flex: 'none', height: 42, padding: '0 20px' }}
+              style={{ flex: 'none', height: 42, padding: '0 var(--rs-space-5)' }}
               onClick={() => {
                 if (!cook) startMealCook()
                 else setGuidePhase('cook')
@@ -650,7 +650,7 @@ export default function CookPlanTab({
             <div key={r.id} className="gh-card">
               <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
                 <div className="rs-flex rs-items-center rs-gap-3">
-                  <div style={{ width: 4, height: 18, borderRadius: 2, background: colorFor[r.id] || '#00e5ff' }} />
+                  <div style={{ width: 4, height: 18, borderRadius: 'var(--md-shape-xs)', background: colorFor[r.id] || '#00e5ff' }} />
                   <h3 className="rs-m-0 rs-type-body" style={{ fontWeight: 700, color: 'var(--fg)' }}>
                     {r.title} · Measure & Prep
                   </h3>
@@ -668,8 +668,8 @@ export default function CookPlanTab({
                       key={ing.key}
                       onClick={() => toggle(ing.key)}
                       className="rs-flex rs-items-center rs-gap-3 rs-pointer" style={{
-                        padding: '12px 18px',
-                        borderRadius: 14,
+                        padding: 'var(--rs-space-3) var(--rs-space-5)',
+                        borderRadius: 'var(--md-shape-lg)',
                         background: isDone ? 'rgba(74, 222, 128, 0.12)' : '#1a2230',
                         border: isDone ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
                         transition: 'all 0.15s ease',
@@ -694,7 +694,7 @@ export default function CookPlanTab({
           {/* Knife work & preliminary prep steps */}
           {prepSteps.length > 0 && (
             <div className="gh-card">
-              <h3 className="rs-type-body" style={{ margin: '0 0 12px 0', fontWeight: 700, color: 'var(--fg)' }}>
+              <h3 className="rs-type-body" style={{ margin: '0 0 var(--rs-space-3) 0', fontWeight: 700, color: 'var(--fg)' }}>
                 Preliminary Prep & Knife Work
               </h3>
               <div className="rs-flex rs-flex-col rs-gap-2">
@@ -705,8 +705,8 @@ export default function CookPlanTab({
                       key={s.key}
                       onClick={() => toggle(s.key)}
                       className="rs-flex rs-items-start rs-gap-3 rs-pointer" style={{
-                        padding: '12px 16px',
-                        borderRadius: 14,
+                        padding: 'var(--rs-space-3) var(--rs-space-4)',
+                        borderRadius: 'var(--md-shape-lg)',
                         background: isDone ? 'rgba(74, 222, 128, 0.12)' : '#1a2230',
                         border: isDone ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
                       }}
@@ -757,7 +757,7 @@ export default function CookPlanTab({
                             key={eq.id}
                             type="button"
                             className={`gh-kitchen-nav-btn ${activeEquipmentId === eq.id ? 'is-active' : ''}`}
-                            style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
+                            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
                             onClick={() => setSelectedEquipmentId(eq.id)}
                           >
                             <span>{eq.label || eq.make || 'Appliance'}</span>
@@ -777,7 +777,7 @@ export default function CookPlanTab({
 
             <div className="rs-flex rs-flex-col rs-gap-3">
               {plan.recipes.map(r => (
-                <div key={r.id} className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap" style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12 }}>
+                <div key={r.id} className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--md-shape-md)' }}>
                   <span className="rs-type-small" style={{ fontWeight: 600, color: 'var(--fg)', minWidth: 160 }}>{r.title}</span>
                   <select
                     className="rs-pill rs-grow rs-type-tiny"
@@ -815,7 +815,7 @@ export default function CookPlanTab({
             <div className="rs-flex rs-gap-2">
               <button
                 className={`gh-kitchen-nav-btn ${viewMode === 'focus' ? 'is-active' : ''}`}
-                style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
+                style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
                 onClick={() => setViewMode('focus')}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: 18 }}>center_focus_strong</span>
@@ -823,7 +823,7 @@ export default function CookPlanTab({
               </button>
               <button
                 className={`gh-kitchen-nav-btn ${viewMode === 'timeline' ? 'is-active' : ''}`}
-                style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
+                style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
                 onClick={() => setViewMode('timeline')}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: 18 }}>view_timeline</span>
@@ -852,8 +852,8 @@ export default function CookPlanTab({
                 <div className="gh-cook-step-header">
                   <div className="rs-flex rs-items-center rs-gap-3">
                     <span className="rs-type-micro" style={{
-                      padding: '4px 10px',
-                      borderRadius: 8,
+                      padding: 'var(--rs-space-1) var(--rs-space-3)',
+                      borderRadius: 'var(--md-shape-sm)',
                       background: colorFor[currentStep.recipe_id] || '#00e5ff',
                       color: '#001a2c',
                       fontWeight: 800,
@@ -861,7 +861,7 @@ export default function CookPlanTab({
                     }}>
                       {currentStep.recipe_title}
                     </span>
-                    <span className="gh-sensor-pill rs-type-micro" style={{ padding: '4px 10px' }}>
+                    <span className="gh-sensor-pill rs-type-micro" style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}>
                       <span className="material-symbols-rounded" style={{ fontSize: 16 }}>{stationIcon(currentStep.station)}</span>
                       <span>{stationLabel(currentStep.station)}</span>
                     </span>
@@ -893,7 +893,7 @@ export default function CookPlanTab({
                       {cook && !(timersFor[currentStep.key] || []).length && (
                         <button
                           className="gh-cook-btn-next rs-type-small"
-                          style={{ height: 44, padding: '0 20px' }}
+                          style={{ height: 44, padding: '0 var(--rs-space-5)' }}
                           disabled={busy}
                           onClick={() => startTimer(currentStep, timerSeconds(currentStep))}
                         >
@@ -935,8 +935,8 @@ export default function CookPlanTab({
                 {/* Up Next Preview */}
                 {nextStep && (
                   <div className="rs-mt-5 rs-flex rs-items-center rs-gap-3" style={{
-                    padding: '12px 16px',
-                    borderRadius: 16,
+                    padding: 'var(--rs-space-3) var(--rs-space-4)',
+                    borderRadius: 'var(--md-shape-lg)',
                     background: 'rgba(255, 255, 255, 0.03)',
                     border: '1px solid rgba(255, 255, 255, 0.06)',
                   }}>
@@ -963,7 +963,7 @@ export default function CookPlanTab({
                 <button
                   type="button"
                   className="gh-cook-btn-next"
-                  style={{ height: 46, padding: '0 24px', display: 'inline-flex' }}
+                  style={{ height: 46, padding: '0 var(--rs-space-5)', display: 'inline-flex' }}
                   onClick={() => setGuidePhase('done')}
                 >
                   <span className="material-symbols-rounded">dinner_dining</span>
@@ -1003,8 +1003,8 @@ export default function CookPlanTab({
                         setViewMode('focus')
                       }}
                       className="rs-flex rs-items-center rs-gap-3 rs-pointer" style={{
-                        padding: '12px 16px',
-                        borderRadius: 16,
+                        padding: 'var(--rs-space-3) var(--rs-space-4)',
+                        borderRadius: 'var(--md-shape-lg)',
                         background: isCurrent
                           ? 'rgba(0, 229, 255, 0.12)'
                           : isDone
@@ -1057,7 +1057,7 @@ export default function CookPlanTab({
 
       {/* PHASE 3: PLATING & DONE */}
       {guidePhase === 'done' && (
-        <div className="gh-cook-hero-card rs-text-center" style={{ padding: '40px 24px' }}>
+        <div className="gh-cook-hero-card rs-text-center" style={{ padding: 'var(--rs-space-7) var(--rs-space-5)' }}>
           <div className="rs-flex rs-items-center rs-justify-center" style={{
             width: 72,
             height: 72,
@@ -1071,7 +1071,7 @@ export default function CookPlanTab({
             </span>
           </div>
 
-          <h2 style={{ fontSize: '2.3rem', fontWeight: 800, color: 'var(--fg)', margin: '0 0 10px 0' }}>
+          <h2 style={{ fontSize: '2.3rem', fontWeight: 800, color: 'var(--fg)', margin: '0 0 var(--rs-space-3) 0' }}>
             Dinner is Served!
           </h2>
           <p className="rs-type-body" style={{ color: 'var(--fg)', maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.45 }}>
@@ -1082,8 +1082,8 @@ export default function CookPlanTab({
             <div className="rs-type-small" style={{
               margin: '0 auto 24px',
               maxWidth: 480,
-              padding: '10px 16px',
-              borderRadius: 12,
+              padding: 'var(--rs-space-3) var(--rs-space-4)',
+              borderRadius: 'var(--md-shape-md)',
               background: 'rgba(74, 222, 128, 0.12)',
               border: '1px solid rgba(74, 222, 128, 0.3)',
               color: 'var(--rs-status-nominal)',

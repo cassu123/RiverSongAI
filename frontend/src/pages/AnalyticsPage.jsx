@@ -133,7 +133,7 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
         flex: '1 1 280px',
         opacity: connected ? 1 : 0.6,
         borderLeft: selected ? `8px solid ${p.color}` : `1px solid #111`,
-        padding: '24px'
+        padding: 'var(--rs-space-5)'
       }}
       onClick={() => onSelect(platform)}
     >
@@ -198,10 +198,10 @@ function PlatformDetail({
 
   return (
     <div className="rs-card is-wide animate-fade-in rs-p-7 rs-mt-7" style={{ border: '1px solid var(--md-outline-variant)' }}>
-      <div className="rs-card-head rs-mb-7" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
+      <div className="rs-card-head rs-mb-7" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 'var(--rs-space-4)' }}>
         <div>
           <span className="rs-card-label">{p.label} / DETAILED_ANALYSIS</span>
-          <h2 style={{ fontSize: '2.5rem', fontWeight: 950, textTransform: 'uppercase', margin: '4px 0 0' }}>{p.label}</h2>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: 950, textTransform: 'uppercase', margin: 'var(--rs-space-1) 0 0' }}>{p.label}</h2>
         </div>
         <div className="rs-flex rs-gap-3">
           {SUPPORTED_FOR_INSIGHTS.includes(platform) && (
@@ -214,7 +214,7 @@ function PlatformDetail({
               {loading ? 'ANALYZING...' : insights ? 'REFRESH INSIGHTS' : 'AI STRATEGIC REVIEW'}
             </button>
           )}
-          <button className="rs-btn-primary" onClick={onAddData} style={{ padding: '10px 24px' }}>
+          <button className="rs-btn-primary" onClick={onAddData} style={{ padding: 'var(--rs-space-3) var(--rs-space-5)' }}>
             ADD DATA
           </button>
         </div>
@@ -226,7 +226,7 @@ function PlatformDetail({
       {insights && !loading && (
         <div className="rs-p-5 rs-mb-7" style={{
           background: 'var(--md-surface-container)',
-          borderRadius: 4,
+          borderRadius: 'var(--md-shape-xs)',
           border: '1px solid var(--md-outline-variant)',
         }}>
           <div className="rs-card-label rs-mb-3" style={{ color: 'var(--md-on-surface)' }}>AI STRATEGIC INSIGHTS</div>
@@ -249,7 +249,7 @@ function PlatformDetail({
               const latest = chartData[chartData.length - 1]?.value
               return (
                 <div key={metric} className="rs-flex rs-flex-col rs-gap-5 rs-p-5" style={{ border: '1px solid var(--md-outline-variant)' }}>
-                  <div className="rs-flex rs-justify-between" style={{ alignItems: 'baseline', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 8 }}>
+                  <div className="rs-flex rs-justify-between" style={{ alignItems: 'baseline', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 'var(--rs-space-2)' }}>
                     <span className="rs-card-label" style={{ border: 'none', padding: 0 }}>{metricLabel(metric)}</span>
                     <span className="rs-card-value" style={{ fontSize: '1.8rem' }}>{fmtMetric(metric, latest)}</span>
                   </div>
@@ -259,23 +259,23 @@ function PlatformDetail({
             })}
           </div>
 
-          <div className="rs-table-wrap" style={{ overflowX: 'auto', border: '1px solid var(--md-outline-variant)', borderRadius: 4 }}>
+          <div className="rs-table-wrap" style={{ overflowX: 'auto', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-xs)' }}>
             <table className="rs-w-full rs-type-small" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--md-outline-variant)', background: 'var(--md-surface-container-high)' }}>
-                  <th className="rs-text-left" style={{ padding: '16px', fontWeight: 900 }}>DATE</th>
-                  {(metrics || []).map(m => <th key={m} className="rs-text-left" style={{ padding: '16px', fontWeight: 900 }}>{metricLabel(m).toUpperCase()}</th>)}
-                  <th style={{ padding: '16px' }}></th>
+                  <th className="rs-text-left" style={{ padding: 'var(--rs-space-4)', fontWeight: 900 }}>DATE</th>
+                  {(metrics || []).map(m => <th key={m} className="rs-text-left" style={{ padding: 'var(--rs-space-4)', fontWeight: 900 }}>{metricLabel(m).toUpperCase()}</th>)}
+                  <th style={{ padding: 'var(--rs-space-4)' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {[...(snapshots || [])].reverse().map(s => (
                   <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td className="rs-mono" style={{ padding: '12px 16px' }}>{s.date}</td>
+                    <td className="rs-mono" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>{s.date}</td>
                     {(metrics || []).map(m => (
-                      <td key={m} style={{ padding: '12px 16px', fontWeight: 600 }}>{fmtMetric(m, s.metrics?.[m])}</td>
+                      <td key={m} style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', fontWeight: 600 }}>{fmtMetric(m, s.metrics?.[m])}</td>
                     ))}
-                    <td className="rs-text-right" style={{ padding: '12px 16px' }}>
+                    <td className="rs-text-right" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                       <button
                         className="rs-p-1 rs-pointer" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)' }}
                         onClick={() => onDeleteSnapshot(s.id)}
@@ -330,7 +330,7 @@ function AddDataModal({ platform, onClose, onSave }) {
       zIndex: 2000,
     }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="rs-card animate-scale-in rs-w-full rs-p-7" style={{ maxWidth: 450 }}>
-        <div className="rs-card-head" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
+        <div className="rs-card-head" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 'var(--rs-space-4)' }}>
           <span className="rs-card-label">MANUAL_DATA_ENTRY / {p.label}</span>
           <button className="rs-pointer" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)' }} onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
@@ -342,7 +342,7 @@ function AddDataModal({ platform, onClose, onSave }) {
             <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>SNAPSHOT_DATE</label>
             <input
               type="date"
-              className="rs-type-body" style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
+              className="rs-type-body" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
               value={date}
               onChange={e => setDate(e.target.value)}
             />
@@ -354,7 +354,7 @@ function AddDataModal({ platform, onClose, onSave }) {
                 <input
                   type="number"
                   placeholder="0.00"
-                  className="rs-type-body" style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
+                  className="rs-type-body" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
                   value={vals[m]}
                   onChange={e => setVals({ ...vals, [m]: e.target.value })}
                 />
@@ -366,7 +366,7 @@ function AddDataModal({ platform, onClose, onSave }) {
 
         <div className="rs-flex rs-gap-4 rs-mt-7" style={{ justifyContent: 'flex-end' }}>
           <button className="rs-pill" onClick={onClose} style={{ border: 'none', textDecoration: 'underline', fontWeight: 900 }}>CANCEL</button>
-          <button className="rs-btn-primary" onClick={handleSave} disabled={saving} style={{ padding: '12px 32px' }}>
+          <button className="rs-btn-primary" onClick={handleSave} disabled={saving} style={{ padding: 'var(--rs-space-3) var(--rs-space-6)' }}>
             {saving ? 'RECORDING…' : 'COMMIT DATA'}
           </button>
         </div>
@@ -591,9 +591,9 @@ export default function AnalyticsPage() {
           transform: 'translateX(-50%)',
           background: 'var(--md-surface-container-high)',
           color: 'var(--md-on-surface)',
-          padding: '12px 24px',
+          padding: 'var(--rs-space-3) var(--rs-space-5)',
           border: '1px solid var(--md-outline-variant)',
-          borderRadius: 10,
+          borderRadius: 'var(--md-shape-sm)',
           letterSpacing: '0.1em',
           zIndex: 2000,
           boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
@@ -602,8 +602,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
-        <header className="rs-mb-7" style={{ paddingTop: 48, paddingBottom: 32, borderBottom: '2px solid var(--md-outline-variant)' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 var(--rs-space-5)' }}>
+        <header className="rs-mb-7" style={{ paddingTop: 'var(--rs-space-7)', paddingBottom: 'var(--rs-space-6)', borderBottom: '2px solid var(--md-outline-variant)' }}>
           <div className="rs-status-strip rs-mb-4" style={{ border: 'none', padding: 0, background: 'none' }}>
             <span className="rs-status-dot" />
             <span style={{ color: 'var(--md-on-surface)', fontWeight: 900 }}>SYSTEM // ANALYTICS / COMMAND</span>
@@ -617,14 +617,14 @@ export default function AnalyticsPage() {
         <div className="rs-flex rs-flex-col rs-gap-6">
 
           {/* Controls Bar */}
-          <div className="rs-flex rs-items-center rs-justify-between rs-flex-wrap rs-gap-4" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
+          <div className="rs-flex rs-items-center rs-justify-between rs-flex-wrap rs-gap-4" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 'var(--rs-space-4)' }}>
             <div className="rs-flex rs-gap-3">
               {RANGE_OPTIONS.map(o => (
                 <button
                   key={o.days}
                   className={days === o.days ? 'rs-pill is-active' : 'rs-pill'}
                   onClick={() => setDays(o.days)}
-                  style={{ border: 'none', padding: '6px 0', marginRight: 16, fontWeight: 900, textDecoration: days === o.days ? 'underline' : 'none' }}
+                  style={{ border: 'none', padding: 'var(--rs-space-2) 0', marginRight: 'var(--rs-space-4)', fontWeight: 900, textDecoration: days === o.days ? 'underline' : 'none' }}
                 >
                   {o.label}
                 </button>
@@ -652,7 +652,7 @@ export default function AnalyticsPage() {
               {PLATFORMS.map(p => {
                 const on = visiblePlatforms.has(p.key)
                 return (
-                  <label key={p.key} className={on ? 'rs-pill is-active' : 'rs-pill'} style={{ cursor: 'pointer', border: '1px solid var(--md-outline-variant)', padding: '8px 16px' }}>
+                  <label key={p.key} className={on ? 'rs-pill is-active' : 'rs-pill'} style={{ cursor: 'pointer', border: '1px solid var(--md-outline-variant)', padding: 'var(--rs-space-2) var(--rs-space-4)' }}>
                     <input
                       type="checkbox"
                       className="rs-hidden"
@@ -663,7 +663,7 @@ export default function AnalyticsPage() {
                         handleVisibleChange(next)
                       }}
                     />
-                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, marginRight: 12, border: '1px solid var(--md-outline-variant)' }} />
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, marginRight: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)' }} />
                     <span style={{ fontWeight: 900 }}>{p.label.toUpperCase()}</span>
                   </label>
                 )
@@ -680,7 +680,7 @@ export default function AnalyticsPage() {
 
         {/* Summary Stats */}
         {snapshots.length > 0 && (
-          <div className="rs-gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', padding: '32px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', padding: 'var(--rs-space-6) 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
             <div>
               <span className="rs-card-label">REVENUE / AGGREGATE</span>
               <div className="rs-card-value" style={{ fontSize: '3rem' }}>{fmtMoney(totalRevenue)}</div>
@@ -707,7 +707,7 @@ export default function AnalyticsPage() {
               className="rs-btn-primary" 
               onClick={handleGenerateReport} 
               disabled={generatingReport}
-              style={{ padding: '10px 24px' }}
+              style={{ padding: 'var(--rs-space-3) var(--rs-space-5)' }}
             >
               {generatingReport ? "DECRYPTING..." : "EXECUTE ANALYSIS"}
             </button>
@@ -756,7 +756,7 @@ export default function AnalyticsPage() {
             zIndex: 2000,
           }} onClick={e => e.target === e.currentTarget && setShowShopifyModal(false)}>
             <div className="rs-card animate-scale-in rs-w-full rs-p-7" style={{ maxWidth: 450 }}>
-              <div className="rs-card-head" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
+              <div className="rs-card-head" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 'var(--rs-space-4)' }}>
                 <span className="rs-card-label">EXTERNAL_LINK / SHOPIFY</span>
                 <button className="rs-pointer" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)' }} onClick={() => setShowShopifyModal(false)}>
                   <span className="material-symbols-rounded">close</span>
@@ -786,7 +786,7 @@ export default function AnalyticsPage() {
                     <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>SHOP_DOMAIN</label>
                     <input
                       type="text"
-                      className="rs-type-body" style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
+                      className="rs-type-body" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
                       placeholder="your-shop.myshopify.com"
                       value={shopifyDomain}
                       onChange={e => setShopifyDomain(e.target.value)}

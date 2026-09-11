@@ -277,7 +277,7 @@ function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
         </button>
       ) : (
         <div className="rs-card is-wide rs-p-5">
-          <h4 className="rs-type-small" style={{ margin: '0 0 14px 0', color: 'var(--primary)' }}>&gt; CREATE NEW CHECKPOINT</h4>
+          <h4 className="rs-type-small" style={{ margin: '0 0 var(--rs-space-4) 0', color: 'var(--primary)' }}>&gt; CREATE NEW CHECKPOINT</h4>
           <div className="cp-edit-grid">
             <div className="cockpit-input-box" style={{ gridColumn: 'span 2' }}>
               <span className="card-metric-label">DESCRIPTION *</span>
@@ -389,7 +389,7 @@ function PeopleSettings({ token, people, onRefresh }) {
       <div className="rs-flex rs-gap-3 rs-mb-5">
         <input
           className="cockpit-input-raw rs-grow"
-          style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
+          style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--md-shape-sm)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}
           placeholder="member@example.com"
           value={emailInput}
           onChange={e => setEmailInput(e.target.value)}
@@ -501,7 +501,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
 
       <div className="rs-gap-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         {/* Assigned */}
-        <div className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="card-metric-label rs-mb-3">
             ASSIGNED TO {currentV?.nickname?.toUpperCase() || currentV?.model?.toUpperCase() || 'VEHICLE'}
           </div>
@@ -510,7 +510,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
           ) : (
             <ul className="cp-list">
               {assignments.map(a => (
-                <li key={a.person_id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between" style={{ padding: '10px 14px' }}>
+                <li key={a.person_id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                   <span className="rs-type-small" style={{ color: 'var(--fg)' }}>{a.person_display_name || a.person_email}</span>
                   <button className="rs-pill btn-danger" onClick={() => handleUnassign(a.person_id)} disabled={busy}>
                     UNASSIGN
@@ -522,14 +522,14 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
         </div>
 
         {/* Unassigned */}
-        <div className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="card-metric-label rs-mb-3">AVAILABLE ROSTER MEMBERS</div>
           {unassigned.length === 0 ? (
             <div className="mp-empty-specs rs-p-4">All registered members are assigned.</div>
           ) : (
             <ul className="cp-list">
               {unassigned.map(p => (
-                <li key={p.id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between" style={{ padding: '10px 14px' }}>
+                <li key={p.id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                   <span className="rs-type-small" style={{ color: 'var(--fg)' }}>{p.display_name || p.email}</span>
                   <button className="rs-pill is-active" onClick={() => handleAssign(p.id)} disabled={busy}>
                     + ASSIGN
@@ -632,14 +632,14 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
       </div>
 
       {preview && (
-        <div className="rs-mt-4 rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
+        <div className="rs-mt-4 rs-p-4" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)' }}>
           <div className="card-metric-label rs-mb-3">PREVIEW — {preview.length} ITEMS DETECTED</div>
           {preview.length === 0 ? (
             <div className="mp-empty-specs">No structured maintenance items detected in this document.</div>
           ) : (
             <ul className="cp-list">
               {preview.map((item, i) => (
-                <li key={i} className="cp-row" style={{ padding: '10px 14px' }}>
+                <li key={i} className="cp-row" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                   <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
                     <span className="cp-svc-badge">{item.service_level || 'INSPECT'}</span>
                     <strong style={{ color: 'var(--fg)' }}>{item.description}</strong>
@@ -778,7 +778,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
       <form onSubmit={handleAsk} className="rs-flex rs-gap-3">
         <input
           className="cockpit-input-raw rs-grow"
-          style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px' }}
+          style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--md-shape-sm)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}
           placeholder="e.g. 'What oil viscosity is recommended?' or 'What is the torque for the oil drain plug?'"
           value={question}
           onChange={e => setQuestion(e.target.value)}
@@ -799,7 +799,7 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
               <summary className="rs-pointer" style={{ color: 'var(--primary)' }}>View Citations ({answer.chunks.length})</summary>
               <div className="rs-mt-2 rs-flex rs-flex-col rs-gap-2">
                 {answer.chunks.map((c, idx) => (
-                  <div key={idx} style={{ padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 6 }}>
+                  <div key={idx} style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)' }}>
                     {c.text}
                   </div>
                 ))}
@@ -1311,7 +1311,7 @@ export default function MaintenancePulse({
                 </div>
               </div>
 
-              <div className="rs-flex rs-justify-between rs-items-center" style={{ paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rs-flex rs-justify-between rs-items-center" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 <button type="button" className="rs-pill btn-danger" onClick={handleDeleteVehicle}>
                   DELETE VEHICLE
                 </button>
@@ -1372,8 +1372,8 @@ export default function MaintenancePulse({
                 style={{
                   background: 'rgba(0,0,0,0.3)',
                   border: '1px solid var(--primary)',
-                  borderRadius: 8,
-                  padding: '6px 12px',
+                  borderRadius: 'var(--md-shape-sm)',
+                  padding: 'var(--rs-space-2) var(--rs-space-3)',
                   width: 120
                 }}
                 value={newOdoInput}
@@ -1558,7 +1558,7 @@ export default function MaintenancePulse({
                         <span className="rs-type-micro" style={{ color: 'var(--md-on-surface-variant)' }}>Measured:</span>
                         <input
                           className="cockpit-input-raw rs-type-tiny"
-                          style={{ maxWidth: 140, padding: '4px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: 6 }}
+                          style={{ maxWidth: 140, padding: 'var(--rs-space-1) var(--rs-space-2)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)' }}
                           placeholder={cp.unit ? `e.g. 32 ${cp.unit}` : 'Actual value'}
                           value={actualValues[cp.id] || ''}
                           onChange={e => setActualValues({ ...actualValues, [cp.id]: e.target.value })}
@@ -1653,7 +1653,7 @@ export default function MaintenancePulse({
 
             {/* Pro Service Specific Fields */}
             {logForm.is_pro_service && (
-              <div className="rs-gap-4 rs-mb-5 rs-p-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
+              <div className="rs-gap-4 rs-mb-5 rs-p-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-md)' }}>
                 <div className="cockpit-input-box">
                   <span className="card-metric-label">SERVICE FACILITY / DEALER</span>
                   <input
@@ -1710,7 +1710,7 @@ export default function MaintenancePulse({
                       <div
                         key={cp.id}
                         className={`cockpit-item-card ${isDone ? 'is-selected' : ''}`}
-                        style={{ padding: '10px 14px', cursor: 'pointer', borderColor: isDone ? 'var(--primary)' : 'rgba(255,255,255,0.08)' }}
+                        style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', cursor: 'pointer', borderColor: isDone ? 'var(--primary)' : 'rgba(255,255,255,0.08)' }}
                         onClick={() => {
                           setLogCheckedPoints(prev => ({
                             ...prev,

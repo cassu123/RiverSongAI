@@ -242,7 +242,7 @@ export default function GooglePage() {
                   calendar.events.length > 0 ? (
                     <div className="rs-flex rs-flex-col rs-gap-3">
                       {calendar.events.slice(0, 3).map(ev => (
-                        <div key={ev.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                        <div key={ev.id} className="rs-card" style={{ padding: 'var(--rs-space-3) var(--rs-space-3)', background: 'var(--md-surface-container-high)', border: 'none' }}>
                           <div className="rs-type-nano" style={{ fontWeight: 700, color: 'var(--md-tertiary)', marginBottom: 2 }}>
                             {ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All Day'}
                           </div>
@@ -295,7 +295,7 @@ export default function GooglePage() {
                         const t = msg.triage || {}
                         const urgencyColor = t.urgency === 'high' ? 'var(--md-error)' : t.urgency === 'low' ? 'var(--md-on-surface-variant)' : 'var(--md-secondary)'
                         return (
-                          <div key={msg.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                          <div key={msg.id} className="rs-card" style={{ padding: 'var(--rs-space-3) var(--rs-space-3)', background: 'var(--md-surface-container-high)', border: 'none' }}>
                             <div className="rs-flex rs-items-center rs-gap-2 rs-mb-1">
                               <span className="rs-pill rs-type-nano" style={{ padding: '1px 7px', background: urgencyColor, color: 'var(--bg-base)' }}>
                                 {(t.urgency || 'med').toUpperCase()}
@@ -316,7 +316,7 @@ export default function GooglePage() {
                             {t.draft_reply && (
                               <details className="rs-mt-2">
                                 <summary className="rs-type-nano rs-pointer" style={{ fontWeight: 700, opacity: 0.8 }}>DRAFT REPLY</summary>
-                                <div className="rs-mt-1 rs-p-2 rs-type-micro" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 6, whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{t.draft_reply}</div>
+                                <div className="rs-mt-1 rs-p-2 rs-type-micro" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{t.draft_reply}</div>
                               </details>
                             )}
                           </div>
@@ -328,7 +328,7 @@ export default function GooglePage() {
                   gmail.messages.length > 0 ? (
                     <div className="rs-flex rs-flex-col rs-gap-3">
                       {gmail.messages.slice(0, 3).map(msg => (
-                        <div key={msg.id} className="rs-card" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                        <div key={msg.id} className="rs-card" style={{ padding: 'var(--rs-space-3) var(--rs-space-3)', background: 'var(--md-surface-container-high)', border: 'none' }}>
                           <div className="rs-type-nano" style={{ fontWeight: 700, color: 'var(--md-secondary)', marginBottom: 2 }}>{msg.from.split('<')[0].trim()}</div>
                           <div className="rs-type-tiny rs-nowrap rs-clip rs-ellipsis" style={{ fontWeight: 500 }}>{msg.subject}</div>
                         </div>
@@ -357,9 +357,9 @@ export default function GooglePage() {
                   books.library.length > 0 ? (
                     <div className="rs-flex rs-flex-col rs-gap-3">
                       {books.library.slice(0, 3).map(b => (
-                        <div key={b.volume_id} className="rs-card rs-flex rs-gap-3" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                        <div key={b.volume_id} className="rs-card rs-flex rs-gap-3" style={{ padding: 'var(--rs-space-3) var(--rs-space-3)', background: 'var(--md-surface-container-high)', border: 'none' }}>
                           {b.cover_url && (
-                            <img src={b.cover_url} alt={b.title} className="rs-no-shrink" style={{ width: 40, height: 60, objectFit: 'cover', borderRadius: 4 }} />
+                            <img src={b.cover_url} alt={b.title} className="rs-no-shrink" style={{ width: 40, height: 60, objectFit: 'cover', borderRadius: 'var(--md-shape-xs)' }} />
                           )}
                           <div className="rs-grow rs-min-w-0">
                             <div className="rs-type-tiny rs-nowrap rs-clip rs-ellipsis" style={{ fontWeight: 500 }}>{b.title}</div>
@@ -402,7 +402,7 @@ export default function GooglePage() {
                       {tasks.list.slice(0, 4).map(t => {
                         const completed = t.status === 'completed'
                         return (
-                          <div key={t.id} className="rs-card rs-flex rs-items-center rs-gap-3" style={{ padding: '10px 12px', background: 'var(--md-surface-container-high)', border: 'none' }}>
+                          <div key={t.id} className="rs-card rs-flex rs-items-center rs-gap-3" style={{ padding: 'var(--rs-space-3) var(--rs-space-3)', background: 'var(--md-surface-container-high)', border: 'none' }}>
                             <span className="rs-items-center rs-justify-center rs-no-shrink" style={{
                               width: 14,
                               height: 14,
@@ -449,7 +449,7 @@ export default function GooglePage() {
                  </div>
                  {status.connected && <span className="rs-pill rs-type-nano" style={{ background: 'var(--md-tertiary-container)', color: 'var(--md-on-tertiary-container)' }}>ACTIVE</span>}
               </div>
-              <p className="rs-card-meta rs-type-small" style={{ color: 'inherit', opacity: 0.8, margin: '12px 0' }}>{desc}</p>
+              <p className="rs-card-meta rs-type-small" style={{ color: 'inherit', opacity: 0.8, margin: 'var(--rs-space-3) 0' }}>{desc}</p>
               <div className="rs-flex rs-flex-wrap rs-gap-2">
                 {tags.map(t => <span key={t} className="rs-pill rs-muted rs-type-nano">{t}</span>)}
               </div>

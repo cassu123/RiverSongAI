@@ -211,8 +211,8 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
           {error && (
             <div
               className="rs-flex rs-gap-2 rs-type-micro" style={{
-                padding: '10px 12px',
-                borderRadius: 8,
+                padding: 'var(--rs-space-3) var(--rs-space-3)',
+                borderRadius: 'var(--md-shape-sm)',
                 background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
                 lineHeight: 1.5,
@@ -323,7 +323,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
             </div>
           )}
 
-          <div className="rs-flex rs-gap-2" style={{ justifyContent: 'flex-end', paddingTop: 4 }}>
+          <div className="rs-flex rs-gap-2" style={{ justifyContent: 'flex-end', paddingTop: 'var(--rs-space-1)' }}>
             <button className="rs-pill rs-pointer" onClick={onClose} disabled={busy}>
               CANCEL
             </button>

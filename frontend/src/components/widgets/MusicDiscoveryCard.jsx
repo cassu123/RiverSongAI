@@ -18,12 +18,12 @@ export function MusicDiscoveryCard({
     return (
       <div className="rs-card rs-span-2 animate-pulse">
         <Head />
-        <div className="rs-flex rs-gap-4" style={{ overflowX: 'auto', paddingBottom: 8 }}>
+        <div className="rs-flex rs-gap-4" style={{ overflowX: 'auto', paddingBottom: 'var(--rs-space-2)' }}>
           {[1, 2, 3, 4].map(i => (
             <div key={i} style={{ flex: '0 0 140px' }}>
-              <div style={{ width: 140, height: 140, background: 'var(--md-surface-container-high)', borderRadius: 12 }} />
-              <div className="rs-mt-2" style={{ height: 12, width: '80%', background: 'var(--md-surface-container-high)', borderRadius: 4 }} />
-              <div className="rs-mt-1" style={{ height: 10, width: '60%', background: 'var(--md-surface-container-high)', borderRadius: 4 }} />
+              <div style={{ width: 140, height: 140, background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-md)' }} />
+              <div className="rs-mt-2" style={{ height: 12, width: '80%', background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-xs)' }} />
+              <div className="rs-mt-1" style={{ height: 10, width: '60%', background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-xs)' }} />
             </div>
           ))}
         </div>
@@ -64,7 +64,7 @@ export function MusicDiscoveryCard({
 
       <div className="rs-flex rs-gap-5" style={{
         overflowX: 'auto',
-        paddingBottom: 12,
+        paddingBottom: 'var(--rs-space-3)',
         scrollSnapType: 'x mandatory',
         WebkitOverflowScrolling: 'touch',
       }}>
@@ -84,7 +84,7 @@ export function MusicDiscoveryCard({
                 alt={track.title}
                 className="rs-w-full rs-h-full" style={{
                   objectFit: 'cover',
-                  borderRadius: 16,
+                  borderRadius: 'var(--md-shape-lg)',
                   boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
                 }}
               />

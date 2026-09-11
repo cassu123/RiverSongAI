@@ -120,7 +120,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
             Set <code>ELEVENLABS_API_KEY</code>, <code>ELEVENLABS_VOICE_ID</code>, and{' '}
             <code>ELEVENLABS_MODEL_ID</code> in <code>.env</code> to enable cloud voices.
             {voiceSettings.provider === 'elevenlabs' && (
-              <span style={{ color: 'var(--rs-status-nominal)', marginLeft: 8 }}>● ACTIVE</span>
+              <span style={{ color: 'var(--rs-status-nominal)', marginLeft: 'var(--rs-space-2)' }}>● ACTIVE</span>
             )}
           </p>
         </div>
@@ -166,7 +166,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
               .filter(g => g.list.length > 0)
               .map(({ label, list, color }) => (
                 <div key={label} className="rs-mb-4">
-                  <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color, marginBottom: 8 }}>
+                  <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color, marginBottom: 'var(--rs-space-2)' }}>
                     {label}
                   </div>
                   <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>

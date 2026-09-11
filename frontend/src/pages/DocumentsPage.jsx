@@ -201,7 +201,7 @@ export default function DocumentsPage({ setAction }) {
             key={d.id}
             className={`rs-drawer-item ${activeId === d.id ? 'is-active' : ''}`}
             onClick={() => openDoc(d.id)}
-            style={{ textAlign: 'left', padding: '8px 10px' }}
+            style={{ textAlign: 'left', padding: 'var(--rs-space-2) var(--rs-space-3)' }}
           >
             <div className="rs-flex rs-items-center rs-gap-2 rs-w-full">
               {d.pinned && <span className="rs-muted rs-type-nano">★</span>}
@@ -229,8 +229,8 @@ export default function DocumentsPage({ setAction }) {
                 className="rs-grow rs-type-small" style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 8,
-                  padding: '10px 12px',
+                  borderRadius: 'var(--md-shape-sm)',
+                  padding: 'var(--rs-space-3) var(--rs-space-3)',
                   color: 'var(--md-on-surface)',
                   fontWeight: 700,
                   outline: 'none',
@@ -243,7 +243,7 @@ export default function DocumentsPage({ setAction }) {
                 className="rs-type-nano" style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 8,
+                  borderRadius: 'var(--md-shape-sm)',
                   padding: '9px 10px',
                   color: 'var(--md-on-surface)',
                   fontWeight: 700,
@@ -269,7 +269,7 @@ export default function DocumentsPage({ setAction }) {
                 minHeight: 'calc(100dvh - 300px)',
                 background: 'rgba(0,0,0,0.18)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 8,
+                borderRadius: 'var(--md-shape-sm)',
                 color: 'var(--md-on-surface)',
                 fontFamily: activeDoc.kind === 'markdown' || activeDoc.kind === 'csv' || activeDoc.kind === 'html'
                   ? 'ui-monospace, SFMono-Regular, Menlo, monospace'

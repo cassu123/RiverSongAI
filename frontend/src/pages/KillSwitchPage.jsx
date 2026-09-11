@@ -111,7 +111,7 @@ export default function KillSwitchPage() {
             )}
           </div>
           {active && (
-            <p className="rs-card-meta rs-mt-3" style={{ borderTop: '1px solid rgba(255, 51, 34, 0.15)', paddingTop: 12 }}>
+            <p className="rs-card-meta rs-mt-3" style={{ borderTop: '1px solid rgba(255, 51, 34, 0.15)', paddingTop: 'var(--rs-space-3)' }}>
               All conversation processing is blocked. Reset the kill switch and
               restart the server to resume normal operation.
             </p>
@@ -167,7 +167,7 @@ export default function KillSwitchPage() {
                   border: '1px solid rgba(255, 51, 34, 0.3)', 
                   borderRadius: 'var(--md-shape-xl)',
                   color: 'var(--fg)',
-                  padding: '12px 16px',
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
                   outline: 'none'
                 }}
                 type="password"
@@ -179,7 +179,7 @@ export default function KillSwitchPage() {
               <button
                 className="rs-btn-primary"
                 type="submit"
-                style={{ flex: '1 1 100px', padding: '12px' }}
+                style={{ flex: '1 1 100px', padding: 'var(--rs-space-3)' }}
                 disabled={resetting || !password}
               >
                 {resetting ? 'VERIFYING…' : '↺ RESET'}
@@ -188,7 +188,7 @@ export default function KillSwitchPage() {
 
             {resetMsg && (
               <div className="rs-mt-3 rs-type-tiny" style={{
-                padding: '8px 16px',
+                padding: 'var(--rs-space-2) var(--rs-space-4)',
                 borderRadius: 'var(--md-shape-xl)',
                 border: '1px solid',
                 borderColor: resetMsg.includes('denied') || resetMsg.includes('failed') ? 'rgba(255,51,34,0.3)' : 'rgba(0,255,204,0.3)',

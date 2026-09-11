@@ -65,7 +65,7 @@ export default function ForcePasswordChangePage() {
         <p className="rs-card-meta rs-mb-5">An administrator has requested a mandatory password update for your account.</p>
 
         {success ? (
-          <div className="rs-text-center" style={{ padding: '20px 0' }}>
+          <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
             <div className="rs-status-dot rs-flex rs-items-center rs-justify-center" style={{ width: 48, height: 48, margin: '0 auto 16px', background: '#4ade80', animation: 'none', borderRadius: '50%' }}>
               <span className="material-symbols-rounded" style={{ color: 'var(--bg-base)' }}>check</span>
             </div>
@@ -82,8 +82,8 @@ export default function ForcePasswordChangePage() {
                 style={{
                   background: 'var(--md-surface-container-low)',
                   border: '1px solid var(--md-outline-variant)',
-                  borderRadius: 12,
-                  padding: '12px 16px',
+                  borderRadius: 'var(--md-shape-md)',
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
                   boxSizing: 'border-box',
                 }}
                 value={newPassword}
@@ -102,8 +102,8 @@ export default function ForcePasswordChangePage() {
                 style={{
                   background: 'var(--md-surface-container-low)',
                   border: '1px solid var(--md-outline-variant)',
-                  borderRadius: 12,
-                  padding: '12px 16px',
+                  borderRadius: 'var(--md-shape-md)',
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
                   boxSizing: 'border-box',
                 }}
                 value={confirmPassword}

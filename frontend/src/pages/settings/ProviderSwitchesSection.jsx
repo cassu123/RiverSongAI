@@ -133,7 +133,7 @@ export default function ProviderSwitchesSection({ token }) {
         <strong>Allowed</strong> is the hard gate — when off, nothing routes to that
         provider, including River&rsquo;s automatic model choice and including admins.
         <strong> Users</strong> controls whether non-admin accounts can select it.
-        {busy && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>Saving…</span>}
+        {busy && <span style={{ marginLeft: 'var(--rs-space-2)', color: 'var(--primary)' }}>Saving…</span>}
       </p>
       <p className="rs-card-meta rs-mb-4" style={{ opacity: 0.75 }}>
         Local and free providers are switchable too — costing nothing is not a reason
@@ -144,8 +144,8 @@ export default function ProviderSwitchesSection({ token }) {
         <div
           role="alert"
           className="rs-flex rs-gap-2 rs-mb-3 rs-type-micro" style={{
-            padding: '10px 12px',
-            borderRadius: 8,
+            padding: 'var(--rs-space-3) var(--rs-space-3)',
+            borderRadius: 'var(--md-shape-sm)',
             background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
             border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
           }}
@@ -160,7 +160,7 @@ export default function ProviderSwitchesSection({ token }) {
         className="rs-gap-4 rs-items-center rs-mb-2" style={{
           display: 'grid',
           gridTemplateColumns: '1fr auto auto',
-          paddingBottom: 6,
+          paddingBottom: 'var(--rs-space-2)',
           borderBottom: '1px solid var(--md-outline-variant)',
         }}
       >
@@ -192,7 +192,7 @@ export default function ProviderSwitchesSection({ token }) {
               className="rs-gap-4 rs-items-center" style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr auto auto',
-                padding: '8px 0',
+                padding: 'var(--rs-space-2) 0',
                 opacity: r.enabled ? 1 : 0.62,
               }}
             >
@@ -240,7 +240,7 @@ export default function ProviderSwitchesSection({ token }) {
           )
         })}
         {rows.length === 0 && (
-          <p className="rs-mpop-empty" style={{ padding: '12px 0' }}>
+          <p className="rs-mpop-empty" style={{ padding: 'var(--rs-space-3) 0' }}>
             Loading providers…
           </p>
         )}

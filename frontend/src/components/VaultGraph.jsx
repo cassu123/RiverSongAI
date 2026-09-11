@@ -323,8 +323,8 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
             bottom: 16,
             left: '50%',
             transform: 'translateX(-50%)',
-            padding: '6px 14px',
-            borderRadius: 8,
+            padding: 'var(--rs-space-2) var(--rs-space-4)',
+            borderRadius: 'var(--md-shape-sm)',
             pointerEvents: 'none',
             background: 'var(--md-surface-container-highest)',
             border: '1px solid var(--md-outline-variant)',
@@ -343,9 +343,9 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
         <div className="rs-flex rs-gap-3 rs-items-center">
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
           <span className="rs-card-meta rs-type-nano">Personal</span>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--md-sys-color-tertiary)', display: 'inline-block', marginLeft: 8 }} />
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--md-sys-color-tertiary)', display: 'inline-block', marginLeft: 'var(--rs-space-2)' }} />
           <span className="rs-card-meta rs-type-nano">Household</span>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1px dashed var(--md-outline)', display: 'inline-block', marginLeft: 8 }} />
+          <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1px dashed var(--md-outline)', display: 'inline-block', marginLeft: 'var(--rs-space-2)' }} />
           <span className="rs-card-meta rs-type-nano">Unlinked target</span>
         </div>
       </div>

@@ -51,7 +51,7 @@ export function BatteryBar({ pct }) {
   const color = v < 20 ? 'var(--md-error)' : v < 45 ? 'var(--rs-status-warning, #f4b740)' : 'var(--rs-status-nominal, #36d399)'
   return (
     <div className="rs-flex rs-items-center rs-gap-2">
-      <div className="rs-grow rs-clip" style={{ height: 8, borderRadius: 4, background: 'var(--md-surface-container-high, #2a2a2a)' }}>
+      <div className="rs-grow rs-clip" style={{ height: 8, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-surface-container-high, #2a2a2a)' }}>
         <div className="rs-h-full" style={{ width: `${v}%`, background: color, transition: 'width .4s ease' }} />
       </div>
       <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, fontSize: 'var(--rs-fs-tiny)', color }}>{v}%</span>
@@ -94,7 +94,7 @@ export function MiniMap({ items, height = 220, selectedId }) {
   const nx = (lng) => ((lng - minLng) / (maxLng - minLng || 1)) * 100
   const ny = (lat) => (1 - (lat - minLat) / (maxLat - minLat || 1)) * 100
   return (
-    <div style={{ position: 'relative', height, borderRadius: 12, overflow: 'hidden',
+    <div style={{ position: 'relative', height, borderRadius: 'var(--md-shape-md)', overflow: 'hidden',
       background: 'radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 70%), var(--md-surface-container-low, #161616)',
       border: '1px solid var(--md-outline-variant, #333)' }}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="rs-w-full rs-h-full" style={{ position: 'absolute', inset: 0 }}>
@@ -140,7 +140,7 @@ export function CommandConsole({ spec, onSend, disabled }) {
           className={c.danger ? 'rs-btn-ghost' : 'rs-btn-primary'}
           onClick={() => onSend(c.command, c.params || {})}
           style={{
-            fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 'var(--rs-fs-micro)', padding: 'var(--rs-space-2) var(--rs-space-4)', display: 'inline-flex', alignItems: 'center', gap: 'var(--rs-space-2)',
             opacity: disabled ? 0.45 : 1,
             ...(c.danger ? { color: 'var(--md-error)', borderColor: 'var(--md-error)' } : {}),
           }}
@@ -164,8 +164,8 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
         const crit = (a.level || '').toLowerCase() === 'critical' || (a.level || '').toLowerCase() === 'emergency'
         return (
           <div key={a.id} className="rs-flex rs-items-center rs-gap-3" style={{
-            padding: '10px 12px',
-            borderRadius: 10,
+            padding: 'var(--rs-space-3) var(--rs-space-3)',
+            borderRadius: 'var(--md-shape-sm)',
             background: crit ? 'color-mix(in srgb, var(--md-error) 12%, transparent)' : 'color-mix(in srgb, var(--rs-status-warning,#f4b740) 12%, transparent)',
             border: `1px solid ${crit ? 'var(--md-error)' : 'var(--rs-status-warning,#f4b740)'}`,
           }}>
@@ -176,7 +176,7 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
               <div className="rs-type-tiny" style={{ fontWeight: 600 }}>{a.message}</div>
               <div className="rs-card-meta rs-type-nano">{a.level} · {new Date(a.timestamp).toLocaleString()}</div>
             </div>
-            <button className="rs-btn-ghost rs-type-nano" style={{ padding: '4px 10px' }}
+            <button className="rs-btn-ghost rs-type-nano" style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
               onClick={async () => { await ackAlert(program, unitId, a.id); onChange && onChange() }}>
               ACK
             </button>
@@ -192,7 +192,7 @@ export function SimulateButton({ program, onDone }) {
   const [busy, setBusy] = useState(false)
   return (
     <button className="rs-btn-primary rs-items-center rs-gap-2 rs-type-micro" disabled={busy}
-      style={{ padding: '8px 14px', display: 'inline-flex' }}
+      style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', display: 'inline-flex' }}
       onClick={async () => {
         setBusy(true)
         try { await simulateUnit(program); onDone && onDone() } finally { setBusy(false) }
@@ -228,7 +228,7 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
           <>
             <p className="rs-card-meta">Name the unit, then flash the returned token into the device firmware.</p>
             <input className="rs-input rs-w-full" autoFocus value={name} onChange={e => setName(e.target.value)}
-              placeholder="e.g. Front-yard unit" style={{ margin: '12px 0' }}
+              placeholder="e.g. Front-yard unit" style={{ margin: 'var(--rs-space-3) 0' }}
               onKeyDown={e => e.key === 'Enter' && submit()} />
             <div className="rs-flex rs-gap-2" style={{ justifyContent: 'flex-end' }}>
               <button className="rs-btn-ghost" onClick={onClose}>Cancel</button>
@@ -238,10 +238,10 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
         ) : (
           <>
             <p className="rs-card-meta">Unit <strong>{result.unit_id}</strong> claimed. Copy this token into the device — it is shown only once.</p>
-            <div className="rs-flex rs-gap-2 rs-items-center" style={{ margin: '12px 0' }}>
+            <div className="rs-flex rs-gap-2 rs-items-center" style={{ margin: 'var(--rs-space-3) 0' }}>
               <code className="rs-grow rs-type-micro" style={{
-                padding: '10px 12px',
-                borderRadius: 8,
+                padding: 'var(--rs-space-3) var(--rs-space-3)',
+                borderRadius: 'var(--md-shape-sm)',
                 background: 'var(--md-surface-container-lowest,#0e0e0e)',
                 border: '1px solid var(--md-outline-variant,#333)',
                 wordBreak: 'break-all',

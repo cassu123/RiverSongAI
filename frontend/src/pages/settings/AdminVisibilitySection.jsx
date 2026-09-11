@@ -60,7 +60,7 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
       <p className="rs-card-meta rs-mb-4">
         Toggle models off to hide them globally for all users. Hidden models cannot
         be selected but their settings are preserved.
-        {saving && <span style={{ marginLeft: 8, color: 'var(--md-primary)' }}>Saving…</span>}
+        {saving && <span style={{ marginLeft: 'var(--rs-space-2)', color: 'var(--md-primary)' }}>Saving…</span>}
       </p>
 
       {/* ── Voices ── */}

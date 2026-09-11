@@ -130,7 +130,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
       </p>
 
       {/* Rate monitor */}
-      <div className="rs-flex rs-flex-col rs-gap-3" style={{ padding: '14px 16px', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
+      <div className="rs-flex rs-flex-col rs-gap-3" style={{ padding: 'var(--rs-space-4) var(--rs-space-4)', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
         <div className="rs-flex rs-justify-between rs-items-center">
           <div className="rs-flex rs-items-center rs-gap-2">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>monitoring</span>
@@ -147,11 +147,11 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
               {nimCalls}<span className="rs-muted" style={{ fontWeight: 400 }}> / {NIM_RATE_LIMIT}</span>
             </span>
           </div>
-          <div className="rs-clip" style={{ height: 8, borderRadius: 4, background: 'var(--md-sys-color-surface-variant)' }}>
+          <div className="rs-clip" style={{ height: 8, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-sys-color-surface-variant)' }}>
             <div className="rs-h-full" style={{
               width: `${pct}%`,
               background: barColor,
-              borderRadius: 4,
+              borderRadius: 'var(--md-shape-xs)',
               transition: 'width 0.4s ease-out',
               boxShadow: pct > 0 ? `0 0 8px ${barColor}60` : 'none',
             }} />
@@ -170,7 +170,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
         </div>
 
         {/* Today's stats — 3-column grid with tabular nums */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ paddingTop: 4, borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ paddingTop: 'var(--rs-space-1)', borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
           {[
             { value: day.calls.toLocaleString(), label: 'requests today',  icon: 'bolt' },
             { value: `${(day.tokens / 1000).toFixed(1)}K`, label: 'tokens today', icon: 'token' },

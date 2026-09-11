@@ -84,7 +84,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
                   <span className="toggle-label rs-grow rs-type-tiny">
                     {m.display_name}
                     {m.vram_gb != null && (
-                      <span className="rs-card-meta rs-type-nano" style={{ marginLeft: 8 }}>
+                      <span className="rs-card-meta rs-type-nano" style={{ marginLeft: 'var(--rs-space-2)' }}>
                         ~{m.vram_gb} GB
                       </span>
                     )}

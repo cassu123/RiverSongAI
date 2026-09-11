@@ -151,7 +151,7 @@ export default function VoiceIDSection({ token }) {
           className="rs-btn-primary" 
           onClick={startEnroll} 
           disabled={recording || recorder.isRecording}
-          style={{ padding: '10px 20px' }}
+          style={{ padding: 'var(--rs-space-3) var(--rs-space-5)' }}
         >
           <span className="material-symbols-rounded">{recording ? 'radio_button_checked' : 'mic'}</span>
           {recording ? `RECORDING... ${countdown}S` : 'RECORD SAMPLE'}
@@ -166,10 +166,10 @@ export default function VoiceIDSection({ token }) {
 
       {confirmDelete && (
         <div className="rs-flex rs-items-center rs-gap-3 rs-mt-2 rs-type-tiny" style={{
-          padding: '10px 14px',
+          padding: 'var(--rs-space-3) var(--rs-space-4)',
           background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
           border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
-          borderRadius: 8,
+          borderRadius: 'var(--md-shape-sm)',
         }}>
           <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1rem', color: 'var(--md-error)' }}>warning</span>
           <span className="rs-grow">Delete your voice prints? River Song will no longer recognize your voice.</span>

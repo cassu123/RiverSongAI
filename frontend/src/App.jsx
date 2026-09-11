@@ -482,7 +482,7 @@ export default function App() {
   const shellMode = (currentPage === 'dashboard' || currentPage === 'briefing') ? 'foyer' : 'workshop'
 
   const impersonationBanner = isAdminImpersonating ? (
-    <div className="rs-text-center rs-relative" style={{ background: '#f59e0b', color: '#000', padding: '8px', fontWeight: 'bold', zIndex: 9999 }}>
+    <div className="rs-text-center rs-relative" style={{ background: '#f59e0b', color: '#000', padding: 'var(--rs-space-2)', fontWeight: 'bold', zIndex: 9999 }}>
       ⚠️ Viewing as {user?.display_name || 'User'} — <button onClick={revertImpersonation} className="rs-pointer" style={{ background: 'transparent', border: 'none', textDecoration: 'underline', fontWeight: 'bold', padding: 0, color: 'inherit' }}>Return to Admin</button>
     </div>
   ) : null;

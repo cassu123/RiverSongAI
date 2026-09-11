@@ -28,7 +28,7 @@ function MapSelector({ position, onChange }) {
 
   return (
     <div className="rs-map rs-mb-4">
-      <MapContainer center={center} zoom={18} className="rs-w-full rs-h-full" style={{ borderRadius: 8 }}>
+      <MapContainer center={center} zoom={18} className="rs-w-full rs-h-full" style={{ borderRadius: 'var(--md-shape-sm)' }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="&copy; OpenStreetMap contributors"
@@ -272,7 +272,7 @@ export default function SetupWizard() {
             </div>
             
             {formData.hardware.sensors.gps === 'rtk' && (
-              <div className="rs-p-4 rs-mb-4" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+              <div className="rs-p-4 rs-mb-4" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--md-shape-sm)' }}>
                 <h4>RTK NTRIP Config</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label>Host</label><input type="text" className="rs-input" value={formData.hardware.rtk.ntrip_host} onChange={e => updateField('hardware.rtk.ntrip_host', e.target.value)} /></div>
@@ -384,7 +384,7 @@ export default function SetupWizard() {
         {step === 8 && (
           <div>
             <h3>Review & Save</h3>
-            <pre className="rs-p-4 rs-type-tiny" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, overflowX: 'auto' }}>
+            <pre className="rs-p-4 rs-type-tiny" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-sm)', overflowX: 'auto' }}>
               {JSON.stringify(formData, null, 2)}
             </pre>
             {error && <div className="rs-mt-4" style={{ color: 'var(--md-error)' }}>{error}</div>}

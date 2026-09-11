@@ -50,7 +50,7 @@ function OcearchMap({ lat, lon, sharks }) {
     })
   }, [sharks, mapReady])
 
-  return <div ref={mapRef} className="rs-w-full rs-h-full rs-clip" style={{ borderRadius: 8 }} />
+  return <div ref={mapRef} className="rs-w-full rs-h-full rs-clip" style={{ borderRadius: 'var(--md-shape-sm)' }} />
 }
 
 export default function EarthTab({ token, active }) {
@@ -95,7 +95,7 @@ export default function EarthTab({ token, active }) {
   )
   
   if (error === 'location') return (
-    <div className="rs-text-center" style={{ padding: '40px 0' }}>
+    <div className="rs-text-center" style={{ padding: 'var(--rs-space-7) 0' }}>
       <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '3rem', opacity: 0.2, display: 'block' }}>location_off</span>
       <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
       <div className="rs-card-meta rs-mb-5">Please set your location in Weather settings first.</div>
@@ -111,13 +111,13 @@ export default function EarthTab({ token, active }) {
     <div className="rs-gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'start' }}>
       
       {/* EONET Events */}
-      <div className="rs-card" style={{ padding: '20px', maxHeight: '600px', overflowY: 'auto' }}>
+      <div className="rs-card" style={{ padding: 'var(--rs-space-5)', maxHeight: '600px', overflowY: 'auto' }}>
         <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>NATURAL EVENTS</span>
           <span style={{ opacity: 0.5 }}>NASA EONET</span>
         </div>
         {eonet.length > 0 ? eonet.map((e, i) => (
-          <div key={i} className="rs-mb-4" style={{ paddingBottom: 14, borderBottom: i < eonet.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
+          <div key={i} className="rs-mb-4" style={{ paddingBottom: 'var(--rs-space-4)', borderBottom: i < eonet.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
             <div className="rs-flex rs-items-start rs-justify-between rs-gap-3">
               <div className="rs-min-w-0">
                 <div className="rs-mb-1 rs-type-tiny" style={{ fontWeight: 700, lineHeight: 1.3 }}>{e.title}</div>
@@ -125,7 +125,7 @@ export default function EarthTab({ token, active }) {
                   <div className="rs-type-nano" style={{
                     fontWeight: 700,
                     padding: '2px 6px',
-                    borderRadius: 4,
+                    borderRadius: 'var(--md-shape-xs)',
                     background: e.category_color + '33',
                     color: e.category_color,
                   }}>
@@ -149,17 +149,17 @@ export default function EarthTab({ token, active }) {
       </div>
 
       {/* Near Earth Objects */}
-      <div className="rs-card" style={{ padding: '20px' }}>
+      <div className="rs-card" style={{ padding: 'var(--rs-space-5)' }}>
         <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>NEAR EARTH OBJECTS</span>
           <span style={{ opacity: 0.5 }}>NASA NeoWs</span>
         </div>
         {neows.length > 0 ? neows.map((n, i) => (
-          <div key={i} className="rs-mb-4" style={{ padding: '12px 14px', background: 'var(--md-surface-container-high)', borderRadius: 8, border: n.hazardous ? '1px solid #ff440055' : '1px solid transparent' }}>
+          <div key={i} className="rs-mb-4" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-sm)', border: n.hazardous ? '1px solid #ff440055' : '1px solid transparent' }}>
             <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
               <div className="rs-type-tiny" style={{ fontWeight: 800 }}>{n.name}</div>
               {n.hazardous && (
-                <div className="rs-type-nano" style={{ fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#ff440033', color: '#ff4400' }}>
+                <div className="rs-type-nano" style={{ fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--md-shape-xs)', background: '#ff440033', color: '#ff4400' }}>
                   HAZARDOUS
                 </div>
               )}
@@ -189,13 +189,13 @@ export default function EarthTab({ token, active }) {
       </div>
 
       {/* OCEARCH */}
-      <div className="rs-card rs-flex rs-flex-col" style={{ padding: '20px' }}>
+      <div className="rs-card rs-flex rs-flex-col" style={{ padding: 'var(--rs-space-5)' }}>
         <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>MARINE WILDLIFE</span>
           <span style={{ opacity: 0.5 }}>OCEARCH</span>
         </div>
         {ocearch.length > 0 && weatherLatLon ? (
-          <div className="rs-relative rs-clip" style={{ height: 300, borderRadius: 8 }}>
+          <div className="rs-relative rs-clip" style={{ height: 300, borderRadius: 'var(--md-shape-sm)' }}>
             <OcearchMap lat={weatherLatLon.lat} lon={weatherLatLon.lon} sharks={ocearch} />
           </div>
         ) : (

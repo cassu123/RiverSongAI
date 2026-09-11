@@ -123,7 +123,7 @@ export default function Overview({ setAction }) {
                 <h3><Link to={`/fleet/vector/units/${u.unit_id}`}>{u.name || u.unit_id}</Link></h3>
                 <p>Platform: {u.platform} | Status: {u.online ? 'Online' : 'Offline'}</p>
                 <div className="rs-flex rs-gap-3 rs-mt-3 rs-items-center">
-                  <span style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.1)' }}>{u.operating_mode || 'idle'}</span>
+                  <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'rgba(255,255,255,0.1)' }}>{u.operating_mode || 'idle'}</span>
                   <span><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: '-2px' }}>battery_full</span> {u.last_battery_pct ?? '--'}%</span>
                 </div>
                 <div className="rs-flex rs-gap-2 rs-mt-4">

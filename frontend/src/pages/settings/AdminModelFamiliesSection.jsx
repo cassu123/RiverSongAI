@@ -80,14 +80,14 @@ export default function AdminModelFamiliesSection({ token }) {
           return (
             <div
               key={family.id}
-              className="rs-p-3" style={{ opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}
+              className="rs-p-3" style={{ opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}
             >
               <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
                 <div>
                   <div className="rs-type-small" style={{ fontWeight: 600 }}>
                     {family.displayName}
                     {ov.quirky_name && (
-                      <span className="rs-type-tiny" style={{ marginLeft: 8, fontWeight: 400, color: 'var(--md-primary)' }}>
+                      <span className="rs-type-tiny" style={{ marginLeft: 'var(--rs-space-2)', fontWeight: 400, color: 'var(--md-primary)' }}>
                         → {ov.quirky_name}
                       </span>
                     )}

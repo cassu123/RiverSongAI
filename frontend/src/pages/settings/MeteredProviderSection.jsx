@@ -197,8 +197,8 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
         <div
           role="alert"
           className="rs-flex rs-gap-2 rs-type-micro" style={{
-            padding: '10px 12px',
-            borderRadius: 10,
+            padding: 'var(--rs-space-3) var(--rs-space-3)',
+            borderRadius: 'var(--md-shape-sm)',
             background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
             border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
           }}
@@ -212,8 +212,8 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           from every other provider section. */}
       <div
         className="rs-flex rs-gap-2" style={{
-          padding: '10px 12px',
-          borderRadius: 10,
+          padding: 'var(--rs-space-3) var(--rs-space-3)',
+          borderRadius: 'var(--md-shape-sm)',
           background: 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)',
           border: '1px solid color-mix(in srgb, var(--md-sys-color-tertiary) 40%, transparent)',
         }}
@@ -253,10 +253,10 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
       {/* Spend tracker */}
       <div
         className="rs-flex rs-flex-col rs-gap-3" style={{
-          padding: '14px 16px',
+          padding: 'var(--rs-space-4) var(--rs-space-4)',
           background: 'var(--md-surface-container-low)',
           border: '1px solid var(--md-outline-variant)',
-          borderRadius: 12,
+          borderRadius: 'var(--md-shape-md)',
         }}
       >
         <div className="rs-flex rs-justify-between rs-items-center rs-gap-2 rs-flex-wrap">
@@ -325,7 +325,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
         {rows.length > 0 && (
           <div
             className="rs-flex rs-flex-col rs-gap-2" style={{
-              paddingTop: 8,
+              paddingTop: 'var(--rs-space-2)',
               borderTop: '1px solid var(--md-sys-color-outline-variant)',
             }}
           >

@@ -53,7 +53,7 @@ export function InlineSettingsSection({
             <span
               className="rs-card-meta rs-muted rs-type-nano rs-nowrap rs-clip rs-ellipsis rs-min-w-0"
               style={{
-                marginLeft: 6,
+                marginLeft: 'var(--rs-space-2)',
               }}
             >
               {subtitle}
@@ -100,8 +100,8 @@ export function ToggleGroup({ options, value, onChange }) {
           key={opt.value}
           onClick={() => onChange(opt.value)}
           className="rs-grow rs-pointer rs-type-nano" style={{
-            padding: '6px 0',
-            borderRadius: 8,
+            padding: 'var(--rs-space-2) 0',
+            borderRadius: 'var(--md-shape-sm)',
             fontWeight: 700,
             border: value === opt.value ? '1px solid var(--primary)' : '1px solid var(--md-outline-variant)',
             background: value === opt.value ? 'rgba(var(--primary-rgb,100,100,255),0.12)' : 'transparent',
@@ -124,7 +124,7 @@ export function Toggle({ checked, onChange, label }) {
         className="rs-relative rs-no-shrink" style={{
           width: 36,
           height: 20,
-          borderRadius: 10,
+          borderRadius: 'var(--md-shape-sm)',
           background: checked ? 'var(--primary)' : 'var(--md-outline-variant)',
           transition: 'background 0.2s',
         }}
@@ -160,8 +160,8 @@ export default function TabSettingsPanel({ open, onClose, panelRef, title = 'SET
       zIndex: 100,
       background: 'var(--md-surface-container)',
       border: '1px solid var(--md-outline-variant)',
-      borderRadius: 12,
-      padding: '16px 18px',
+      borderRadius: 'var(--md-shape-md)',
+      padding: 'var(--rs-space-4) var(--rs-space-5)',
       boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
       minWidth: 280,
       maxWidth: 340,

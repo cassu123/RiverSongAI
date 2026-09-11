@@ -315,7 +315,7 @@ export default function HomeNodePage({ setAction }) {
                 </span>
                 <span>{a.text}</span>
                 {(a.domain === 'lock' || a.domain === 'cover') && (
-                  <span className="rs-type-micro" style={{ opacity: 0.9, textDecoration: 'underline', marginLeft: 4 }}>
+                  <span className="rs-type-micro" style={{ opacity: 0.9, textDecoration: 'underline', marginLeft: 'var(--rs-space-1)' }}>
                     Secure
                   </span>
                 )}
@@ -408,7 +408,7 @@ export default function HomeNodePage({ setAction }) {
             River Song cannot connect to Home Assistant. Verify that your Home Assistant server is running and the configured URL is accessible.
           </p>
           <button className="rs-btn-primary" onClick={() => fetchAll()}>
-            <span className="material-symbols-rounded" style={{ fontSize: 18, marginRight: 6 }}>refresh</span>
+            <span className="material-symbols-rounded" style={{ fontSize: 18, marginRight: 'var(--rs-space-2)' }}>refresh</span>
             RETRY CONNECTION
           </button>
         </div>
@@ -654,7 +654,7 @@ function ClimateTile({ device, busy, onAction }) {
         <span
           className="gh-chip rs-type-micro"
           style={{
-            padding: '4px 10px',
+            padding: 'var(--rs-space-1) var(--rs-space-3)',
             color: isCooling ? '#96cbff' : isHeating ? '#fed7aa' : 'rgba(255,255,255,0.7)',
             borderColor: isCooling ? 'rgba(0, 229, 255, 0.4)' : isHeating ? 'rgba(251, 146, 60, 0.4)' : undefined,
           }}
@@ -887,9 +887,9 @@ function NotConfigured() {
           <span>Add to your backend <code>.env</code> file:</span>
         </div>
         <div className="rs-mono rs-type-tiny" style={{
-          padding: '14px 18px',
+          padding: 'var(--rs-space-4) var(--rs-space-5)',
           background: 'rgba(0,0,0,0.35)',
-          borderRadius: '16px',
+          borderRadius: 'var(--md-shape-lg)',
           color: 'var(--md-primary)',
           border: '1px solid rgba(0, 229, 255, 0.2)',
         }}>

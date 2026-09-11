@@ -97,11 +97,15 @@
   --md-outline:         #899398;
   --md-outline-variant: #40484E;
 
-  /* Shape tokens */
+  /* Shape tokens. --md-shape-md was referenced in three places and defined in
+     none; var() with no fallback on an undefined property is invalid at
+     computed-value time, so those elements were rendering square. */
   --md-shape-full: 999px;
   --md-shape-xl:   20px;
   --md-shape-lg:   14px;
+  --md-shape-md:   12px;
   --md-shape-sm:   8px;
+  --md-shape-xs:   4px;
 
   /* Chrome Blur */
   --glass-blur: blur(24px);

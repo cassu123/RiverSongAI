@@ -81,7 +81,7 @@ export default function ConversationPage({ setAction }) {
     setAction(
       <div className="rs-chat-input-container">
         <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
-          <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 12 }} />
+          <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
           <span className="rs-type-tiny" style={{ fontWeight: 600, letterSpacing: '0.1em' }}>
             {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
           </span>
@@ -178,10 +178,10 @@ export default function ConversationPage({ setAction }) {
           width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto',
           background: 'color-mix(in srgb, var(--bg-base) 72%, transparent)',
           backdropFilter: 'blur(12px)',
-          borderRadius: 16, padding: '16px 20px', color: 'var(--fg)',
+          borderRadius: 'var(--md-shape-lg)', padding: 'var(--rs-space-4) var(--rs-space-5)', color: 'var(--fg)',
           border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          flexDirection: 'column', gap: 8, zIndex: 2
+          flexDirection: 'column', gap: 'var(--rs-space-2)', zIndex: 2
         }}>
         {messages.slice(-2).map((m, i) => (
           <div key={i} className="rs-type-small" style={{

@@ -45,10 +45,10 @@ export default function ToastHost() {
             key={t.id}
             onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
             className="rs-type-tiny rs-pointer" style={{
-              padding: '10px 14px',
+              padding: 'var(--rs-space-3) var(--rs-space-4)',
               background: 'rgba(10, 10, 14, 0.92)',
               border: `1px solid ${c.border}`,
-              borderRadius: 8,
+              borderRadius: 'var(--md-shape-sm)',
               color: c.text,
               boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             }}
