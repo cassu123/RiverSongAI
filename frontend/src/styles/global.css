@@ -125,13 +125,21 @@
      difference between the ethereal environments and the tactical ones, and
      --card-border-alpha already carries that (0.12 vs 0.25); it just never
      reached anything drawn inline. Three weights, all derived from it, so a
-     hairline gets heavier when the environment says it should. */
+     hairline gets heavier when the environment says it should.
+
+     Each is an offset plus a fraction of the alpha, not a straight multiple.
+     A straight multiple put the tactical environments at 0.19-0.25 against
+     the ethereal 0.09-0.12, and every panel edge on Harkonnen and UNSC read
+     as a framed window floating over the backdrop. The offset keeps the
+     spread to about 1.4x, so tactical is still the crisper of the two and
+     its heaviest border (0.145) lands near the 0.12 these were frozen at
+     before any of this was theme-aware. */
   --rs-veil-1:   rgba(255, 255, 255, 0.04);
   --rs-veil-2:   rgba(255, 255, 255, 0.06);
   --rs-veil-3:   rgba(255, 255, 255, 0.10);
-  --rs-hairline-soft:   rgba(255, 255, 255, calc(var(--card-border-alpha, 0.12) * 0.5));
-  --rs-hairline:        rgba(255, 255, 255, calc(var(--card-border-alpha, 0.12) * 0.75));
-  --rs-hairline-strong: rgba(255, 255, 255, var(--card-border-alpha, 0.12));
+  --rs-hairline-soft:   rgba(255, 255, 255, calc(0.035 + var(--card-border-alpha, 0.12) * 0.15));
+  --rs-hairline:        rgba(255, 255, 255, calc(0.05  + var(--card-border-alpha, 0.12) * 0.25));
+  --rs-hairline-strong: rgba(255, 255, 255, calc(0.07  + var(--card-border-alpha, 0.12) * 0.3));
 
   /* Scrims — dark washes over media and behind overlays. */
   --rs-scrim-1:  rgba(0, 0, 0, 0.25);
