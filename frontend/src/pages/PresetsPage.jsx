@@ -161,7 +161,7 @@ export default function PresetsPage({ setAction }) {
                 </label>
               )}
             </div>
-            {error && <div className="rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
             <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save}>{editId ? 'UPDATE' : 'CREATE'}</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>

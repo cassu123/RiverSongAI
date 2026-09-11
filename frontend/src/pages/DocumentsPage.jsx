@@ -191,7 +191,7 @@ export default function DocumentsPage({ setAction }) {
   }
 
   return (
-    <div className="rs-foyer animate-fade-in rs-gap-4" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'minmax(220px, 280px) 1fr', alignItems: 'stretch' }}>
+    <div className="rs-foyer animate-fade-in rs-gap-4 rs-items-stretch" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'minmax(220px, 280px) 1fr' }}>
       {/* Left rail — document list */}
       <div className="rs-card rs-p-3 rs-flex rs-flex-col rs-gap-2" style={{ maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }}>
         <div className="rs-card-label rs-mb-2">DOCUMENTS · {docs.length}</div>
@@ -205,7 +205,7 @@ export default function DocumentsPage({ setAction }) {
           >
             <div className="rs-flex rs-items-center rs-gap-2 rs-w-full">
               {d.pinned && <span className="rs-muted rs-type-nano">★</span>}
-              <span className="rs-grow rs-type-micro rs-clip rs-ellipsis rs-nowrap" style={{ fontWeight: 700 }}>
+              <span className="rs-grow rs-type-micro rs-clip rs-ellipsis rs-nowrap rs-fw-700">
                 {d.title || 'Untitled'}
               </span>
               <span className="rs-card-label rs-muted rs-type-nano">{d.kind?.toUpperCase()}</span>
@@ -226,13 +226,12 @@ export default function DocumentsPage({ setAction }) {
                 value={activeDoc.title}
                 onChange={onChangeTitle}
                 placeholder="Title"
-                className="rs-grow rs-type-small" style={{
+                className="rs-grow rs-type-small rs-fw-700" style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 'var(--md-shape-sm)',
                   padding: 'var(--rs-space-3) var(--rs-space-3)',
                   color: 'var(--md-on-surface)',
-                  fontWeight: 700,
                   outline: 'none',
                   fontFamily: 'inherit',
                 }}
@@ -240,13 +239,12 @@ export default function DocumentsPage({ setAction }) {
               <select
                 value={activeDoc.kind}
                 onChange={onChangeKind}
-                className="rs-type-nano" style={{
+                className="rs-type-nano rs-fw-700" style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 'var(--md-shape-sm)',
                   padding: '9px 10px',
                   color: 'var(--md-on-surface)',
-                  fontWeight: 700,
                   letterSpacing: '0.08em',
                   outline: 'none',
                   fontFamily: 'inherit',
@@ -280,7 +278,7 @@ export default function DocumentsPage({ setAction }) {
               }}
             />
 
-            {error && <div className="rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
           </>
         )}
       </div>

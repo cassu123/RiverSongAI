@@ -387,7 +387,7 @@ export default function SetupWizard() {
             <pre className="rs-p-4 rs-type-tiny" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-sm)', overflowX: 'auto' }}>
               {JSON.stringify(formData, null, 2)}
             </pre>
-            {error && <div className="rs-mt-4" style={{ color: 'var(--md-error)' }}>{error}</div>}
+            {error && <div className="rs-mt-4 rs-c-error">{error}</div>}
           </div>
         )}
 

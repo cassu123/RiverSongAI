@@ -190,7 +190,7 @@ export default function MemoryPage({ setAction }) {
 
       {(activeTab === 'ALL' || activeTab === 'FACT') && (
         <form onSubmit={handleCreateFact} className="rs-card is-wide animate-page-in" style={addFormStyle}>
-          <span className="rs-card-label rs-no-shrink" style={{ color: 'var(--primary)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD FACT</span>
+          <span className="rs-card-label rs-no-shrink rs-c-accent" style={{ alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD FACT</span>
           <input className="rs-card" placeholder="Key (e.g. name)" value={newFact.key} onChange={e => setNewFact({...newFact, key: e.target.value})} style={addInput(1)} />
           <input className="rs-card" placeholder="Value (e.g. Alice)" value={newFact.value} onChange={e => setNewFact({...newFact, value: e.target.value})} style={addInput(2)} />
           <button type="submit" className="rs-pill rs-no-shrink rs-nowrap" style={{ background: 'var(--primary)', color: 'var(--bg)' }}>ADD</button>
@@ -199,7 +199,7 @@ export default function MemoryPage({ setAction }) {
 
       {(activeTab === 'ALL' || activeTab === 'PREFERENCE') && (
         <form onSubmit={handleCreatePref} className="rs-card is-wide animate-page-in" style={addFormStyle}>
-          <span className="rs-card-label rs-no-shrink" style={{ color: 'var(--rs-status-warning)', alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD PREF</span>
+          <span className="rs-card-label rs-no-shrink rs-c-warning" style={{ alignSelf: isPhone ? 'flex-start' : 'center' }}>ADD PREF</span>
           <input className="rs-card" placeholder="Category" value={newPref.category} onChange={e => setNewPref({...newPref, category: e.target.value})} style={addInput(1)} />
           <input className="rs-card" placeholder="Value" value={newPref.value} onChange={e => setNewPref({...newPref, value: e.target.value})} style={addInput(2)} />
           <select className="rs-card" value={newPref.confidence} onChange={e => setNewPref({...newPref, confidence: e.target.value})} style={{ ...addInput('0 0 auto'), padding: 'var(--rs-space-2)' }}>
@@ -289,10 +289,10 @@ export default function MemoryPage({ setAction }) {
                 </div>
               )}
               
-              <div className="rs-mt-4 rs-flex rs-justify-between" style={{ alignItems: 'flex-end' }}>
+              <div className="rs-mt-4 rs-flex rs-justify-between rs-items-end">
                 {renderProvenance(m)}
                 {m._type === 'SUMMARY' && m.expires_at && (
-                  <span className="rs-type-nano" style={{ color: 'var(--rs-status-warning)' }}>
+                  <span className="rs-type-nano rs-c-warning">
                     Expires: {new Date(m.expires_at).toLocaleDateString()}
                   </span>
                 )}

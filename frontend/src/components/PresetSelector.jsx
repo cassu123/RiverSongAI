@@ -104,7 +104,7 @@ export default function PresetSelector({ onApply, onManage }) {
                 disabled={applying === p.id}
                 style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}
               >
-                <span className="rs-grow rs-type-micro" style={{ fontWeight: 700 }}>
+                <span className="rs-grow rs-type-micro rs-fw-700">
                   {p.is_default && <span style={{ marginRight: 'var(--rs-space-1)', opacity: 0.7 }}>★</span>}
                   {p.name}
                 </span>
@@ -117,7 +117,7 @@ export default function PresetSelector({ onApply, onManage }) {
                 onClick={() => { setOpen(false); onManage() }}
                 style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', opacity: 0.7, borderTop: '1px solid rgba(255,255,255,0.08)' }}
               >
-                <span className="rs-type-nano" style={{ fontWeight: 700 }}>+ MANAGE PRESETS</span>
+                <span className="rs-type-nano rs-fw-700">+ MANAGE PRESETS</span>
               </button>
             )}
           </div>

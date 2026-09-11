@@ -167,7 +167,7 @@ export default function WebhookTokensPage({ setAction }) {
               placeholder="Expires at (ISO-8601 UTC, optional) — e.g. 2026-12-31T23:59:59Z"
               style={inputStyle}
             />
-            {error && <div className="rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
             <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={create}>ISSUE</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
@@ -233,11 +233,10 @@ export default function WebhookTokensPage({ setAction }) {
       {audit.open && (
         <div
           onClick={closeAudit}
-          className="rs-flex" style={{
+          className="rs-flex rs-justify-end" style={{
             position: 'fixed',
             inset: 0,
             background: 'rgba(0,0,0,0.55)',
-            justifyContent: 'flex-end',
             zIndex: 100,
           }}
         >
@@ -264,7 +263,7 @@ export default function WebhookTokensPage({ setAction }) {
                 borderRadius: 'var(--md-shape-xs)',
               }}>
                 <div className="rs-flex rs-justify-between rs-mb-1">
-                  <span style={{ fontWeight: 600 }}>{e.action?.toUpperCase()}</span>
+                  <span className="rs-fw-600">{e.action?.toUpperCase()}</span>
                   <span style={{ opacity: 0.6 }}>{e.ts}</span>
                 </div>
                 <div style={{ opacity: 0.7, marginBottom: 2 }}>ACTOR {e.actor || '—'}</div>

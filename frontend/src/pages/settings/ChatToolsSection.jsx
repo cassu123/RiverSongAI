@@ -114,26 +114,22 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         <div className="rs-flex rs-flex-wrap rs-items-center rs-justify-between rs-gap-3">
           <p className="rs-card-meta rs-m-0">
             Configure which skills, integrations, and tools River can access during voice and chat sessions.
-            {saving && <span style={{ marginLeft: 'var(--rs-space-2)', color: 'var(--primary)' }}>SAVING…</span>}
+            {saving && <span className="rs-c-accent" style={{ marginLeft: 'var(--rs-space-2)' }}>SAVING…</span>}
           </p>
           <div className="rs-flex rs-items-center rs-gap-2">
-            <span className="rs-type-micro" style={{
-              fontWeight: 700,
+            <span className="rs-type-micro rs-fw-700 rs-c-nominal" style={{
               padding: '3px 10px',
               borderRadius: 'var(--md-shape-md)',
               background: 'color-mix(in srgb, var(--rs-status-nominal) 15%, transparent)',
-              color: 'var(--rs-status-nominal)',
               border: '1px solid color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)',
             }}>
               {enabledCount} ACTIVE
             </span>
             {disabledCount > 0 && (
-              <span className="rs-type-micro" style={{
-                fontWeight: 700,
+              <span className="rs-type-micro rs-fw-700 rs-c-error" style={{
                 padding: '3px 10px',
                 borderRadius: 'var(--md-shape-md)',
                 background: 'color-mix(in srgb, var(--md-error) 15%, transparent)',
-                color: 'var(--md-error)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 30%, transparent)',
               }}>
                 {disabledCount} DISABLED
@@ -223,7 +219,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                       <span className="material-symbols-rounded" style={{ fontSize: '1.25rem', color: isEnabled ? 'var(--primary)' : 'var(--md-outline)' }}>
                         {tool.icon || 'handyman'}
                       </span>
-                      <span className="rs-type-small" style={{ fontWeight: 600, color: 'var(--md-on-surface)' }}>
+                      <span className="rs-type-small rs-fw-600" style={{ color: 'var(--md-on-surface)' }}>
                         {tool.label}
                       </span>
                     </div>

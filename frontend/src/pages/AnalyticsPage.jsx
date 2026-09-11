@@ -100,7 +100,7 @@ function LineChart({ data, color, height = 80 }) {
           <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="#fff" stroke={color} strokeWidth="2" />
         ))}
       </svg>
-      <div className="rs-flex rs-justify-between rs-type-nano rs-mono" style={{ opacity: 0.8, letterSpacing: '0.05em', fontWeight: 900 }}>
+      <div className="rs-flex rs-justify-between rs-type-nano rs-mono rs-fw-900" style={{ opacity: 0.8, letterSpacing: '0.05em' }}>
         <span>{first.toUpperCase()}</span>
         <span>{last.toUpperCase()}</span>
       </div>
@@ -152,11 +152,10 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
         <div className="rs-flex rs-flex-col rs-gap-4">
           <div className="rs-flex rs-gap-3" style={{ alignItems: 'baseline' }}>
             <span className="rs-card-value" style={{ fontSize: '2.2rem', letterSpacing: '-0.05em' }}>{fmtMetric(primary, primaryVal)}</span>
-            <span className="rs-card-meta rs-m-0 rs-type-nano" style={{ fontWeight: 900, textTransform: 'uppercase' }}>{metricLabel(primary)}</span>
+            <span className="rs-card-meta rs-m-0 rs-type-nano rs-fw-900" style={{ textTransform: 'uppercase' }}>{metricLabel(primary)}</span>
             {delta != null && (
-              <span className="rs-type-micro" style={{
+              <span className="rs-type-micro rs-fw-900" style={{
                 marginLeft: 'auto',
-                fontWeight: 900,
                 color: delta >= 0 ? 'var(--rs-status-nominal, #4ade80)' : '#f87171',
               }}>
                 {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
@@ -164,7 +163,7 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
             )}
           </div>
           {revenue != null && primary !== 'revenue' && (
-            <div className="rs-card-meta" style={{ marginTop: -8, fontWeight: 900 }}>{fmtMoney(revenue)} REVENUE</div>
+            <div className="rs-card-meta rs-fw-900" style={{ marginTop: -8 }}>{fmtMoney(revenue)} REVENUE</div>
           )}
           <LineChart data={chartData} color="var(--primary)" height={60} />
         </div>
@@ -206,10 +205,10 @@ function PlatformDetail({
         <div className="rs-flex rs-gap-3">
           {SUPPORTED_FOR_INSIGHTS.includes(platform) && (
             <button 
-              className="rs-pill" 
+              className="rs-pill rs-fw-900" 
               onClick={onFetchInsights}
               disabled={loading}
-              style={{ border: '1px solid var(--md-outline-variant)', fontWeight: 900 }}
+              style={{ border: '1px solid var(--md-outline-variant)' }}
             >
               {loading ? 'ANALYZING...' : insights ? 'REFRESH INSIGHTS' : 'AI STRATEGIC REVIEW'}
             </button>
@@ -221,7 +220,7 @@ function PlatformDetail({
       </div>
 
       {loading && <div className="rs-card-meta rs-mb-5 rs-type-body" style={{ fontStyle: 'italic' }}>River is analysing your data...</div>}
-      {error && <div className="rs-mb-5 rs-type-small" style={{ color: 'var(--rs-status-critical)', fontWeight: 700 }}>{error}</div>}
+      {error && <div className="rs-mb-5 rs-type-small rs-c-critical rs-fw-700">{error}</div>}
 
       {insights && !loading && (
         <div className="rs-p-5 rs-mb-7" style={{
@@ -230,7 +229,7 @@ function PlatformDetail({
           border: '1px solid var(--md-outline-variant)',
         }}>
           <div className="rs-card-label rs-mb-3" style={{ color: 'var(--md-on-surface)' }}>AI STRATEGIC INSIGHTS</div>
-          <div className="rs-type-body" style={{ lineHeight: 1.8, whiteSpace: 'pre-wrap', fontWeight: 500 }}>{insights}</div>
+          <div className="rs-type-body rs-fw-500" style={{ lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{insights}</div>
         </div>
       )}
 
@@ -263,8 +262,8 @@ function PlatformDetail({
             <table className="rs-w-full rs-type-small" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--md-outline-variant)', background: 'var(--md-surface-container-high)' }}>
-                  <th className="rs-text-left" style={{ padding: 'var(--rs-space-4)', fontWeight: 900 }}>DATE</th>
-                  {(metrics || []).map(m => <th key={m} className="rs-text-left" style={{ padding: 'var(--rs-space-4)', fontWeight: 900 }}>{metricLabel(m).toUpperCase()}</th>)}
+                  <th className="rs-text-left rs-fw-900" style={{ padding: 'var(--rs-space-4)' }}>DATE</th>
+                  {(metrics || []).map(m => <th key={m} className="rs-text-left rs-fw-900" style={{ padding: 'var(--rs-space-4)' }}>{metricLabel(m).toUpperCase()}</th>)}
                   <th style={{ padding: 'var(--rs-space-4)' }}></th>
                 </tr>
               </thead>
@@ -273,7 +272,7 @@ function PlatformDetail({
                   <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
                     <td className="rs-mono" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>{s.date}</td>
                     {(metrics || []).map(m => (
-                      <td key={m} style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', fontWeight: 600 }}>{fmtMetric(m, s.metrics?.[m])}</td>
+                      <td key={m} className="rs-fw-600" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>{fmtMetric(m, s.metrics?.[m])}</td>
                     ))}
                     <td className="rs-text-right" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                       <button
@@ -342,7 +341,7 @@ function AddDataModal({ platform, onClose, onSave }) {
             <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>SNAPSHOT_DATE</label>
             <input
               type="date"
-              className="rs-type-body" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
+              className="rs-type-body rs-fw-700" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)' }}
               value={date}
               onChange={e => setDate(e.target.value)}
             />
@@ -354,18 +353,18 @@ function AddDataModal({ platform, onClose, onSave }) {
                 <input
                   type="number"
                   placeholder="0.00"
-                  className="rs-type-body" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
+                  className="rs-type-body rs-fw-700" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)' }}
                   value={vals[m]}
                   onChange={e => setVals({ ...vals, [m]: e.target.value })}
                 />
               </div>
             ))}
           </div>
-          {err && <div className="rs-type-tiny" style={{ color: 'var(--rs-status-critical)', fontWeight: 700 }}>{err}</div>}
+          {err && <div className="rs-type-tiny rs-c-critical rs-fw-700">{err}</div>}
         </div>
 
-        <div className="rs-flex rs-gap-4 rs-mt-7" style={{ justifyContent: 'flex-end' }}>
-          <button className="rs-pill" onClick={onClose} style={{ border: 'none', textDecoration: 'underline', fontWeight: 900 }}>CANCEL</button>
+        <div className="rs-flex rs-gap-4 rs-mt-7 rs-justify-end">
+          <button className="rs-pill rs-fw-900" onClick={onClose} style={{ border: 'none', textDecoration: 'underline' }}>CANCEL</button>
           <button className="rs-btn-primary" onClick={handleSave} disabled={saving} style={{ padding: 'var(--rs-space-3) var(--rs-space-6)' }}>
             {saving ? 'RECORDING…' : 'COMMIT DATA'}
           </button>
@@ -606,10 +605,10 @@ export default function AnalyticsPage() {
         <header className="rs-mb-7" style={{ paddingTop: 'var(--rs-space-7)', paddingBottom: 'var(--rs-space-6)', borderBottom: '2px solid var(--md-outline-variant)' }}>
           <div className="rs-status-strip rs-mb-4" style={{ border: 'none', padding: 0, background: 'none' }}>
             <span className="rs-status-dot" />
-            <span style={{ color: 'var(--md-on-surface)', fontWeight: 900 }}>SYSTEM // ANALYTICS / COMMAND</span>
+            <span className="rs-fw-900" style={{ color: 'var(--md-on-surface)' }}>SYSTEM // ANALYTICS / COMMAND</span>
           </div>
           <h1 className="rs-page-title rs-mb-2" style={{ fontSize: '4rem' }}>Analytics</h1>
-          <div className="rs-muted rs-type-body" style={{ fontWeight: 500, maxWidth: '60ch' }}>
+          <div className="rs-muted rs-type-body rs-fw-500" style={{ maxWidth: '60ch' }}>
             Commercial performance, audience growth, and multi-channel telemetry.
           </div>
         </header>
@@ -631,7 +630,7 @@ export default function AnalyticsPage() {
               ))}
             </div>
             <div className="rs-flex rs-gap-3">
-              <button className="rs-pill" onClick={loadData} disabled={loading} style={{ border: 'none', fontWeight: 900 }}>
+              <button className="rs-pill rs-fw-900" onClick={loadData} disabled={loading} style={{ border: 'none' }}>
                 {loading ? 'SYNCING...' : 'REFRESH'}
               </button>
               <button
@@ -664,7 +663,7 @@ export default function AnalyticsPage() {
                       }}
                     />
                     <span style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, marginRight: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)' }} />
-                    <span style={{ fontWeight: 900 }}>{p.label.toUpperCase()}</span>
+                    <span className="rs-fw-900">{p.label.toUpperCase()}</span>
                   </label>
                 )
               })}
@@ -676,7 +675,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {err && <div className="rs-card is-wide" style={{ color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }}>{err}</div>}
+        {err && <div className="rs-card is-wide rs-c-critical" style={{ borderColor: 'var(--rs-status-critical)' }}>{err}</div>}
 
         {/* Summary Stats */}
         {snapshots.length > 0 && (
@@ -767,13 +766,13 @@ export default function AnalyticsPage() {
                 <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-5">
                   <div className="rs-flex rs-items-center rs-gap-3">
                     <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--rs-status-nominal, #4ade80)' }} />
-                    <span className="rs-card-meta rs-m-0 rs-type-body" style={{ fontWeight: 900, color: 'var(--md-on-surface)' }}>
+                    <span className="rs-card-meta rs-m-0 rs-type-body rs-fw-900" style={{ color: 'var(--md-on-surface)' }}>
                       CONNECTED: {shopifyStatus.shop?.toUpperCase()}
                     </span>
                   </div>
                   <div className="rs-card-meta rs-type-body">Your store is currently linked. River is syncing orders and inventory telemetry in the background.</div>
                   <div className="rs-flex rs-justify-between rs-gap-4 rs-mt-4">
-                    <button className="rs-pill" style={{ color: 'var(--rs-status-critical)', fontWeight: 900, textDecoration: 'underline' }} onClick={() => { setShowShopifyModal(false); handleDisconnectShopify() }}>DISCONNECT</button>
+                    <button className="rs-pill rs-c-critical rs-fw-900" style={{ textDecoration: 'underline' }} onClick={() => { setShowShopifyModal(false); handleDisconnectShopify() }}>DISCONNECT</button>
                     <div className="rs-flex rs-gap-3">
                       <button className="rs-pill" onClick={() => setShowShopifyModal(false)}>CLOSE</button>
                       <button className="rs-btn-primary" onClick={() => setShopifyStatus(s => ({ ...s, connected: false }))}>RECONNECT</button>
@@ -786,7 +785,7 @@ export default function AnalyticsPage() {
                     <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>SHOP_DOMAIN</label>
                     <input
                       type="text"
-                      className="rs-type-body" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)', fontWeight: 700 }}
+                      className="rs-type-body rs-fw-700" style={{ padding: 'var(--rs-space-3)', border: '1px solid var(--md-outline-variant)' }}
                       placeholder="your-shop.myshopify.com"
                       value={shopifyDomain}
                       onChange={e => setShopifyDomain(e.target.value)}
@@ -796,8 +795,8 @@ export default function AnalyticsPage() {
                   <div className="rs-card-meta rs-mt-4 rs-type-small">
                     Enter your Shopify store domain to initialize the OAuth handshake. This will enable real-time sales analytics and inventory syncing.
                   </div>
-                  <div className="rs-flex rs-gap-4 rs-mt-7" style={{ justifyContent: 'flex-end' }}>
-                    <button className="rs-pill" onClick={() => setShowShopifyModal(false)} style={{ border: 'none', textDecoration: 'underline', fontWeight: 900 }}>CANCEL</button>
+                  <div className="rs-flex rs-gap-4 rs-mt-7 rs-justify-end">
+                    <button className="rs-pill rs-fw-900" onClick={() => setShowShopifyModal(false)} style={{ border: 'none', textDecoration: 'underline' }}>CANCEL</button>
                     <button className="rs-btn-primary" onClick={handleConnectShopify} disabled={shopifyConnecting || !shopifyDomain.trim()}>
                       {shopifyConnecting ? 'LINKING…' : 'INITIALIZE LINK'}
                     </button>

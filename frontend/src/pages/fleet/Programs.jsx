@@ -238,7 +238,7 @@ export default function Programs() {
               </div>
             </div>
 
-            <div className="rs-flex rs-gap-3 rs-mt-5" style={{ justifyContent: 'flex-end' }}>
+            <div className="rs-flex rs-gap-3 rs-mt-5 rs-justify-end">
               <button className="rs-btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="rs-btn-primary" onClick={handleSave}>Save</button>
             </div>

@@ -125,7 +125,7 @@ export default function ComparePage({ setAction }) {
           <ModelInput label="MODEL A" value={modelA} onChange={setModelA} />
           <ModelInput label="MODEL B" value={modelB} onChange={setModelB} />
         </div>
-        {error && <div className="rs-mt-3 rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+        {error && <div className="rs-mt-3 rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
       </div>
 
       {run && (

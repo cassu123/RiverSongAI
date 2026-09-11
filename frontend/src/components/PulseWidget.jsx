@@ -92,8 +92,7 @@ export default function PulseWidget({ token }) {
               {currentNews.headline || 'No headlines.'}
             </span>
             {currentNews.source && (
-              <span className="rs-no-shrink rs-type-nano rs-nowrap" style={{
-                fontWeight: 700,
+              <span className="rs-no-shrink rs-type-nano rs-nowrap rs-fw-700" style={{
                 letterSpacing: '0.07em',
                 textTransform: 'uppercase',
                 color: C.muted,
@@ -123,8 +122,7 @@ export default function PulseWidget({ token }) {
               </span>
             ) : (
               <div className="rs-flex rs-gap-3" style={{ alignItems: 'baseline' }}>
-                <span className="rs-mono rs-type-nano" style={{
-                  fontWeight: 600,
+                <span className="rs-mono rs-type-nano rs-fw-600" style={{
                   letterSpacing: '0.05em',
                   color: C.muted,
                 }}>
@@ -164,16 +162,14 @@ export default function PulseWidget({ token }) {
             time={fmtTs(ts?.flights)}
           >
             <div className="rs-flex rs-gap-2" style={{ alignItems: 'baseline' }}>
-              <span className="rs-mono rs-type-body" style={{
-                fontWeight: 800,
+              <span className="rs-mono rs-type-body rs-fw-800" style={{
                 letterSpacing: '-0.04em',
                 lineHeight: 1,
                 color: C.sky,
               }}>
                 {flights.flights?.length ?? 0}
               </span>
-              <span className="rs-type-micro" style={{
-                fontWeight: 500,
+              <span className="rs-type-micro rs-fw-500" style={{
                 color: C.muted,
                 letterSpacing: '0.01em',
               }}>
@@ -207,8 +203,7 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
         >
           {icon}
         </span>
-        <span className="rs-grow rs-type-nano" style={{
-          fontWeight: 800,
+        <span className="rs-grow rs-type-nano rs-fw-800" style={{
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: C.dim,

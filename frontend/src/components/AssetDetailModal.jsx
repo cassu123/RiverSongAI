@@ -245,7 +245,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
         </div>
 
         <div className="rs-modal-body">
-          {error && <div className="rs-status-strip rs-mb-4" style={{ background: 'rgba(248,113,113,0.2)', color: 'var(--rs-status-critical)' }}>{error}</div>}
+          {error && <div className="rs-status-strip rs-mb-4 rs-c-critical" style={{ background: 'rgba(248,113,113,0.2)' }}>{error}</div>}
 
           {!isNew && (
             <div className="rs-mb-5">
@@ -347,7 +347,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                    <h4 className="rs-type-tiny" style={{ margin: '0 0 var(--rs-space-2) 0', color: 'var(--md-on-surface-variant)' }}>RECEIPT</h4>
                    {item.receipt_image_path ? (
                       <div className="rs-flex rs-items-center rs-gap-2">
-                         <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
+                         <span className="material-symbols-rounded rs-c-nominal">check_circle</span>
                          <span className="rs-type-tiny">Attached</span>
                          <button className="rs-pill" onClick={() => receiptInputRef.current.click()}>Replace</button>
                       </div>
@@ -362,7 +362,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                    <h4 className="rs-type-tiny" style={{ margin: '0 0 var(--rs-space-2) 0', color: 'var(--md-on-surface-variant)' }}>WARRANTY</h4>
                    {item.warranty_image_path ? (
                       <div className="rs-flex rs-items-center rs-gap-2">
-                         <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
+                         <span className="material-symbols-rounded rs-c-nominal">check_circle</span>
                          <span className="rs-type-tiny">Attached</span>
                          <button className="rs-pill" onClick={() => warrantyInputRef.current.click()}>Replace</button>
                       </div>
@@ -386,7 +386,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
         
         <div className="rs-modal-footer rs-justify-between">
           {!isNew ? (
-             <button className="rs-btn-primary" style={{ background: 'transparent', color: 'var(--rs-status-critical)', border: '1px solid #f87171' }} onClick={handleDelete}>
+             <button className="rs-btn-primary rs-c-critical" style={{ background: 'transparent', border: '1px solid #f87171' }} onClick={handleDelete}>
                DELETE
              </button>
           ) : <div></div>}

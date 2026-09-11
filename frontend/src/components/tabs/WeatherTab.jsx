@@ -303,7 +303,7 @@ export default function WeatherTab({ token, active }) {
                 }}>
                   <span className="material-symbols-rounded rs-no-shrink" style={{ color: ALERT_COLORS[a.severity], marginTop: 2 }}>warning</span>
                   <div>
-                    <div className="rs-type-micro" style={{ fontWeight: 700, marginBottom: 2, color: ALERT_COLORS[a.severity] }}>{a.event}</div>
+                    <div className="rs-type-micro rs-fw-700" style={{ marginBottom: 2, color: ALERT_COLORS[a.severity] }}>{a.event}</div>
                     <div className="rs-card-meta rs-type-micro">{a.headline}</div>
                   </div>
                 </div>
@@ -340,10 +340,9 @@ function HeroCard({ current, today, location_name, unit }) {
     <div className="rs-wx-panel is-hero">
       <div className="rs-flex rs-items-center rs-gap-5 rs-flex-wrap">
         <span
-          className="material-symbols-rounded rs-no-shrink"
+          className="material-symbols-rounded rs-no-shrink rs-c-accent"
           style={{
             fontSize: 'clamp(3.25rem, 15vw, 6.5rem)',
-            color: 'var(--primary)',
             lineHeight: 0.9,
             filter: 'drop-shadow(0 4px 14px rgba(var(--primary-rgb,100,100,255),0.18))',
           }}
@@ -360,7 +359,7 @@ function HeroCard({ current, today, location_name, unit }) {
           }}>
             {temp != null ? temp : '--'}{unit || '°'}
           </div>
-          <div className="rs-mt-2 rs-type-body" style={{ fontWeight: 700, color: 'var(--md-on-surface)' }}>
+          <div className="rs-mt-2 rs-type-body rs-fw-700" style={{ color: 'var(--md-on-surface)' }}>
             {current.condition || '—'}
           </div>
           <div className="rs-card-meta rs-mt-1 rs-type-micro">
@@ -395,8 +394,7 @@ function DetailCard({ label, value, sub, color, badge }) {
           </div>
         )}
       </div>
-      <div className="rs-mono rs-type-body rs-nowrap" style={{
-        fontWeight: 800,
+      <div className="rs-mono rs-type-body rs-nowrap rs-fw-800" style={{
         color: color || 'var(--md-on-surface)',
       }}>
         {value}
@@ -501,8 +499,7 @@ function HourlyStrip({ hourly, unit }) {
           <div className="rs-flex rs-items-start">
             {hourly.map((h, i) => (
               <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
-                <div className="rs-mono rs-type-micro" style={{
-                  fontWeight: 700,
+                <div className="rs-mono rs-type-micro rs-fw-700" style={{
                   color: 'var(--md-on-surface)',
                 }}>
                   {h.temperature != null ? Math.round(h.temperature) : '--'}°
@@ -526,12 +523,12 @@ function HourlyStrip({ hourly, unit }) {
           </div>
 
           {/* Precip bars */}
-          <div className="rs-flex rs-mt-1" style={{ height: 18, alignItems: 'flex-end' }}>
+          <div className="rs-flex rs-mt-1 rs-items-end" style={{ height: 18 }}>
             {hourly.map((h, i) => {
               const p = h.precip_prob || 0
               const barH = Math.max(0, (p / 100) * 14)
               return (
-                <div key={i} className="rs-flex rs-flex-col rs-items-center" style={{ width: W_PER_HOUR, justifyContent: 'flex-end' }}>
+                <div key={i} className="rs-flex rs-flex-col rs-items-center rs-justify-end" style={{ width: W_PER_HOUR }}>
                   <div style={{
                     width: 14,
                     height: barH,
@@ -548,8 +545,7 @@ function HourlyStrip({ hourly, unit }) {
           <div className="rs-flex" style={{ marginTop: 2 }}>
             {hourly.map((h, i) => (
               <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
-                <span className="rs-type-nano" style={{
-                  fontWeight: 600,
+                <span className="rs-type-nano rs-fw-600" style={{
                   color: h.precip_prob > 0 ? PRECIP_COLOR : 'transparent',
                 }}>
                   {h.precip_prob > 0 ? `${h.precip_prob}%` : '·'}
@@ -604,10 +600,10 @@ function DailyForecast({ daily, unit }) {
             }}>
               {/* Day labels are short and must never split — "TODAY" was
                   breaking to "TODA / Y" once the column tightened. */}
-              <span className="rs-type-micro rs-nowrap" style={{ fontWeight: 800 }}>
+              <span className="rs-type-micro rs-nowrap rs-fw-800">
                 {i === 0 ? 'TODAY' : fmtDay(d.date)}
               </span>
-              <span className="material-symbols-rounded rs-text-center" style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>
+              <span className="material-symbols-rounded rs-text-center rs-c-accent" style={{ fontSize: '1.2rem' }}>
                 {wmoIcon(d.weathercode)}
               </span>
               <span className="rs-card-meta rs-type-micro rs-clip rs-ellipsis rs-nowrap">
@@ -624,7 +620,7 @@ function DailyForecast({ daily, unit }) {
                   borderRadius: 'var(--md-shape-xs)',
                 }} />
               </div>
-              <span className="rs-mono rs-type-micro rs-text-right" style={{ fontWeight: 700 }}>
+              <span className="rs-mono rs-type-micro rs-text-right rs-fw-700">
                 <span style={{ opacity: 0.5 }}>{d.temp_min != null ? Math.round(d.temp_min) : '--'}°</span>
                 <span style={{ margin: '0 var(--rs-space-1)', opacity: 0.3 }}>·</span>
                 {d.temp_max != null ? Math.round(d.temp_max) : '--'}°
@@ -668,7 +664,7 @@ function SunCard({ sunrise, sunset }) {
         <div className="rs-text-center" style={{ minWidth: 60 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(78% 0.16 75)' }}>wb_twilight</span>
           <div className="rs-card-label rs-mt-1 rs-muted rs-type-nano">SUNRISE</div>
-          <div className="rs-mono rs-type-tiny" style={{ fontWeight: 700 }}>
+          <div className="rs-mono rs-type-tiny rs-fw-700">
             {fmtClockTime(sunrise)}
           </div>
         </div>
@@ -684,7 +680,7 @@ function SunCard({ sunrise, sunset }) {
         <div className="rs-text-center" style={{ minWidth: 60 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(60% 0.18 30)' }}>bedtime</span>
           <div className="rs-card-label rs-mt-1 rs-muted rs-type-nano">SUNSET</div>
-          <div className="rs-mono rs-type-tiny" style={{ fontWeight: 700 }}>
+          <div className="rs-mono rs-type-tiny rs-fw-700">
             {fmtClockTime(sunset)}
           </div>
         </div>

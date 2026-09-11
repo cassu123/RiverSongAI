@@ -151,10 +151,9 @@ export default function SafetyRules() {
               opacity: rule.enabled ? 1 : 0.55,
             }}>
               <div className="rs-flex rs-gap-3 rs-flex-wrap" style={{ alignItems: 'baseline' }}>
-                <span className="rs-type-body" style={{ fontWeight: 700 }}>{rule.name}</span>
-                <span className="rs-type-tiny" style={{
+                <span className="rs-type-body rs-fw-700">{rule.name}</span>
+                <span className="rs-type-tiny rs-fw-700" style={{
                   color: tone,
-                  fontWeight: 700,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                 }}>
@@ -193,7 +192,7 @@ export default function SafetyRules() {
                   background: 'rgba(0,0,0,0.22)',
                   border: `1px solid ${result.ok ? 'var(--secondary)' : 'var(--warn)'}`,
                 }}>
-                  <div style={{ fontWeight: 700, color: result.ok ? 'var(--secondary)' : 'var(--warn)' }}>
+                  <div className="rs-fw-700" style={{ color: result.ok ? 'var(--secondary)' : 'var(--warn)' }}>
                     {result.ok
                       ? (result.delay
                           ? `Would fire, after ${Math.round(result.delay / 60)} min held`
@@ -202,7 +201,7 @@ export default function SafetyRules() {
                   </div>
                   <div className="rs-mt-1" style={{ opacity: 0.85 }}>{result.reason}</div>
                   {result.delivered && (
-                    <div className="rs-mt-2" style={{ color: 'var(--md-primary)' }}>
+                    <div className="rs-mt-2 rs-c-primary">
                       Sent for real — check your phone. Quiet hours still apply
                       unless this rule is critical.
                     </div>
@@ -224,7 +223,7 @@ export default function SafetyRules() {
 
       {error && (
         <div className="rs-mt-3 rs-flex rs-gap-3 rs-items-center rs-flex-wrap">
-          <span className="rs-card-meta rs-type-small" style={{ color: 'var(--md-error)' }}>
+          <span className="rs-card-meta rs-type-small rs-c-error">
             {error}
           </span>
           <button className="rs-pill rs-type-tiny" onClick={load}>

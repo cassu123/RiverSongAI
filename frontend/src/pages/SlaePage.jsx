@@ -77,7 +77,7 @@ export default function SlaePage({ setAction }) {
       <div className="rs-foyer animate-fade-in">
         <div className="rs-foyer-head">
           <h1 className="rs-greeting">SLAE Control</h1>
-          <div className="rs-greeting-sub" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>
+          <div className="rs-greeting-sub rs-c-error">{error.toUpperCase()}</div>
         </div>
       </div>
     )

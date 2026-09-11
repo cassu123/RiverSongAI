@@ -176,7 +176,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
         <div className="rs-card-inner rs-flex rs-flex-col rs-gap-4">
 
           <div className="rs-flex rs-items-center rs-justify-between">
-            <div className="rs-card-value rs-type-body" style={{ fontWeight: 800 }}>
+            <div className="rs-card-value rs-type-body rs-fw-800">
               Add a recipe
             </div>
             <button className="rs-pill" onClick={onClose} aria-label="Close">
@@ -323,7 +323,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
             </div>
           )}
 
-          <div className="rs-flex rs-gap-2" style={{ justifyContent: 'flex-end', paddingTop: 'var(--rs-space-1)' }}>
+          <div className="rs-flex rs-gap-2 rs-justify-end" style={{ paddingTop: 'var(--rs-space-1)' }}>
             <button className="rs-pill rs-pointer" onClick={onClose} disabled={busy}>
               CANCEL
             </button>

@@ -164,7 +164,7 @@ function AircraftRow({ a, i, total }) {
       borderBottom: i < total - 1 ? '1px solid var(--md-outline-variant)' : 'none',
     }}>
       <div>
-        <div className="rs-type-micro rs-nowrap rs-clip rs-ellipsis" style={{ fontWeight: 800, letterSpacing: '0.05em' }}>
+        <div className="rs-type-micro rs-nowrap rs-clip rs-ellipsis rs-fw-800" style={{ letterSpacing: '0.05em' }}>
           {a.callsign || '—'}
         </div>
         <div className="rs-card-meta rs-muted rs-type-nano" style={{ marginTop: 1 }}>
@@ -174,7 +174,7 @@ function AircraftRow({ a, i, total }) {
       <div className="rs-card-meta rs-flight-country rs-type-nano rs-clip rs-ellipsis rs-nowrap">
         {a.origin_country || '—'}
       </div>
-      <div className="rs-mono rs-type-nano rs-nowrap" style={{ fontWeight: 700 }}>
+      <div className="rs-mono rs-type-nano rs-nowrap rs-fw-700">
         {a.altitude_ft != null ? `${a.altitude_ft.toLocaleString()} ft` : '—'}
       </div>
       <div className="rs-mono rs-type-nano rs-nowrap">
@@ -183,7 +183,7 @@ function AircraftRow({ a, i, total }) {
       <div className="rs-flight-hdg rs-text-center rs-type-tiny">
         {trackArrow(a.heading_deg)}
       </div>
-      <div className="rs-type-nano rs-text-right" style={{ fontWeight: 700, color: statusColor }}>
+      <div className="rs-type-nano rs-text-right rs-fw-700" style={{ color: statusColor }}>
         {a.on_ground ? 'GND' : 'AIR'}
       </div>
     </div>
@@ -373,7 +373,7 @@ export default function FlightsTab({ token, active }) {
       {/* Status row */}
       <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
         <div className="rs-flex rs-items-center rs-gap-3">
-          <span className="rs-card-meta rs-type-micro" style={{ fontWeight: 700 }}>
+          <span className="rs-card-meta rs-type-micro rs-fw-700">
             OVERHEAD RADAR
           </span>
           {!loading && !error && (

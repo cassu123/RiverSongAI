@@ -48,8 +48,8 @@ export default function ParentChildrenSection({ data, token, onChanged }) {
       {(data.children || []).map(child => (
         <div key={child.id} className="rs-card rs-mb-3" style={{ background: 'var(--md-surface-container-low)' }}>
           <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
-            <div style={{ fontWeight: 600 }}>{child.display_name}</div>
-            {saving === child.id && <span className="rs-card-label" style={{ color: 'var(--primary)' }}>SAVING…</span>}
+            <div className="rs-fw-600">{child.display_name}</div>
+            {saving === child.id && <span className="rs-card-label rs-c-accent">SAVING…</span>}
           </div>
           <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
             {(data.globally_on || []).map(key => {

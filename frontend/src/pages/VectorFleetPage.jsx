@@ -24,9 +24,9 @@ export default function VectorFleetPage({ setAction }) {
 
       <div style={{ padding: '0 var(--rs-space-5)' }}>
         <div className="rs-flex rs-gap-5 rs-mb-5" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 'var(--rs-space-2)' }}>
-          <Link to="/environment" style={{ fontWeight: 400, color: 'var(--text-secondary)', textDecoration: 'none' }}>Property / Home</Link>
-          <Link to="/fleet" style={{ fontWeight: 400, color: 'var(--text-secondary)', textDecoration: 'none' }}>Ecosystem</Link>
-          <Link to="/fleet/vector" style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 'var(--rs-space-2)', marginBottom: -9 }}>Vector</Link>
+          <Link to="/environment" className="rs-fw-400" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Property / Home</Link>
+          <Link to="/fleet" className="rs-fw-400" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Ecosystem</Link>
+          <Link to="/fleet/vector" className="rs-fw-600" style={{ color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 'var(--rs-space-2)', marginBottom: -9 }}>Vector</Link>
         </div>
 
         <div className="rs-mb-5 rs-flex rs-gap-4" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 'var(--rs-space-4)' }}>

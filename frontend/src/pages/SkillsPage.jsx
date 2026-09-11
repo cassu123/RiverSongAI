@@ -162,7 +162,7 @@ export default function SkillsPage({ setAction }) {
               rows={6}
               style={{ ...inputStyle, resize: 'vertical' }}
             />
-            {error && <div className="rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
             <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save} disabled={saving}>
                 {saving ? 'SAVING…' : (activeId ? 'UPDATE' : 'CREATE')}

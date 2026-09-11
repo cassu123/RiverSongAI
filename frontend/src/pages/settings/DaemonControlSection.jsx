@@ -19,7 +19,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
-                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>WARDEN (Vision/Security)</div>
+                  <div className="rs-type-tiny rs-fw-600">WARDEN (Vision/Security)</div>
                   <div className="rs-card-meta rs-m-0">RTSP Camera Monitoring</div>
                 </div>
                 <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
@@ -40,7 +40,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
-                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>MECHANIC (Telemetry)</div>
+                  <div className="rs-type-tiny rs-fw-600">MECHANIC (Telemetry)</div>
                   <div className="rs-card-meta rs-m-0">MAVLink / ArduRover Link</div>
                 </div>
                 <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
@@ -67,7 +67,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
-                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>PULSE (Ambient Feeds)</div>
+                  <div className="rs-type-tiny rs-fw-600">PULSE (Ambient Feeds)</div>
                   <div className="rs-card-meta rs-m-0">News, Markets, and Flights Poller</div>
                 </div>
                 <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
@@ -88,7 +88,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
-                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>SCRIBE (Chronos Heuristics)</div>
+                  <div className="rs-type-tiny rs-fw-600">SCRIBE (Chronos Heuristics)</div>
                   <div className="rs-card-meta rs-m-0">Schedule & Chronobiology Heuristics</div>
                 </div>
                 <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">
@@ -109,7 +109,7 @@ export default function DaemonControlSection({ daemonStatus, aiFeatures, saveAiF
             <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
               <div className="rs-flex rs-justify-between rs-items-center rs-gap-3">
                 <div className="rs-min-w-0">
-                  <div className="rs-type-tiny" style={{ fontWeight: 600 }}>SIFTER (RAG)</div>
+                  <div className="rs-type-tiny rs-fw-600">SIFTER (RAG)</div>
                   <div className="rs-card-meta rs-m-0">Background Document Indexing</div>
                 </div>
                 <div className="rs-flex rs-items-center rs-gap-3 rs-no-shrink">

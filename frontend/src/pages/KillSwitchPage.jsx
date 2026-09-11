@@ -88,7 +88,7 @@ export default function KillSwitchPage() {
           <div className="rs-card-head">
              <span className="rs-card-label">SYSTEM STATE</span>
           </div>
-          <div className="rs-flex rs-items-center rs-gap-4" style={{ fontSize: '1.4rem', fontWeight: 600, letterSpacing: '0.1em' }}>
+          <div className="rs-flex rs-items-center rs-gap-4 rs-fw-600" style={{ fontSize: '1.4rem', letterSpacing: '0.1em' }}>
             {loading ? (
               <><span className="rs-status-dot" /> LOADING</>
             ) : active ? (
@@ -130,7 +130,7 @@ export default function KillSwitchPage() {
             </p>
             {confirm ? (
               <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
-                <span className="rs-mb-2 rs-type-tiny" style={{ flex: '1 1 100%', color: 'var(--warn)', fontWeight: 600 }}>Are you sure? This cannot be undone remotely.</span>
+                <span className="rs-mb-2 rs-type-tiny rs-fw-600" style={{ flex: '1 1 100%', color: 'var(--warn)' }}>Are you sure? This cannot be undone remotely.</span>
                 <button
                   className="rs-btn-primary"
                   style={{ background: '#ff3322', color: 'white' }}
@@ -161,14 +161,13 @@ export default function KillSwitchPage() {
             </p>
             <form className="rs-flex rs-gap-3 rs-flex-wrap" onSubmit={handleReset}>
               <input
-                style={{ 
-                  flex: '1 1 200px', 
-                  background: 'var(--md-surface-container)', 
-                  border: '1px solid rgba(255, 51, 34, 0.3)', 
+                className="rs-c-fg" style={{
+                  flex: '1 1 200px',
+                  background: 'var(--md-surface-container)',
+                  border: '1px solid rgba(255, 51, 34, 0.3)',
                   borderRadius: 'var(--md-shape-xl)',
-                  color: 'var(--fg)',
                   padding: 'var(--rs-space-3) var(--rs-space-4)',
-                  outline: 'none'
+                  outline: 'none',
                 }}
                 type="password"
                 placeholder="Admin password"

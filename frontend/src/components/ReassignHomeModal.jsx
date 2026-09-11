@@ -41,17 +41,17 @@ export default function ReassignHomeModal({ homeId, homes, token, onClose, onCom
   return (
     <div className="barcode-scanner-modal rs-flex rs-items-center rs-justify-center" role="dialog" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
       <div className="rs-card is-elev rs-w-full rs-p-5 rs-relative" style={{ maxWidth: 500 }}>
-        <button onClick={onClose} className="rs-pointer" style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--fg)' }}>
+        <button onClick={onClose} className="rs-pointer rs-c-fg" style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none' }}>
           <span className="material-symbols-rounded">close</span>
         </button>
         
         <h2 className="rs-mb-2" style={{ marginTop: 0 }}>Bulk Reassign (PCS Move)</h2>
         <p className="rs-card-meta">Move all assets in this stash to another home.</p>
 
-        {error && <div className="rs-p-2 rs-mb-4" style={{ color: 'var(--rs-status-critical)', background: 'rgba(248,113,113,0.1)' }}>{error}</div>}
+        {error && <div className="rs-p-2 rs-mb-4 rs-c-critical" style={{ background: 'rgba(248,113,113,0.1)' }}>{error}</div>}
 
         {availableHomes.length === 0 ? (
-          <div className="rs-mb-4" style={{ color: 'var(--rs-status-warning)' }}>
+          <div className="rs-mb-4 rs-c-warning">
             You don't have any other homes to move items to. Please create a new home first.
           </div>
         ) : (
@@ -70,7 +70,7 @@ export default function ReassignHomeModal({ homeId, homes, token, onClose, onCom
               </select>
             </div>
             
-            <div className="rs-mt-5 rs-flex rs-gap-3" style={{ justifyContent: 'flex-end' }}>
+            <div className="rs-mt-5 rs-flex rs-gap-3 rs-justify-end">
               <button type="button" className="rs-btn" onClick={onClose}>CANCEL</button>
               <button type="submit" className="rs-btn-primary" disabled={loading || !targetHomeId}>
                 {loading ? 'MOVING...' : 'MOVE ALL ASSETS'}

@@ -129,9 +129,9 @@ export default function VoiceIDSection({ token }) {
       <div className="rs-mb-4">
         {status.enrolled ? (
           <div className="rs-flex rs-items-start rs-gap-2">
-            <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1.1rem', color: 'var(--rs-status-nominal)', marginTop: 1 }}>check_circle</span>
+            <span className="material-symbols-rounded rs-no-shrink rs-c-nominal" style={{ fontSize: '1.1rem', marginTop: 1 }}>check_circle</span>
             <div>
-              <div className="rs-type-small" style={{ color: 'var(--rs-status-nominal)', fontWeight: 600 }}>
+              <div className="rs-type-small rs-c-nominal rs-fw-600">
                 ENROLLED — {status.sample_count} SAMPLES
               </div>
               <div className="rs-card-meta">
@@ -158,7 +158,7 @@ export default function VoiceIDSection({ token }) {
         </button>
 
         {status.sample_count > 0 && !recording && !confirmDelete && (
-          <button className="rs-pill rs-pointer" onClick={() => setConfirmDelete(true)} style={{ color: 'var(--md-error)' }}>
+          <button className="rs-pill rs-pointer rs-c-error" onClick={() => setConfirmDelete(true)}>
             DELETE ENROLLMENT
           </button>
         )}
@@ -171,15 +171,15 @@ export default function VoiceIDSection({ token }) {
           border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
           borderRadius: 'var(--md-shape-sm)',
         }}>
-          <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1rem', color: 'var(--md-error)' }}>warning</span>
+          <span className="material-symbols-rounded rs-no-shrink rs-c-error" style={{ fontSize: '1rem' }}>warning</span>
           <span className="rs-grow">Delete your voice prints? River Song will no longer recognize your voice.</span>
-          <button className="rs-pill rs-pointer" style={{ color: 'var(--md-error)' }} onClick={deleteEnrollment}>DELETE</button>
+          <button className="rs-pill rs-pointer rs-c-error" onClick={deleteEnrollment}>DELETE</button>
           <button className="rs-pill rs-pointer" onClick={() => setConfirmDelete(false)}>CANCEL</button>
         </div>
       )}
 
-      {error && <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{error}</div>}
-      {success && <div className="rs-card-meta" style={{ color: 'var(--rs-status-nominal)' }}>{success}</div>}
+      {error && <div className="rs-card-meta rs-c-error">{error}</div>}
+      {success && <div className="rs-card-meta rs-c-nominal">{success}</div>}
 
       <p className="rs-card-meta">
         Recommended: at least 3 samples of about 5 seconds each.

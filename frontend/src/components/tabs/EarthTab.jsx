@@ -102,7 +102,7 @@ export default function EarthTab({ token, active }) {
     </div>
   )
   
-  if (error) return <div className="rs-p-5" style={{ color: 'var(--rs-status-critical)' }}>Error: {error}</div>
+  if (error) return <div className="rs-p-5 rs-c-critical">Error: {error}</div>
   if (!data) return null
 
   const { eonet = [], neows = [], ocearch = [] } = data
@@ -120,10 +120,9 @@ export default function EarthTab({ token, active }) {
           <div key={i} className="rs-mb-4" style={{ paddingBottom: 'var(--rs-space-4)', borderBottom: i < eonet.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
             <div className="rs-flex rs-items-start rs-justify-between rs-gap-3">
               <div className="rs-min-w-0">
-                <div className="rs-mb-1 rs-type-tiny" style={{ fontWeight: 700, lineHeight: 1.3 }}>{e.title}</div>
+                <div className="rs-mb-1 rs-type-tiny rs-fw-700" style={{ lineHeight: 1.3 }}>{e.title}</div>
                 <div className="rs-flex rs-items-center rs-gap-2">
-                  <div className="rs-type-nano" style={{
-                    fontWeight: 700,
+                  <div className="rs-type-nano rs-fw-700" style={{
                     padding: '2px 6px',
                     borderRadius: 'var(--md-shape-xs)',
                     background: e.category_color + '33',
@@ -157,9 +156,9 @@ export default function EarthTab({ token, active }) {
         {neows.length > 0 ? neows.map((n, i) => (
           <div key={i} className="rs-mb-4" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-sm)', border: n.hazardous ? '1px solid #ff440055' : '1px solid transparent' }}>
             <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
-              <div className="rs-type-tiny" style={{ fontWeight: 800 }}>{n.name}</div>
+              <div className="rs-type-tiny rs-fw-800">{n.name}</div>
               {n.hazardous && (
-                <div className="rs-type-nano" style={{ fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--md-shape-xs)', background: '#ff440033', color: '#ff4400' }}>
+                <div className="rs-type-nano rs-fw-700" style={{ padding: '2px 6px', borderRadius: 'var(--md-shape-xs)', background: '#ff440033', color: '#ff4400' }}>
                   HAZARDOUS
                 </div>
               )}
@@ -167,19 +166,19 @@ export default function EarthTab({ token, active }) {
             <div className="rs-gap-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
               <div>
                 <div className="rs-card-meta rs-type-nano" style={{ marginBottom: 2 }}>APPROACH</div>
-                <div className="rs-type-micro" style={{ fontWeight: 600 }}>{new Date(n.approach_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+                <div className="rs-type-micro rs-fw-600">{new Date(n.approach_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
               </div>
               <div>
                 <div className="rs-card-meta rs-type-nano" style={{ marginBottom: 2 }}>MISS DISTANCE</div>
-                <div className="rs-type-micro" style={{ fontWeight: 600 }}>{n.miss_distance_lunar.toFixed(1)} LD</div>
+                <div className="rs-type-micro rs-fw-600">{n.miss_distance_lunar.toFixed(1)} LD</div>
               </div>
               <div>
                 <div className="rs-card-meta rs-type-nano" style={{ marginBottom: 2 }}>VELOCITY</div>
-                <div className="rs-type-micro" style={{ fontWeight: 600 }}>{n.velocity_kph.toLocaleString()} km/h</div>
+                <div className="rs-type-micro rs-fw-600">{n.velocity_kph.toLocaleString()} km/h</div>
               </div>
               <div>
                 <div className="rs-card-meta rs-type-nano" style={{ marginBottom: 2 }}>EST. DIAMETER</div>
-                <div className="rs-type-micro" style={{ fontWeight: 600 }}>{n.diameter_m} m</div>
+                <div className="rs-type-micro rs-fw-600">{n.diameter_m} m</div>
               </div>
             </div>
           </div>

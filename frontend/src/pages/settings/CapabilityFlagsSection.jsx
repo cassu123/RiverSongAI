@@ -19,11 +19,10 @@ export default function CapabilityFlagsSection({ data }) {
             borderRadius: 'var(--md-shape-md)'
           }}>
             <div className="rs-flex rs-items-center rs-justify-between rs-mb-2">
-              <div className="rs-type-small" style={{ fontWeight: 600, color: 'var(--md-on-surface)' }}>
+              <div className="rs-type-small rs-fw-600" style={{ color: 'var(--md-on-surface)' }}>
                 {flag.key}
               </div>
-              <div className="rs-type-micro" style={{
-                fontWeight: 700,
+              <div className="rs-type-micro rs-fw-700" style={{
                 padding: '2px 8px',
                 borderRadius: 'var(--md-shape-md)',
                 background: flag.enabled ? 'color-mix(in srgb, var(--rs-status-success) 15%, transparent)' : 'color-mix(in srgb, var(--md-outline) 15%, transparent)',

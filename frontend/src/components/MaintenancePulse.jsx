@@ -113,7 +113,7 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
         <span className="cp-svc-badge" style={{ borderColor: svcColor, color: svcColor }}>
           {cp.service_level ? cp.service_level.toUpperCase() : 'INSPECT'}
         </span>
-        <span className="rs-type-body" style={{ fontWeight: 700, color: 'var(--fg)' }}>{cp.description}</span>
+        <span className="rs-type-body rs-fw-700 rs-c-fg">{cp.description}</span>
         {cp.expected_spec && (
           <span className="cp-spec-tag">
             {cp.expected_spec}
@@ -132,7 +132,7 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
           </span>
         )}
         {cp.parts && cp.parts.map(p => (
-          <span key={p.id} className="cp-interval-tag" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+          <span key={p.id} className="cp-interval-tag rs-c-accent" style={{ borderColor: 'var(--primary)' }}>
             {p.part_name} {p.oem_part_number || p.part_number ? `(${p.oem_part_number || p.part_number})` : ''}
           </span>
         ))}
@@ -190,7 +190,7 @@ function CheckPointRow({ cp, token, vehicleId, onUpdated, isNonRoad }) {
               <input className="cockpit-input-raw" type="number" value={form.due_at_miles} onChange={set('due_at_miles')} placeholder="5000" />
             </div>
           </div>
-          <div className="rs-flex rs-gap-2 rs-mt-4" style={{ justifyContent: 'flex-end' }}>
+          <div className="rs-flex rs-gap-2 rs-mt-4 rs-justify-end">
             <button className="rs-pill" onClick={() => setEditing(false)}>CANCEL</button>
             <button className="rs-btn-primary" onClick={save} disabled={busy}>{busy ? 'SAVING...' : 'SAVE CHANGES'}</button>
           </div>
@@ -277,7 +277,7 @@ function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
         </button>
       ) : (
         <div className="rs-card is-wide rs-p-5">
-          <h4 className="rs-type-small" style={{ margin: '0 0 var(--rs-space-4) 0', color: 'var(--primary)' }}>&gt; CREATE NEW CHECKPOINT</h4>
+          <h4 className="rs-type-small rs-c-accent" style={{ margin: '0 0 var(--rs-space-4) 0' }}>&gt; CREATE NEW CHECKPOINT</h4>
           <div className="cp-edit-grid">
             <div className="cockpit-input-box" style={{ gridColumn: 'span 2' }}>
               <span className="card-metric-label">DESCRIPTION *</span>
@@ -316,7 +316,7 @@ function SpecsEditor({ vehicle, token, onUpdated, isNonRoad }) {
               <input className="cockpit-input-raw" type="number" value={newPoint.due_at_miles} onChange={setNp('due_at_miles')} placeholder="5000" />
             </div>
           </div>
-          <div className="rs-flex rs-gap-3 rs-mt-4" style={{ justifyContent: 'flex-end' }}>
+          <div className="rs-flex rs-gap-3 rs-mt-4 rs-justify-end">
             <button className="rs-pill" onClick={() => { setShowAdd(false); setNewPoint(BLANK_CP); }}>CANCEL</button>
             <button className="rs-btn-primary" onClick={addPoint} disabled={busy || !newPoint.description.trim()}>
               {busy ? 'SAVING...' : 'CREATE ITEM'}
@@ -407,7 +407,7 @@ function PeopleSettings({ token, people, onRefresh }) {
           {people.map(p => (
             <li key={p.id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between">
               <div>
-                <strong className="rs-type-body" style={{ color: 'var(--fg)' }}>{p.display_name || p.email}</strong>
+                <strong className="rs-type-body rs-c-fg">{p.display_name || p.email}</strong>
                 {p.display_name && <div className="rs-type-micro" style={{ color: 'var(--md-on-surface-variant)' }}>{p.email}</div>}
               </div>
               <div className="rs-flex rs-items-center rs-gap-3">
@@ -511,7 +511,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
             <ul className="cp-list">
               {assignments.map(a => (
                 <li key={a.person_id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
-                  <span className="rs-type-small" style={{ color: 'var(--fg)' }}>{a.person_display_name || a.person_email}</span>
+                  <span className="rs-type-small rs-c-fg">{a.person_display_name || a.person_email}</span>
                   <button className="rs-pill btn-danger" onClick={() => handleUnassign(a.person_id)} disabled={busy}>
                     UNASSIGN
                   </button>
@@ -530,7 +530,7 @@ function AssignmentsSettings({ token, vehicles, people, selectedVehicleId, onPeo
             <ul className="cp-list">
               {unassigned.map(p => (
                 <li key={p.id} className="cp-row rs-flex rs-flex-row rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
-                  <span className="rs-type-small" style={{ color: 'var(--fg)' }}>{p.display_name || p.email}</span>
+                  <span className="rs-type-small rs-c-fg">{p.display_name || p.email}</span>
                   <button className="rs-pill is-active" onClick={() => handleAssign(p.id)} disabled={busy}>
                     + ASSIGN
                   </button>
@@ -628,7 +628,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
             <button className="rs-pill" onClick={() => { setFile(null); setPreview(null); }}>✕</button>
           </>
         )}
-        {busy && <span className="rs-type-tiny rs-mono" style={{ color: 'var(--primary)' }}>{busyLabel}</span>}
+        {busy && <span className="rs-type-tiny rs-mono rs-c-accent">{busyLabel}</span>}
       </div>
 
       {preview && (
@@ -642,7 +642,7 @@ function ManualUpload({ token, vehicleId, onUpdated }) {
                 <li key={i} className="cp-row" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                   <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
                     <span className="cp-svc-badge">{item.service_level || 'INSPECT'}</span>
-                    <strong style={{ color: 'var(--fg)' }}>{item.description}</strong>
+                    <strong className="rs-c-fg">{item.description}</strong>
                     {item.expected_spec && <span className="cp-spec-tag">{item.expected_spec}</span>}
                     {item.interval_miles && <span className="cp-interval-tag">{item.interval_miles.toLocaleString()} mi</span>}
                     {item.ft_lb && <span className="cp-torque-tag">{item.ft_lb} ft-lb</span>}
@@ -791,12 +791,12 @@ function VehicleRAG({ token, vehicleId, currentOdometer, onUpdated }) {
 
       {answer && (
         <div className="mp-rag-answer animate-fade-in rs-mt-5">
-          <div className="rs-type-small" style={{ lineHeight: 1.6, color: 'var(--fg)' }}>
+          <div className="rs-type-small rs-c-fg" style={{ lineHeight: 1.6 }}>
             {answer.response}
           </div>
           {answer.chunks?.length > 0 && (
             <details className="rs-mt-4 rs-type-tiny" style={{ opacity: 0.8 }}>
-              <summary className="rs-pointer" style={{ color: 'var(--primary)' }}>View Citations ({answer.chunks.length})</summary>
+              <summary className="rs-pointer rs-c-accent">View Citations ({answer.chunks.length})</summary>
               <div className="rs-mt-2 rs-flex rs-flex-col rs-gap-2">
                 {answer.chunks.map((c, idx) => (
                   <div key={idx} style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--md-shape-xs)' }}>
@@ -1233,12 +1233,12 @@ export default function MaintenancePulse({
               }}
             >
               {vehicles.map(v => (
-                <option key={v.id} value={v.id} style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>
+                <option key={v.id} value={v.id} className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>
                   {v.nickname || `${v.year || ''} ${v.make} ${v.model}`}
                 </option>
               ))}
             </select>
-            <span className="material-symbols-rounded" style={{ position: 'absolute', right: 12, pointerEvents: 'none', color: 'var(--primary)' }}>
+            <span className="material-symbols-rounded rs-c-accent" style={{ position: 'absolute', right: 12, pointerEvents: 'none' }}>
               arrow_drop_down
             </span>
           </div>
@@ -1259,7 +1259,7 @@ export default function MaintenancePulse({
         <div className="rs-card is-wide is-elev rs-mb-5" style={{ borderTop: '2px solid var(--primary)' }}>
           <div className="rs-card-inner">
             <div className="rs-card-head rs-mb-4 rs-flex rs-justify-between rs-items-center">
-              <span className="rs-card-label" style={{ color: 'var(--primary)' }}>&gt; VEHICLE SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
+              <span className="rs-card-label rs-c-accent">&gt; VEHICLE SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
               <button className="rs-pill" onClick={() => setShowDetailsDrawer(false)}>
                 <span className="material-symbols-rounded">close</span>
               </button>
@@ -1413,7 +1413,7 @@ export default function MaintenancePulse({
           <div className="service-scope-card">
             <div className="service-scope-header">
               <div className="service-scope-title">
-                <span className="material-symbols-rounded" style={{ color: 'var(--primary)' }}>precision_manufacturing</span>
+                <span className="material-symbols-rounded rs-c-accent">precision_manufacturing</span>
                 <span>
                   {selectedMilestone === 'all'
                     ? 'ALL CONFIGURED PROCEDURES'
@@ -1467,7 +1467,7 @@ export default function MaintenancePulse({
             {/* Required Fluids & Parts */}
             <div className="staging-card">
               <div className="staging-card-head">
-                <span className="material-symbols-rounded" style={{ color: 'var(--primary)' }}>inventory_2</span>
+                <span className="material-symbols-rounded rs-c-accent">inventory_2</span>
                 <span className="card-metric-label">STAGED SUPPLIES &amp; PARTS</span>
               </div>
               {stagedProvisions.length === 0 ? (
@@ -1544,7 +1544,7 @@ export default function MaintenancePulse({
                           </span>
                         </button>
                         <div>
-                          <div className="rs-type-body" style={{ fontWeight: 700, color: 'var(--fg)' }}>{cp.description}</div>
+                          <div className="rs-type-body rs-fw-700 rs-c-fg">{cp.description}</div>
                           <div className="rs-type-micro" style={{ color: 'var(--md-on-surface-variant)', marginTop: 2 }}>
                             {cp.expected_spec ? `Spec: ${cp.expected_spec}` : ''} {cp.volume ? `· ${cp.volume}` : ''}
                           </div>
@@ -1579,7 +1579,7 @@ export default function MaintenancePulse({
       {activeTab === 'log' && (
         <div className="mp-log-form animate-page-in">
           <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
-            <h3 className="rs-m-0 rs-flex rs-items-center rs-gap-3" style={{ color: 'var(--primary)' }}>
+            <h3 className="rs-m-0 rs-flex rs-items-center rs-gap-3 rs-c-accent">
               <span className="material-symbols-rounded">edit_calendar</span>
               <span>LOG VEHICLE MAINTENANCE</span>
             </h3>
@@ -1722,7 +1722,7 @@ export default function MaintenancePulse({
                           <span className="material-symbols-rounded" style={{ color: isDone ? 'var(--primary)' : 'var(--md-on-surface-variant)' }}>
                             {isDone ? 'check_box' : 'check_box_outline_blank'}
                           </span>
-                          <span className="rs-type-small" style={{ color: 'var(--fg)', fontWeight: isDone ? 700 : 500 }}>{cp.description}</span>
+                          <span className="rs-type-small rs-c-fg" style={{ fontWeight: isDone ? 700 : 500 }}>{cp.description}</span>
                         </div>
                       </div>
                     );
@@ -1743,7 +1743,7 @@ export default function MaintenancePulse({
               />
             </div>
 
-            <div className="rs-flex rs-gap-3" style={{ justifyContent: 'flex-end' }}>
+            <div className="rs-flex rs-gap-3 rs-justify-end">
               <button type="button" className="rs-pill" onClick={() => setActiveTab('walkthrough')}>CANCEL</button>
               <button type="submit" className="rs-btn-primary" disabled={submittingLog}>
                 <span className="material-symbols-rounded">save</span>
@@ -1782,8 +1782,8 @@ export default function MaintenancePulse({
               {logs.map(log => (
                 <div key={log.id} className="mp-history-card">
                   <div className="rs-flex rs-justify-between rs-items-center">
-                    <span className="rs-type-body" style={{ fontWeight: 800, color: 'var(--fg)' }}>{log.service_type || 'Maintenance'}</span>
-                    <span className="rs-mono rs-type-tiny" style={{ color: 'var(--primary)' }}>
+                    <span className="rs-type-body rs-fw-800 rs-c-fg">{log.service_type || 'Maintenance'}</span>
+                    <span className="rs-mono rs-type-tiny rs-c-accent">
                       {log.service_date ? new Date(log.service_date).toLocaleDateString() : ''}
                     </span>
                   </div>
@@ -1796,7 +1796,7 @@ export default function MaintenancePulse({
                   </div>
 
                   {log.notes && (
-                    <div className="rs-type-tiny" style={{ color: 'var(--fg)', opacity: 0.9 }}>
+                    <div className="rs-type-tiny rs-c-fg" style={{ opacity: 0.9 }}>
                       {log.notes}
                     </div>
                   )}

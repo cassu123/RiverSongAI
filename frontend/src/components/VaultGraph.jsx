@@ -329,7 +329,7 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
             background: 'var(--md-surface-container-highest)',
             border: '1px solid var(--md-outline-variant)',
           }}>
-            <span style={{ fontWeight: 600 }}>{n.title}</span>
+            <span className="rs-fw-600">{n.title}</span>
             {n.virtual_path
               ? <span style={{ opacity: 0.45 }}>{n.virtual_path}</span>
               : <span style={{ opacity: 0.45, color: 'var(--md-sys-color-error)' }}>unlinked target</span>

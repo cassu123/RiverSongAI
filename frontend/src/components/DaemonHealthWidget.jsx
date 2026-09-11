@@ -154,8 +154,7 @@ function DaemonRow({ name, alive, port, status, age, first }) {
         }}
       />
       <span
-        className="rs-grow rs-type-nano rs-min-w-0 rs-clip rs-ellipsis rs-nowrap" style={{
-          fontWeight: 800,
+        className="rs-grow rs-type-nano rs-min-w-0 rs-clip rs-ellipsis rs-nowrap rs-fw-800" style={{
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: alive ? C.text : C.dim,

@@ -34,12 +34,11 @@ export function MetricStat({ label, value, unit, accent }) {
   return (
     <div className="rs-flex rs-flex-col" style={{ gap: 2, minWidth: 86 }}>
       <div className="rs-card-label rs-type-nano">{label}</div>
-      <div className="rs-type-h3" style={{
-        fontWeight: 700,
+      <div className="rs-type-h3 rs-fw-700" style={{
         fontVariantNumeric: 'tabular-nums',
         color: accent || 'var(--text-primary, inherit)',
       }}>
-        {value}{unit && <span className="rs-muted rs-type-micro" style={{ fontWeight: 500 }}> {unit}</span>}
+        {value}{unit && <span className="rs-muted rs-type-micro rs-fw-500"> {unit}</span>}
       </div>
     </div>
   )
@@ -173,7 +172,7 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
               {crit ? 'error' : 'warning'}
             </span>
             <div className="rs-grow">
-              <div className="rs-type-tiny" style={{ fontWeight: 600 }}>{a.message}</div>
+              <div className="rs-type-tiny rs-fw-600">{a.message}</div>
               <div className="rs-card-meta rs-type-nano">{a.level} · {new Date(a.timestamp).toLocaleString()}</div>
             </div>
             <button className="rs-btn-ghost rs-type-nano" style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
@@ -230,7 +229,7 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
             <input className="rs-input rs-w-full" autoFocus value={name} onChange={e => setName(e.target.value)}
               placeholder="e.g. Front-yard unit" style={{ margin: 'var(--rs-space-3) 0' }}
               onKeyDown={e => e.key === 'Enter' && submit()} />
-            <div className="rs-flex rs-gap-2" style={{ justifyContent: 'flex-end' }}>
+            <div className="rs-flex rs-gap-2 rs-justify-end">
               <button className="rs-btn-ghost" onClick={onClose}>Cancel</button>
               <button className="rs-btn-primary" disabled={busy || !name.trim()} onClick={submit}>{busy ? 'Claiming…' : 'Claim'}</button>
             </div>
@@ -255,7 +254,7 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
             <div className="rs-card-meta rs-mb-3 rs-type-nano">
               Headless test: <code>python scripts/fleet_sim.py --program {program} --unit-id {result.unit_id} --token &lt;token&gt;</code>
             </div>
-            <div className="rs-flex" style={{ justifyContent: 'flex-end' }}>
+            <div className="rs-flex rs-justify-end">
               <button className="rs-btn-primary" onClick={onClose}>Done</button>
             </div>
           </>

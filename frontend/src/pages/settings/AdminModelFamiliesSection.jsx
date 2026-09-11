@@ -84,10 +84,10 @@ export default function AdminModelFamiliesSection({ token }) {
             >
               <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
                 <div>
-                  <div className="rs-type-small" style={{ fontWeight: 600 }}>
+                  <div className="rs-type-small rs-fw-600">
                     {family.displayName}
                     {ov.quirky_name && (
-                      <span className="rs-type-tiny" style={{ marginLeft: 'var(--rs-space-2)', fontWeight: 400, color: 'var(--md-primary)' }}>
+                      <span className="rs-type-tiny rs-fw-400 rs-c-primary" style={{ marginLeft: 'var(--rs-space-2)' }}>
                         → {ov.quirky_name}
                       </span>
                     )}

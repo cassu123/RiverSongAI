@@ -86,7 +86,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
           {enabled ? 'cloud_done' : 'cloud_off'}
         </span>
         <div className="rs-grow">
-          <div className="rs-type-small" style={{ fontWeight: 600 }}>Free cloud inference · 100+ models</div>
+          <div className="rs-type-small rs-fw-600">Free cloud inference · 100+ models</div>
           <div className="rs-card-meta">
             {enabled
               ? 'Connected · ~40 req/min free tier'
@@ -134,7 +134,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
         <div className="rs-flex rs-justify-between rs-items-center">
           <div className="rs-flex rs-items-center rs-gap-2">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>monitoring</span>
-            <span className="rs-type-tiny" style={{ fontWeight: 600, letterSpacing: '0.06em' }}>RATE MONITOR</span>
+            <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.06em' }}>RATE MONITOR</span>
           </div>
           <span className="rs-card-meta rs-type-nano">auto-refreshes · 15s</span>
         </div>
@@ -143,8 +143,8 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
         <div className="rs-flex rs-flex-col rs-gap-2">
           <div className="rs-flex rs-justify-between" style={{ alignItems: 'baseline' }}>
             <span className="rs-card-meta">Requests this minute</span>
-            <span className="rs-type-small" style={{ fontWeight: 700, color: barColor, fontVariantNumeric: 'tabular-nums' }}>
-              {nimCalls}<span className="rs-muted" style={{ fontWeight: 400 }}> / {NIM_RATE_LIMIT}</span>
+            <span className="rs-type-small rs-fw-700" style={{ color: barColor, fontVariantNumeric: 'tabular-nums' }}>
+              {nimCalls}<span className="rs-muted rs-fw-400"> / {NIM_RATE_LIMIT}</span>
             </span>
           </div>
           <div className="rs-clip" style={{ height: 8, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-sys-color-surface-variant)' }}>
@@ -179,7 +179,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
             <div key={label} className="rs-flex rs-flex-col" style={{ gap: 2 }}>
               <div className="rs-flex rs-items-center rs-gap-1">
                 <span className="material-symbols-rounded" style={{ fontSize: '0.8rem', opacity: 0.6 }}>{icon}</span>
-                <span className="rs-type-body" style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: color || 'inherit' }}>{value}</span>
+                <span className="rs-type-body rs-fw-700" style={{ fontVariantNumeric: 'tabular-nums', color: color || 'inherit' }}>{value}</span>
               </div>
               <div className="rs-card-meta rs-type-nano">{label}</div>
             </div>

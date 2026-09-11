@@ -180,7 +180,7 @@ export function CommerceSales({ workspace, token }) {
               <div className="rs-card-value">Sale #{s.id.slice(0, 8)}</div>
               <div className="rs-card-meta">Items: {s.lines?.reduce((a,b)=>a+b.quantity,0) || 0} | Status: {s.status}</div>
             </div>
-            <div className="rs-type-h3" style={{ color: 'var(--primary)', fontWeight: 700 }}>
+            <div className="rs-type-h3 rs-c-accent rs-fw-700">
               ${Number(s.total_amount).toFixed(2)}
             </div>
           </div>

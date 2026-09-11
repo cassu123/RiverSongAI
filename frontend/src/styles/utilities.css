@@ -92,3 +92,26 @@
 .rs-relative.rs-relative     { position: relative; }
 .rs-h-full.rs-h-full         { height: 100%; }
 .rs-min-w-0.rs-min-w-0       { min-width: 0; }
+
+/* --- Semantic colour and weight -------------------------------------------
+   Named after the token each one carries, not after a meaning invented here:
+   --md-error and --rs-status-critical are two different reds that both exist,
+   and a class called .rs-danger would hide which one an element is using. */
+.rs-c-fg.rs-c-fg             { color: var(--fg); }
+.rs-c-accent.rs-c-accent     { color: var(--primary); }
+.rs-c-primary.rs-c-primary   { color: var(--md-primary); }
+.rs-c-error.rs-c-error       { color: var(--md-error); }
+.rs-c-critical.rs-c-critical { color: var(--rs-status-critical); }
+.rs-c-nominal.rs-c-nominal   { color: var(--rs-status-nominal); }
+.rs-c-warning.rs-c-warning   { color: var(--rs-status-warning); }
+
+.rs-fw-400.rs-fw-400 { font-weight: 400; }
+.rs-fw-500.rs-fw-500 { font-weight: 500; }
+.rs-fw-600.rs-fw-600 { font-weight: 600; }
+.rs-fw-700.rs-fw-700 { font-weight: 700; }
+.rs-fw-800.rs-fw-800 { font-weight: 800; }
+.rs-fw-900.rs-fw-900 { font-weight: 900; }
+
+.rs-justify-end.rs-justify-end { justify-content: flex-end; }
+.rs-items-end.rs-items-end     { align-items: flex-end; }
+.rs-items-stretch.rs-items-stretch { align-items: stretch; }

@@ -84,7 +84,7 @@ export function InlineSettingsSection({
 export function SettingsRow({ label, children }) {
   return (
     <div className="rs-mb-4">
-      <div className="rs-mb-2 rs-muted rs-type-nano" style={{ fontWeight: 700, letterSpacing: '0.12em' }}>
+      <div className="rs-mb-2 rs-muted rs-type-nano rs-fw-700" style={{ letterSpacing: '0.12em' }}>
         {label}
       </div>
       {children}
@@ -99,10 +99,9 @@ export function ToggleGroup({ options, value, onChange }) {
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className="rs-grow rs-pointer rs-type-nano" style={{
+          className="rs-grow rs-pointer rs-type-nano rs-fw-700" style={{
             padding: 'var(--rs-space-2) 0',
             borderRadius: 'var(--md-shape-sm)',
-            fontWeight: 700,
             border: value === opt.value ? '1px solid var(--primary)' : '1px solid var(--md-outline-variant)',
             background: value === opt.value ? 'rgba(var(--primary-rgb,100,100,255),0.12)' : 'transparent',
             color: value === opt.value ? 'var(--primary)' : 'var(--md-on-surface-variant)',
@@ -167,7 +166,7 @@ export default function TabSettingsPanel({ open, onClose, panelRef, title = 'SET
       maxWidth: 340,
     }}>
       <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
-        <span className="rs-muted rs-type-nano" style={{ fontWeight: 800, letterSpacing: '0.1em' }}>{title}</span>
+        <span className="rs-muted rs-type-nano rs-fw-800" style={{ letterSpacing: '0.1em' }}>{title}</span>
         <button onClick={onClose} className="rs-p-1 rs-flex rs-pointer" style={{
           background: 'none',
           border: 'none',

@@ -82,7 +82,7 @@ export default function ConversationPage({ setAction }) {
       <div className="rs-chat-input-container">
         <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
           <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
-          <span className="rs-type-tiny" style={{ fontWeight: 600, letterSpacing: '0.1em' }}>
+          <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.1em' }}>
             {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
           </span>
         </div>
@@ -121,13 +121,12 @@ export default function ConversationPage({ setAction }) {
       <div className="rs-speak-status rs-flex rs-flex-col rs-items-center">
         <div className="rs-flex rs-items-center rs-gap-2">
           <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
-          <span className="rs-type-h3" style={{ fontWeight: 600, letterSpacing: '0.15em', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
+          <span className="rs-type-h3 rs-fw-600" style={{ letterSpacing: '0.15em', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
             {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}
           </span>
         </div>
         {convState === 'idle' && (
-          <div className="rs-mt-3 rs-text-center rs-type-micro rs-mono" style={{
-            color: 'var(--primary)',
+          <div className="rs-mt-3 rs-text-center rs-type-micro rs-mono rs-c-accent" style={{
             minHeight: 80,
             pointerEvents: 'none',
           }}>
@@ -159,7 +158,7 @@ export default function ConversationPage({ setAction }) {
 
       {error && (
         <div className="rs-speak-error">
-          <span className="rs-type-tiny" style={{ color: 'var(--rs-status-critical)' }}>{error}</span>
+          <span className="rs-type-tiny rs-c-critical">{error}</span>
         </div>
       )}
 
@@ -192,12 +191,12 @@ export default function ConversationPage({ setAction }) {
           </div>
         ))}
         {streamingContent && (
-          <div className="rs-type-small" style={{ color: 'var(--primary)' }}>
+          <div className="rs-type-small rs-c-accent">
             <strong>RIVER:</strong> {streamingContent}
           </div>
         )}
         {messages.length === 0 && !streamingContent && convState === 'listening' && (
-          <div className="rs-text-center rs-type-small" style={{ color: 'var(--primary)' }}>Intercepting audio stream...</div>
+          <div className="rs-text-center rs-type-small rs-c-accent">Intercepting audio stream...</div>
         )}
       </div>
     </div>

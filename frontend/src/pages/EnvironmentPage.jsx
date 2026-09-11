@@ -74,7 +74,7 @@ export default function EnvironmentPage({ setAction }) {
 
   const ActionSlot = useMemo(() => (
     <div className="rs-input-bar">
-      <div className="rs-flex rs-gap-3 rs-w-full" style={{ justifyContent: 'flex-end' }}>
+      <div className="rs-flex rs-gap-3 rs-w-full rs-justify-end">
          <button className="rs-pill" onClick={() => fetchData()}>
            <span className="material-symbols-rounded">refresh</span>
            REFRESH
@@ -145,8 +145,8 @@ export default function EnvironmentPage({ setAction }) {
       </header>
 
       <div className="rs-flex rs-gap-5 rs-mb-5" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 'var(--rs-space-2)' }}>
-        <Link to="/environment" style={{ fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 'var(--rs-space-2)', marginBottom: -9 }}>Property / Home</Link>
-        <Link to="/fleet" style={{ fontWeight: 400, color: 'var(--text-secondary)', textDecoration: 'none' }}>Fleet</Link>
+        <Link to="/environment" className="rs-fw-600" style={{ color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '2px solid var(--accent-primary)', paddingBottom: 'var(--rs-space-2)', marginBottom: -9 }}>Property / Home</Link>
+        <Link to="/fleet" className="rs-fw-400" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Fleet</Link>
       </div>
 
       {flash && (
@@ -190,7 +190,7 @@ export default function EnvironmentPage({ setAction }) {
                   
                   <div style={{ fontSize: '4rem', fontWeight: 300, lineHeight: 1, margin: 'var(--rs-space-3) 0' }}>{r.persons}</div>
                   
-                  <div className="rs-type-micro" style={{ color: act.color, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  <div className="rs-type-micro rs-fw-500" style={{ color: act.color, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     {act.icon} {act.label}
                   </div>
 
@@ -233,7 +233,7 @@ export default function EnvironmentPage({ setAction }) {
             <div className="rs-gap-4 rs-w-full" style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'start' }}>
               <div className="rs-card rs-grow" style={{ backdropFilter: 'var(--glass-blur)' }}>
                 <div className="rs-card-head">
-                  <div className="rs-pill" style={{ background: ROVER_MODE_COLOR[rover.mode] || ROVER_MODE_COLOR.MANUAL, color: 'black', fontWeight: 600 }}>
+                  <div className="rs-pill rs-fw-600" style={{ background: ROVER_MODE_COLOR[rover.mode] || ROVER_MODE_COLOR.MANUAL, color: 'black' }}>
                     {rover.mode}
                   </div>
                   <div className="rs-card-label" style={{ color: rover.armed ? 'var(--md-error)' : 'inherit' }}>
@@ -254,11 +254,11 @@ export default function EnvironmentPage({ setAction }) {
                 <div className="rs-gap-5 rs-mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div>
                     <div className="rs-card-label rs-type-nano">SPEED</div>
-                    <div className="rs-type-small" style={{ fontWeight: 500 }}>{rover.speed_ms} m/s</div>
+                    <div className="rs-type-small rs-fw-500">{rover.speed_ms} m/s</div>
                   </div>
                   <div>
                     <div className="rs-card-label rs-type-nano">HEADING</div>
-                    <div className="rs-type-small" style={{ fontWeight: 500 }}>{rover.heading}°</div>
+                    <div className="rs-type-small rs-fw-500">{rover.heading}°</div>
                   </div>
                 </div>
 
@@ -281,13 +281,13 @@ export default function EnvironmentPage({ setAction }) {
                   <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'HOLD'})} disabled={acting === 'rover'}>HOLD</button>
                   <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'AUTO'})} disabled={acting === 'rover'}>AUTO</button>
                   <button className="rs-btn-primary" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('set_mode', {mode: 'RTL'})} disabled={acting === 'rover'}>RTL</button>
-                  <button className="rs-pill" style={{ minWidth: 120, color: 'var(--md-error)' }} onClick={() => sendRoverCommand('disarm')} disabled={acting === 'rover'}>DISARM</button>
+                  <button className="rs-pill rs-c-error" style={{ minWidth: 120 }} onClick={() => sendRoverCommand('disarm')} disabled={acting === 'rover'}>DISARM</button>
                 </div>
               )}
             </div>
 
             <div className="rs-card" style={{ borderStyle: 'dashed', background: 'transparent', backdropFilter: 'var(--glass-blur-sm)' }}>
-              <div className="rs-mono rs-type-tiny" style={{ color: 'var(--primary)' }}>◈ GPS: {rover.lat}, {rover.lon}</div>
+              <div className="rs-mono rs-type-tiny rs-c-accent">◈ GPS: {rover.lat}, {rover.lon}</div>
               <div className="rs-card-meta rs-mt-1">Full real-time map integration is planned for Phase 14.</div>
             </div>
           </>

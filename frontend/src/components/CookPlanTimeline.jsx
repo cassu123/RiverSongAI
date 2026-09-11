@@ -46,9 +46,8 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
         <div key={lane.id} className="rs-flex rs-items-center rs-gap-2">
           <span
             title={lane.title}
-            className="rs-no-shrink rs-type-nano rs-clip rs-ellipsis rs-nowrap" style={{
+            className="rs-no-shrink rs-type-nano rs-clip rs-ellipsis rs-nowrap rs-fw-700" style={{
               width: 74,
-              fontWeight: 700,
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               color: colorFor[lane.id],

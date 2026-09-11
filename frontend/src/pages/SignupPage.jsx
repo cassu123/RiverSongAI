@@ -35,7 +35,7 @@ export default function SignupPage({ onSwitchToLogin }) {
         <div className="rs-text-center" style={{ marginBottom: '2rem' }}>
           <div className="rs-flex rs-items-center rs-gap-3 rs-justify-center rs-mb-2">
             <span className="rs-pill is-active rs-type-body" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}>RS</span>
-            <span className="rs-type-h3" style={{ fontFamily: 'var(--font-mood)', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
+            <span className="rs-type-h3 rs-fw-600" style={{ fontFamily: 'var(--font-mood)', letterSpacing: '0.12em' }}>RIVER SONG</span>
           </div>
           <div className="rs-card-label rs-muted rs-type-nano">NEW OPERATOR REGISTRATION</div>
         </div>
@@ -81,7 +81,7 @@ export default function SignupPage({ onSwitchToLogin }) {
             />
           </div>
 
-          {error && <div className="rs-text-center rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+          {error && <div className="rs-text-center rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
 
           <button className="rs-btn-primary rs-mt-1 rs-w-full" type="submit" disabled={loading}>
             {loading ? 'INITIALIZING...' : 'AUTHORIZE ACCOUNT'}

@@ -115,9 +115,9 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
         <div className="rs-card">
           <div className="rs-card-inner">
             <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
-              <span className="material-symbols-rounded" style={{color: 'var(--md-primary)', fontSize: '2rem'}}>local_library</span>
+              <span className="material-symbols-rounded rs-c-primary" style={{ fontSize: '2rem' }}>local_library</span>
               <div>
-                <div style={{fontWeight: 700}}>Libby / OverDrive</div>
+                <div className="rs-fw-700">Libby / OverDrive</div>
                 <div className="rs-card-meta">Live loans and holds telemetry</div>
               </div>
             </div>
@@ -150,7 +150,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
               <span className="material-symbols-rounded" style={{color: '#4285f4', fontSize: '2rem'}}>play_arrow</span>
               <div>
-                <div style={{fontWeight: 700}}>Google Play Books</div>
+                <div className="rs-fw-700">Google Play Books</div>
                 <div className="rs-card-meta">Sync annotations and reading states</div>
               </div>
             </div>
@@ -180,7 +180,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
               <span className="material-symbols-rounded" style={{color: 'var(--text-dim)', fontSize: '2rem'}}>upload_file</span>
               <div>
-                <div style={{fontWeight: 700}}>Legacy Archive Import</div>
+                <div className="rs-fw-700">Legacy Archive Import</div>
                 <div className="rs-card-meta">Goodreads, Kobo, or Play Books CSV</div>
               </div>
             </div>

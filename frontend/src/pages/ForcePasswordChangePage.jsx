@@ -58,7 +58,7 @@ export default function ForcePasswordChangePage() {
     <div className="rs-root rs-flex rs-items-center rs-justify-center" style={{ background: 'var(--bg-base)' }}>
       <div className="rs-card animate-fade-in" style={{ maxWidth: 400, width: '90%' }}>
         <header className="rs-card-head">
-          <span className="rs-card-label" style={{ color: 'var(--md-error)' }}>SECURITY UPDATE REQUIRED</span>
+          <span className="rs-card-label rs-c-error">SECURITY UPDATE REQUIRED</span>
         </header>
         
         <h1 className="rs-greeting rs-mb-3" style={{ fontSize: '1.5rem' }}>New Credentials</h1>
@@ -113,7 +113,7 @@ export default function ForcePasswordChangePage() {
               />
             </div>
 
-            {error && <div className="rs-type-tiny" style={{ color: 'var(--md-error)' }}>{error}</div>}
+            {error && <div className="rs-type-tiny rs-c-error">{error}</div>}
 
             <div className="rs-flex rs-gap-3 rs-mt-3">
               <button type="submit" className="rs-btn-primary rs-grow" disabled={loading}>

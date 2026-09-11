@@ -60,13 +60,12 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
                       <button
                         key={key}
                         onClick={() => toggle(key)}
-                        className="rs-type-nano rs-pointer" style={{
+                        className="rs-type-nano rs-pointer rs-fw-700" style={{
                           padding: 'var(--rs-space-1) var(--rs-space-3)',
                           borderRadius: 'var(--md-shape-xs)',
                           border: `1px solid ${on ? 'var(--primary)' : 'oklch(30% 0.01 265)'}`,
                           background: on ? 'oklch(20% 0.06 265)' : 'transparent',
                           color: on ? 'var(--primary)' : 'oklch(50% 0.01 265)',
-                          fontWeight: 700,
                           letterSpacing: '0.06em',
                           textTransform: 'uppercase',
                           transition: 'all 0.15s ease',

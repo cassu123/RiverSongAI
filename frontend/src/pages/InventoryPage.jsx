@@ -143,7 +143,7 @@ export default function InventoryPage({ setAction }) {
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
-                className="rs-w-full rs-type-small" style={{ all: 'unset', fontWeight: 600 }} 
+                className="rs-w-full rs-type-small rs-fw-600" style={{ all: 'unset' }} 
                 placeholder="IDENTIFY ASSET..." 
                 value={query} 
                 onChange={e => setQuery(e.target.value)} 
@@ -159,7 +159,7 @@ export default function InventoryPage({ setAction }) {
             <span className="material-symbols-rounded">barcode_scanner</span>
             <span className="rs-speak-actions-label">SCAN</span>
           </button>
-          <button className="rs-btn-primary" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'rgba(250,204,21,0.2)', color: 'var(--rs-status-warning)' }} disabled={!homeId}>
+          <button className="rs-btn-primary rs-c-warning" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'rgba(250,204,21,0.2)' }} disabled={!homeId}>
             <span className="material-symbols-rounded">fact_check</span>
             <span className="rs-speak-actions-label">AUDIT</span>
           </button>
@@ -217,7 +217,7 @@ export default function InventoryPage({ setAction }) {
 
       {homes && homes.length === 0 && (
         <div className="rs-card is-wide rs-mt-6 rs-p-7 rs-text-center">
-          <span className="material-symbols-rounded rs-mb-4" style={{ fontSize: '3rem', color: 'var(--md-primary)' }}>home</span>
+          <span className="material-symbols-rounded rs-mb-4 rs-c-primary" style={{ fontSize: '3rem' }}>home</span>
           <h2 style={{ margin: '0 0 var(--rs-space-2) 0', fontSize: '1.5rem' }}>Welcome to The Stash</h2>
           <div className="rs-card-meta rs-mb-5">Before you can track assets, you need to create a Home or Location.</div>
           <form onSubmit={createHome} className="rs-flex rs-gap-3 rs-justify-center" style={{ maxWidth: 400, margin: '0 auto' }}>
@@ -289,14 +289,14 @@ export default function InventoryPage({ setAction }) {
                  <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem' }}>{stats.total}</div>
                </div>
                <div>
-                 <div className="rs-card-label" style={{ color: 'var(--md-primary)' }}>REPLACEMENT VALUE</div>
+                 <div className="rs-card-label rs-c-primary">REPLACEMENT VALUE</div>
                  <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem' }}>{stats.value}</div>
                </div>
                <div>
                  <div className="rs-card-label" style={{ color: 'var(--warn)' }}>MISSING INFO</div>
                  <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem', color: stats.missingDocs > 0 ? 'var(--warn)' : 'inherit' }}>{stats.missingDocs}</div>
                </div>
-               <div className="rs-grow rs-flex rs-items-center" style={{ minWidth: 200, justifyContent: 'flex-end' }}>
+               <div className="rs-grow rs-flex rs-items-center rs-justify-end" style={{ minWidth: 200 }}>
                   <div className="rs-status-strip">
                     <span className="rs-status-dot" style={{ background: stats.missingDocs === 0 ? '#4ade80' : 'var(--warn)' }} />
                     <span>{stats.missingDocs === 0 ? 'CLAIM READY' : 'NEEDS ATTENTION'}</span>
@@ -323,7 +323,7 @@ export default function InventoryPage({ setAction }) {
                 <div className="rs-card-head">
                   <span className="rs-card-label">{(item.category || 'ASSET').toUpperCase()}</span>
                   <div className="rs-status-strip" style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)' }}>
-                    <span className="rs-mono" style={{ fontWeight: 900 }}>{item.quantity}</span>
+                    <span className="rs-mono rs-fw-900">{item.quantity}</span>
                     <span className="rs-type-nano">{(item.unit || 'UNIT').toUpperCase()}</span>
                   </div>
                 </div>
@@ -335,8 +335,8 @@ export default function InventoryPage({ setAction }) {
                 
                 {(item.receipt_url || item.warranty_url) && (
                   <div className="rs-flex rs-gap-2 rs-mb-3">
-                    {item.receipt_url && <span className="rs-card-meta" style={{ color: 'var(--rs-status-nominal)' }}><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>receipt</span> Receipt</span>}
-                    {item.warranty_url && <span className="rs-card-meta" style={{ color: 'var(--rs-status-nominal)' }}><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>verified</span> Warranty</span>}
+                    {item.receipt_url && <span className="rs-card-meta rs-c-nominal"><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>receipt</span> Receipt</span>}
+                    {item.warranty_url && <span className="rs-card-meta rs-c-nominal"><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>verified</span> Warranty</span>}
                   </div>
                 )}
                 

@@ -104,8 +104,7 @@ export function MusicDiscoveryCard({
             </div>
             
             <div className="rs-mt-3">
-              <div className="rs-type-tiny rs-nowrap rs-clip rs-ellipsis" style={{
-                fontWeight: 600,
+              <div className="rs-type-tiny rs-nowrap rs-clip rs-ellipsis rs-fw-600" style={{
                 color: 'var(--md-on-surface)',
               }}>
                 {track.title}

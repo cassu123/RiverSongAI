@@ -115,7 +115,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
               )}
               {msg.meta && msg.meta.receipts && msg.meta.receipts.length > 0 && (
                 <div className="rs-mt-3 rs-p-3" style={{ background: 'var(--bg-elev)', borderRadius: 'var(--md-shape-sm)', border: '1px solid var(--md-outline-variant)' }}>
-                  <div className="rs-mb-2 rs-type-micro" style={{ color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>
+                  <div className="rs-mb-2 rs-type-micro rs-c-accent rs-fw-600" style={{ textTransform: 'uppercase' }}>
                     Agent Tasks Completed
                   </div>
                   {msg.meta.receipts.map((rcpt, i) => (
@@ -124,7 +124,7 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                         {rcpt.ok ? 'check_circle' : 'error'}
                       </span>
                       <div className="rs-flex rs-flex-col">
-                        <span className="rs-type-tiny rs-mono" style={{ fontWeight: 500 }}>{rcpt.tool}</span>
+                        <span className="rs-type-tiny rs-mono rs-fw-500">{rcpt.tool}</span>
                         <span className="rs-type-micro" style={{ opacity: 0.8 }}>{rcpt.summary}</span>
                       </div>
                     </div>

@@ -82,7 +82,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
                 className={`rs-card is-tappable ${selected?.unit_id === u.unit_id ? 'is-elev' : ''}`}
                 style={{ padding: 'var(--rs-space-3)', cursor: 'pointer', borderColor: selected?.unit_id === u.unit_id ? accent : undefined }}>
                 <div className="rs-flex rs-items-center rs-justify-between rs-gap-2">
-                  <span className="rs-type-tiny rs-clip rs-ellipsis rs-nowrap" style={{ fontWeight: 600 }}>
+                  <span className="rs-type-tiny rs-clip rs-ellipsis rs-nowrap rs-fw-600">
                     {u.name || u.unit_id}
                   </span>
                   <UnitStatusPill unit={u} />
@@ -91,7 +91,7 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
                   <span className="rs-pill rs-mt-2 rs-type-nano" style={{ padding: '1px 6px', display: 'inline-block' }}>SIM</span>
                 )}
                 <div className="rs-flex rs-gap-2 rs-mt-2">
-                  <button className="rs-btn-ghost rs-type-nano" style={{ padding: '3px 8px', color: 'var(--md-error)', borderColor: 'var(--md-error)' }}
+                  <button className="rs-btn-ghost rs-type-nano rs-c-error" style={{ padding: '3px 8px', borderColor: 'var(--md-error)' }}
                     onClick={(e) => { e.stopPropagation(); remove(u) }}>Remove</button>
                 </div>
               </div>

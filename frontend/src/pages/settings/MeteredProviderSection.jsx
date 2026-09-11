@@ -172,7 +172,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           {enabled ? 'paid' : 'cloud_off'}
         </span>
         <div className="rs-grow">
-          <div className="rs-type-small" style={{ fontWeight: 600 }}>{meta.tagline}</div>
+          <div className="rs-type-small rs-fw-600">{meta.tagline}</div>
           <div className="rs-card-meta">
             {enabled
               ? 'Connected · billed per token'
@@ -264,7 +264,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>
               savings
             </span>
-            <span className="rs-type-tiny" style={{ fontWeight: 600, letterSpacing: '0.06em' }}>
+            <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.06em' }}>
               SPEND TRACKER
             </span>
           </div>
@@ -305,8 +305,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
                   {icon}
                 </span>
                 <span
-                  className="rs-type-body" style={{
-                    fontWeight: 700,
+                  className="rs-type-body rs-fw-700" style={{
                     fontVariantNumeric: 'tabular-nums',
                     color: color || 'inherit',
                   }}

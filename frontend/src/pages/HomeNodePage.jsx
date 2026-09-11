@@ -260,7 +260,7 @@ export default function HomeNodePage({ setAction }) {
       <div className="gh-glance-bar">
         <div className="gh-glance-left">
           <div className="gh-glance-orb-wrap">
-            <span className="material-symbols-rounded" style={{ color: 'var(--md-primary)', fontSize: 22 }}>
+            <span className="material-symbols-rounded rs-c-primary" style={{ fontSize: 22 }}>
               {status?.reachable ? 'home' : 'cloud_off'}
             </span>
           </div>
@@ -335,7 +335,7 @@ export default function HomeNodePage({ setAction }) {
               onClick={() => callAction(s.entity_id, 'turn_on')}
               disabled={acting === s.entity_id}
             >
-              <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--md-primary)' }}>
+              <span className="material-symbols-rounded rs-c-primary" style={{ fontSize: 18 }}>
                 auto_awesome
               </span>
               <span>{s.name}</span>
@@ -401,7 +401,7 @@ export default function HomeNodePage({ setAction }) {
           <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: 48, color: 'var(--warn)' }}>
             cloud_off
           </span>
-          <h2 className="rs-mb-2 rs-type-h3" style={{ fontWeight: 600, color: 'var(--fg)' }}>
+          <h2 className="rs-mb-2 rs-type-h3 rs-fw-600 rs-c-fg">
             Home Assistant Unreachable
           </h2>
           <p className="rs-card-meta" style={{ maxWidth: 440, margin: '0 auto 20px auto' }}>
@@ -473,7 +473,7 @@ export default function HomeNodePage({ setAction }) {
               <span className="material-symbols-rounded rs-mb-3 rs-muted" style={{ fontSize: 44 }}>
                 devices
               </span>
-              <p className="rs-card-meta rs-mb-4 rs-type-body" style={{ color: 'var(--fg)' }}>
+              <p className="rs-card-meta rs-mb-4 rs-type-body rs-c-fg">
                 No active devices found in Home Assistant.
               </p>
               <button className="gh-glance-action" style={{ margin: '0 auto' }} onClick={runSync} disabled={syncing}>
@@ -730,8 +730,8 @@ function LockTile({ device, busy, onAction }) {
       <div className="gh-tile-body">
         <div className="gh-tile-title">{device.name}</div>
         <div
-          className="gh-tile-status"
-          style={{ color: locked ? '#34d399' : '#fb923c', fontWeight: 600 }}
+          className="gh-tile-status rs-fw-600"
+          style={{ color: locked ? '#34d399' : '#fb923c' }}
         >
           {locked ? 'LOCKED' : 'UNLOCKED'}
         </div>
@@ -886,11 +886,10 @@ function NotConfigured() {
           <span className="gh-chip rs-justify-center" style={{ width: 28, height: 28, padding: 0 }}>2</span>
           <span>Add to your backend <code>.env</code> file:</span>
         </div>
-        <div className="rs-mono rs-type-tiny" style={{
+        <div className="rs-mono rs-type-tiny rs-c-primary" style={{
           padding: 'var(--rs-space-4) var(--rs-space-5)',
           background: 'rgba(0,0,0,0.35)',
           borderRadius: 'var(--md-shape-lg)',
-          color: 'var(--md-primary)',
           border: '1px solid rgba(0, 229, 255, 0.2)',
         }}>
           <div>HOME_ASSISTANT_URL=http://homeassistant.local:8123</div>

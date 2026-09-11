@@ -60,7 +60,7 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
       <p className="rs-card-meta rs-mb-4">
         Toggle models off to hide them globally for all users. Hidden models cannot
         be selected but their settings are preserved.
-        {saving && <span style={{ marginLeft: 'var(--rs-space-2)', color: 'var(--md-primary)' }}>Saving…</span>}
+        {saving && <span className="rs-c-primary" style={{ marginLeft: 'var(--rs-space-2)' }}>Saving…</span>}
       </p>
 
       {/* ── Voices ── */}
@@ -72,7 +72,7 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
         const group = allVoices.filter(v => v.accent === accent)
         return (
           <div key={accent} className="rs-mb-3">
-            <div className="rs-mb-1 rs-type-nano" style={{ fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em' }}>
+            <div className="rs-mb-1 rs-type-nano rs-fw-600" style={{ color: 'var(--md-outline)', letterSpacing: '0.08em' }}>
               {accent.toUpperCase()}
             </div>
             <div className="rs-flex rs-flex-col rs-gap-1">
@@ -112,7 +112,7 @@ export default function AdminVisibilitySection({ visibility, token, onChanged })
         const group = allLlms.filter(m => m.provider === provider)
         return (
           <div key={provider} className="rs-mb-3">
-            <div className="rs-mb-1 rs-type-nano" style={{ fontWeight: 600, color: 'var(--md-outline)', letterSpacing: '0.08em' }}>
+            <div className="rs-mb-1 rs-type-nano rs-fw-600" style={{ color: 'var(--md-outline)', letterSpacing: '0.08em' }}>
               {(PROVIDER_DISPLAY[provider] || provider).toUpperCase()}
             </div>
             <div className="rs-flex rs-flex-col rs-gap-1">

@@ -61,10 +61,8 @@ function fmtGameTime(iso) {
 
 function StatusBadge({ game }) {
   if (game.is_live) return (
-    <span className="rs-type-nano" style={{
+    <span className="rs-type-nano rs-c-critical rs-fw-800" style={{
       background: 'rgba(248,113,113,0.15)',
-      color: 'var(--rs-status-critical)',
-      fontWeight: 800,
       letterSpacing: '0.08em',
       padding: '3px 8px',
       borderRadius: 'var(--md-shape-xs)',
@@ -73,10 +71,8 @@ function StatusBadge({ game }) {
     </span>
   )
   if (game.status === 'STATUS_FINAL') return (
-    <span className="rs-type-nano" style={{
+    <span className="rs-type-nano rs-c-nominal rs-fw-800" style={{
       background: 'rgba(74,222,128,0.12)',
-      color: 'var(--rs-status-nominal)',
-      fontWeight: 800,
       letterSpacing: '0.08em',
       padding: '3px 8px',
       borderRadius: 'var(--md-shape-xs)',
@@ -85,10 +81,9 @@ function StatusBadge({ game }) {
     </span>
   )
   return (
-    <span className="rs-type-nano" style={{
+    <span className="rs-type-nano rs-fw-700" style={{
       background: 'var(--md-surface-container-high)',
       color: 'var(--md-on-surface-variant)',
-      fontWeight: 700,
       letterSpacing: '0.06em',
       padding: '3px 8px',
       borderRadius: 'var(--md-shape-xs)',
@@ -107,13 +102,12 @@ function TeamSide({ abbr, name, logo, score, winner, showScore, align = 'left' }
           <img src={logo} alt={abbr} style={{ width: 28, height: 28, objectFit: 'contain' }}
             onError={e => { e.target.style.display = 'none' }} />
         )}
-        <span className="rs-type-small" style={{ fontWeight: 800 }}>{abbr}</span>
+        <span className="rs-type-small rs-fw-800">{abbr}</span>
       </div>
       <span className="rs-card-meta rs-type-nano">{name}</span>
       {showScore && score !== '' && (
-        <span className="rs-mono" style={{
+        <span className="rs-mono rs-fw-900" style={{
           fontSize: '1.6rem',
-          fontWeight: 900,
           color: winner ? 'var(--primary)' : 'var(--md-on-surface)',
           lineHeight: 1,
         }}>
@@ -154,7 +148,7 @@ function GameCard({ game, onClick }) {
       <div className="rs-flex rs-items-center" style={{ gap: 0 }}>
         <TeamSide abbr={game.away_abbr} name={game.away_team} logo={game.away_logo}
           score={game.away_score} winner={game.away_winner} showScore={!isScheduled} />
-        <div className="rs-type-body rs-no-shrink" style={{ padding: '0 var(--rs-space-4)', fontWeight: 900, opacity: 0.2 }}>@</div>
+        <div className="rs-type-body rs-no-shrink rs-fw-900" style={{ padding: '0 var(--rs-space-4)', opacity: 0.2 }}>@</div>
         <TeamSide abbr={game.home_abbr} name={game.home_team} logo={game.home_logo}
           score={game.home_score} winner={game.home_winner} showScore={!isScheduled} align="right" />
       </div>
@@ -191,7 +185,7 @@ function LeagueGrid({ favorites, onToggle }) {
     <div>
       {Object.entries(PICKER_GROUPS).map(([cat, leagues]) => (
         <div key={cat} className="rs-mb-4">
-          <div className="rs-mb-2 rs-muted rs-type-nano" style={{ fontWeight: 700, letterSpacing: '0.12em' }}>
+          <div className="rs-mb-2 rs-muted rs-type-nano rs-fw-700" style={{ letterSpacing: '0.12em' }}>
             {cat.toUpperCase()}
           </div>
           <div className="rs-flex rs-flex-wrap rs-gap-2">
@@ -201,11 +195,10 @@ function LeagueGrid({ favorites, onToggle }) {
                 <button
                   key={l.id}
                   onClick={() => onToggle(l.id)}
-                  className="rs-flex rs-items-center rs-type-nano rs-pointer" style={{
+                  className="rs-flex rs-items-center rs-type-nano rs-pointer rs-fw-700" style={{
                     gap: 5,
                     padding: '5px 10px',
                     borderRadius: 'var(--md-shape-xl)',
-                    fontWeight: 700,
                     border: active ? '1px solid var(--primary)' : '1px solid var(--md-outline-variant)',
                     background: active ? 'rgba(var(--primary-rgb,100,100,255),0.12)' : 'transparent',
                     color: active ? 'var(--primary)' : 'var(--md-on-surface-variant)',
@@ -255,7 +248,7 @@ function NewsArticleCard({ a }) {
       )}
       <div className="rs-grow rs-min-w-0">
         <div className="rs-flex rs-items-center rs-gap-2" style={{ marginBottom: 5 }}>
-          <span className="rs-card-label rs-type-nano" style={{ color: 'var(--primary)', opacity: 0.9 }}>
+          <span className="rs-card-label rs-type-nano rs-c-accent" style={{ opacity: 0.9 }}>
             {a.source?.toUpperCase()}
           </span>
           {a.category && (
@@ -385,7 +378,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
         </div>
         <div className="rs-flex rs-items-center rs-gap-3">
           <BoxTeam c={away} />
-          <div style={{ fontSize: '1.4rem', opacity: 0.2, fontWeight: 900 }}>—</div>
+          <div className="rs-fw-900" style={{ fontSize: '1.4rem', opacity: 0.2 }}>—</div>
           <BoxTeam c={home} align="right" />
         </div>
       </div>
@@ -410,13 +403,13 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
             </div>
             {statNames.map(({ name, label }) => (
               <React.Fragment key={name}>
-                <div className="rs-mono rs-type-micro rs-text-left" style={{ fontWeight: 700 }}>
+                <div className="rs-mono rs-type-micro rs-text-left rs-fw-700">
                   {awayBy[name] ?? '—'}
                 </div>
                 <div className="rs-card-meta rs-text-center rs-muted rs-type-nano">
                   {label}
                 </div>
-                <div className="rs-mono rs-type-micro rs-text-right" style={{ fontWeight: 700 }}>
+                <div className="rs-mono rs-type-micro rs-text-right rs-fw-700">
                   {homeBy[name] ?? '—'}
                 </div>
               </React.Fragment>
@@ -431,7 +424,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
           <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">LEADERS</div>
           {leaders.map((teamBlock, ti) => (
             <div key={ti} className="rs-mb-4">
-              <div className="rs-card-label rs-mb-2 rs-type-nano" style={{ color: 'var(--primary)' }}>
+              <div className="rs-card-label rs-mb-2 rs-type-nano rs-c-accent">
                 {teamBlock.team?.displayName?.toUpperCase()}
               </div>
               {(teamBlock.leaders || []).map((cat, ci) => {
@@ -444,11 +437,11 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
                   }}>
                     <div>
                       <div className="rs-card-meta rs-muted rs-type-nano">{cat.displayName?.toUpperCase()}</div>
-                      <div className="rs-type-micro" style={{ fontWeight: 700 }}>
+                      <div className="rs-type-micro rs-fw-700">
                         {athleteEntry.athlete?.displayName || '—'}
                       </div>
                     </div>
-                    <div className="rs-mono rs-type-tiny" style={{ fontWeight: 800 }}>
+                    <div className="rs-mono rs-type-tiny rs-fw-800">
                       {athleteEntry.displayValue || '—'}
                     </div>
                   </div>
@@ -479,13 +472,12 @@ function BoxTeam({ c, align = 'left' }) {
       <div className="rs-flex rs-items-center rs-gap-2" style={{ flexDirection: isRight ? 'row-reverse' : 'row' }}>
         {t.logo && <img src={t.logo} alt={t.abbreviation} style={{ width: 40, height: 40, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none' }} />}
         <div style={{ textAlign: isRight ? 'right' : 'left' }}>
-          <div className="rs-type-small" style={{ fontWeight: 800 }}>{t.abbreviation || '—'}</div>
+          <div className="rs-type-small rs-fw-800">{t.abbreviation || '—'}</div>
           <div className="rs-card-meta rs-type-nano">{t.displayName}</div>
         </div>
       </div>
-      <div className="rs-mono" style={{
+      <div className="rs-mono rs-fw-900" style={{
         fontSize: '2.4rem',
-        fontWeight: 900,
         lineHeight: 1,
         color: winner ? 'var(--primary)' : 'var(--md-on-surface)',
       }}>

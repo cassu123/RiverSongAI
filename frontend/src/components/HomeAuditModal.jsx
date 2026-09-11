@@ -110,7 +110,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
         <h2 className="rs-mb-2" style={{ marginTop: 0, fontSize: '2rem' }}>Sector Audit</h2>
         <p className="rs-card-meta">Verify physical presence of operational assets.</p>
 
-        {error && <div className="rs-p-2 rs-mb-4" style={{ color: 'var(--rs-status-critical)', background: 'rgba(248,113,113,0.1)' }}>{error}</div>}
+        {error && <div className="rs-p-2 rs-mb-4 rs-c-critical" style={{ background: 'rgba(248,113,113,0.1)' }}>{error}</div>}
 
         {loading ? (
           <div>INITIALIZING AUDIT SUBSYSTEM...</div>
@@ -119,7 +119,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
             <span className="material-symbols-rounded rs-mb-4" style={{ fontSize: '4rem', opacity: 0.2 }}>fact_check</span>
             {audit && audit.status === 'completed' && (
               <div className="rs-mb-6">
-                <div className="rs-mb-4 rs-type-h3" style={{ color: 'var(--rs-status-nominal)' }}>AUDIT COMPLETED SUCCESSFULLY</div>
+                <div className="rs-mb-4 rs-type-h3 rs-c-nominal">AUDIT COMPLETED SUCCESSFULLY</div>
                 <div className="rs-flex rs-gap-4 rs-justify-center">
                   <button className="rs-btn-primary" onClick={() => downloadDiscrepancy(false)} style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)' }}>
                     <span className="material-symbols-rounded">picture_as_pdf</span>
@@ -162,7 +162,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
 
             <div className="rs-flex rs-gap-6 rs-flex-wrap">
               <div style={{ flex: '1 1 400px' }}>
-                <h3 className="rs-mb-4 rs-flex rs-justify-between rs-type-body" style={{ color: 'var(--rs-status-nominal)' }}>
+                <h3 className="rs-mb-4 rs-flex rs-justify-between rs-type-body rs-c-nominal">
                   <span>SCANNED</span>
                   <span>({audit.scanned?.length || 0})</span>
                 </h3>
@@ -179,7 +179,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                 ))}
               </div>
               <div style={{ flex: '1 1 400px' }}>
-                <h3 className="rs-mb-4 rs-flex rs-justify-between rs-type-body" style={{ color: 'var(--rs-status-critical)' }}>
+                <h3 className="rs-mb-4 rs-flex rs-justify-between rs-type-body rs-c-critical">
                   <span>MISSING</span>
                   <span>({audit.missing?.length || 0})</span>
                 </h3>
@@ -199,13 +199,13 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
 
             <div className="rs-mt-6 rs-p-5" style={{ background: 'var(--md-surface-container)', borderRadius: 'var(--md-shape-md)' }}>
               <textarea 
-                className="rs-chat-input rs-w-full rs-p-3 rs-mb-4"
-                style={{ height: 80, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container-high)', border: 'none', color: 'var(--fg)' }}
+                className="rs-chat-input rs-w-full rs-p-3 rs-mb-4 rs-c-fg"
+                style={{ height: 80, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container-high)', border: 'none' }}
                 placeholder="Audit completion notes (optional)..."
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
               />
-              <button className="rs-btn-primary rs-w-full rs-justify-center" onClick={completeAudit} disabled={completing} style={{ height: 56, background: 'rgba(74,222,128,0.2)', color: 'var(--rs-status-nominal)' }}>
+              <button className="rs-btn-primary rs-w-full rs-justify-center rs-c-nominal" onClick={completeAudit} disabled={completing} style={{ height: 56, background: 'rgba(74,222,128,0.2)' }}>
                 <span className="material-symbols-rounded">done_all</span>
                 {completing ? 'FINALIZING...' : 'FINALIZE AUDIT'}
               </button>

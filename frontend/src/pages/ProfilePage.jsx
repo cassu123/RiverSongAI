@@ -321,7 +321,7 @@ function TwoFactorCard({ token }) {
       )}
 
       {error && (
-        <div className="rs-card-meta rs-mt-3" style={{ color: 'var(--md-error)' }}>{error}</div>
+        <div className="rs-card-meta rs-mt-3 rs-c-error">{error}</div>
       )}
     </div>
   )
@@ -447,9 +447,9 @@ export default function ProfilePage({
         <div className="rs-card is-wide">
           <div className="rs-card-head">
              <span className="rs-card-label">PROFILE IDENTITY</span>
-             {saveStatus && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1 }}>{saveStatus}</span>}
+             {saveStatus && <span className="rs-card-label rs-c-accent" style={{ opacity: 1 }}>{saveStatus}</span>}
           </div>
-          <div className="rs-flex rs-gap-5 rs-flex-wrap" style={{ alignItems: 'flex-end' }}>
+          <div className="rs-flex rs-gap-5 rs-flex-wrap rs-items-end">
             <div className="rs-grow" style={{ minWidth: 240 }}>
               <div className="rs-card-label rs-mb-2 rs-type-micro">DISPLAY NAME</div>
               <input 
@@ -469,7 +469,7 @@ export default function ProfilePage({
             </div>
             <div>
               <div className="rs-card-label rs-type-nano">ROLE & CLEARANCE</div>
-              <div className="rs-mt-1 rs-type-body" style={{ color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)', fontWeight: 700 }}>
+              <div className="rs-mt-1 rs-type-body rs-fw-700" style={{ color: user?.role === 'admin' ? '#96cbff' : 'var(--primary)' }}>
                 {user?.role ? user.role.toUpperCase() : 'USER'}
               </div>
             </div>
@@ -593,11 +593,11 @@ export default function ProfilePage({
                       <div className="rs-flex rs-items-center rs-gap-4">
                         <span className="material-symbols-rounded" style={{ fontSize: '24px', opacity: 0.8 }}>{service.icon}</span>
                         <div>
-                          <div className="rs-type-small" style={{ fontWeight: 600, color: 'var(--text-base)' }}>
+                          <div className="rs-type-small rs-fw-600" style={{ color: 'var(--text-base)' }}>
                             {service.name}
                           </div>
                           {isConnected && (
-                            <div className="rs-mt-1 rs-flex rs-items-center rs-gap-1 rs-type-micro" style={{ color: 'var(--rs-status-nominal)' }}>
+                            <div className="rs-mt-1 rs-flex rs-items-center rs-gap-1 rs-type-micro rs-c-nominal">
                               <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
                               Connected
                               {meta.email && ` as ${meta.email}`}

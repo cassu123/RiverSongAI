@@ -35,7 +35,7 @@ export default function SetupPage() {
         <div className="rs-text-center" style={{ marginBottom: '2.5rem' }}>
           <div className="rs-flex rs-items-center rs-gap-4 rs-justify-center rs-mb-2">
             <span className="rs-pill is-active rs-type-h3" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>CORE</span>
-            <span style={{ fontFamily: 'var(--font-mood)', fontSize: '1.6rem', letterSpacing: '0.2em', fontWeight: 600 }}>RIVER SONG</span>
+            <span className="rs-fw-600" style={{ fontFamily: 'var(--font-mood)', fontSize: '1.6rem', letterSpacing: '0.2em' }}>RIVER SONG</span>
           </div>
           <div className="rs-card-label" style={{ opacity: 0.5 }}>INITIAL SYSTEM BOOTSTRAP</div>
         </div>
@@ -85,7 +85,7 @@ export default function SetupPage() {
             />
           </div>
 
-          {error && <div className="rs-text-center rs-type-tiny" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+          {error && <div className="rs-text-center rs-type-tiny rs-c-error">{error.toUpperCase()}</div>}
 
           <button className="rs-btn-primary rs-mt-2" type="submit" disabled={loading}>
             {loading ? 'INITIALIZING KERNEL...' : 'PROVISION NODE'}

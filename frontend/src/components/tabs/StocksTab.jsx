@@ -69,7 +69,7 @@ function NewsList({ items }) {
             textDecoration: 'none', color: 'inherit',
           }}
         >
-          <div className="rs-type-tiny" style={{ fontWeight: 700, lineHeight: 1.35, marginBottom: 3 }}>{n.headline}</div>
+          <div className="rs-type-tiny rs-fw-700" style={{ lineHeight: 1.35, marginBottom: 3 }}>{n.headline}</div>
           <div className="rs-card-meta rs-type-nano">
             {n.source} · {relTime(n.published_at)}
           </div>
@@ -107,7 +107,7 @@ function QuoteRow({ quote, selected, onSelect, onRemove }) {
       }}
     >
       <div style={{ minWidth: 52 }}>
-        <div className="rs-type-small" style={{ fontWeight: 900, letterSpacing: '0.08em', color: 'var(--primary)' }}>
+        <div className="rs-type-small rs-fw-900 rs-c-accent" style={{ letterSpacing: '0.08em' }}>
           {quote.ticker}
         </div>
         {quote.name && (
@@ -118,12 +118,12 @@ function QuoteRow({ quote, selected, onSelect, onRemove }) {
       </div>
       <SparkBar change={quote.change} />
       <div className="rs-grow rs-text-right">
-        <div className="rs-mono rs-type-body" style={{ fontWeight: 800 }}>
+        <div className="rs-mono rs-type-body rs-fw-800">
           {quote.price != null ? `$${Number(quote.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
         </div>
       </div>
       <div className="rs-text-right" style={{ minWidth: 80 }}>
-        <div className="rs-mono rs-type-tiny" style={{ fontWeight: 700, color: changeColor }}>
+        <div className="rs-mono rs-type-tiny rs-fw-700" style={{ color: changeColor }}>
           {up ? '+' : ''}{quote.change != null ? quote.change.toFixed(2) : '--'}
         </div>
         <div className="rs-mono rs-type-nano" style={{ color: changeColor, opacity: 0.8 }}>
@@ -330,14 +330,14 @@ export default function StocksTab({ token, active }) {
                   border: 'none',
                   borderTop: '1px solid var(--md-outline-variant)',
                 }}>
-                  <span className="rs-type-tiny" style={{ fontWeight: 800, color: 'var(--primary)', minWidth: 52 }}>{r.ticker}</span>
+                  <span className="rs-type-tiny rs-fw-800 rs-c-accent" style={{ minWidth: 52 }}>{r.ticker}</span>
                   <span className="rs-card-meta rs-grow rs-type-micro">{r.name}</span>
                   <span className="rs-card-meta rs-muted rs-type-nano">{r.region}</span>
                 </button>
               ))}
             </div>
           )}
-          {addError && <div className="rs-mt-2 rs-type-micro" style={{ color: 'oklch(64% 0.17 22)', fontWeight: 600 }}>{addError}</div>}
+          {addError && <div className="rs-mt-2 rs-type-micro rs-fw-600" style={{ color: 'oklch(64% 0.17 22)' }}>{addError}</div>}
         </div>
       </div>
 
@@ -420,10 +420,10 @@ function StocksSkeleton() {
             <div style={{ height: 8, width: 32, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.25 }} />
           </div>
           <div style={{ height: 8, width: 56, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-          <div className="rs-grow rs-flex" style={{ justifyContent: 'flex-end' }}>
+          <div className="rs-grow rs-flex rs-justify-end">
             <div style={{ height: 14, width: 64, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.35 }} />
           </div>
-          <div className="rs-flex rs-flex-col rs-gap-1" style={{ minWidth: 80, alignItems: 'flex-end' }}>
+          <div className="rs-flex rs-flex-col rs-gap-1 rs-items-end" style={{ minWidth: 80 }}>
             <div style={{ height: 10, width: 48, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
             <div style={{ height: 8, width: 36, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.2 }} />
           </div>

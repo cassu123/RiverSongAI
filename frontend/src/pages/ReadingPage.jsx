@@ -90,7 +90,7 @@ export default function ReadingPage({ setAction }) {
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
               <input 
                 type="text" 
-                className="rs-w-full rs-type-small" style={{ all: 'unset', fontWeight: 600 }} 
+                className="rs-w-full rs-type-small rs-fw-600" style={{ all: 'unset' }} 
                 placeholder="SEARCH ARCHIVES..." 
                 value={search} 
                 onChange={e => setSearch(e.target.value)} 
@@ -131,14 +131,14 @@ export default function ReadingPage({ setAction }) {
                  <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem' }}>{stats.total}</div>
                </div>
                <div>
-                 <div className="rs-card-label" style={{ color: 'var(--primary)' }}>ACTIVE READS</div>
-                 <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem', color: 'var(--primary)' }}>{stats.reading}</div>
+                 <div className="rs-card-label rs-c-accent">ACTIVE READS</div>
+                 <div className="rs-card-value rs-mono rs-c-accent" style={{ fontSize: '2.5rem' }}>{stats.reading}</div>
                </div>
                <div>
                  <div className="rs-card-label" style={{ color: 'var(--warn)' }}>QUEUE DEPTH</div>
                  <div className="rs-card-value rs-mono" style={{ fontSize: '2.5rem', color: 'var(--warn)' }}>{stats.queue}</div>
                </div>
-               <div className="rs-grow rs-flex rs-items-center" style={{ minWidth: 200, justifyContent: 'flex-end' }}>
+               <div className="rs-grow rs-flex rs-items-center rs-justify-end" style={{ minWidth: 200 }}>
                   <div className="rs-status-strip">
                     <span className="rs-status-dot" style={{ background: '#4ade80' }} />
                     <span>ARCHIVES NOMINAL</span>
@@ -180,7 +180,7 @@ export default function ReadingPage({ setAction }) {
                   )}
                 </div>
                 <div className="rs-p-4">
-                  <div className="rs-mb-1 rs-type-small rs-clip" style={{ fontWeight: 700, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.2 }}>{book.title}</div>
+                  <div className="rs-mb-1 rs-type-small rs-clip rs-fw-700" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.2 }}>{book.title}</div>
                   <div className="rs-card-meta rs-mt-2 rs-type-nano">{book.author}</div>
                   <div className="rs-mt-4 rs-flex rs-justify-between rs-items-center">
                      <span className="rs-card-label rs-type-nano">{book.status.toUpperCase()}</span>
@@ -213,7 +213,7 @@ export default function ReadingPage({ setAction }) {
                   }}>
                     <div className="rs-card-inner" style={{ background: active ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'transparent', border: active ? '1px solid var(--primary)' : '1px solid transparent' }}>
                       <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '1.8rem', color: s.color }}>{s.icon}</span>
-                      <div className="rs-type-micro" style={{ fontWeight: 700 }}>{s.label.toUpperCase()}</div>
+                      <div className="rs-type-micro rs-fw-700">{s.label.toUpperCase()}</div>
                     </div>
                   </button>
                 )

@@ -25,7 +25,7 @@ export default function HappeningsTab({ token, active }) {
     </div>
   )
   
-  if (error) return <div className="rs-p-5" style={{ color: 'var(--rs-status-critical)' }}>Error: {error}</div>
+  if (error) return <div className="rs-p-5 rs-c-critical">Error: {error}</div>
   if (!data) return null
 
   const { trending = [], events_nearby = [] } = data
@@ -38,19 +38,17 @@ export default function HappeningsTab({ token, active }) {
         <div className="rs-card-label rs-mb-4">TRENDING DISCUSSIONS</div>
         {trending.length > 0 ? trending.map((t, i) => (
           <div key={i} className="rs-mb-4 rs-flex rs-gap-3" style={{ borderBottom: i < trending.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 'var(--rs-space-4)' }}>
-            <div className="rs-flex rs-items-center rs-justify-center rs-no-shrink rs-type-small" style={{
+            <div className="rs-flex rs-items-center rs-justify-center rs-no-shrink rs-type-small rs-c-fg rs-fw-800" style={{
               width: 24,
               height: 24,
               borderRadius: 'var(--md-shape-xs)',
               background: t.source === 'hackernews' ? '#ff6600' : '#ff4500',
-              color: 'var(--fg)',
-              fontWeight: 800,
             }}>
               {t.source === 'hackernews' ? 'Y' : 'r'}
             </div>
             <div className="rs-grow rs-min-w-0">
               <a href={t.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="rs-mb-2 rs-type-tiny" style={{ fontWeight: 700, lineHeight: 1.3 }}>
+                <div className="rs-mb-2 rs-type-tiny rs-fw-700" style={{ lineHeight: 1.3 }}>
                   {t.title}
                 </div>
               </a>
@@ -101,18 +99,18 @@ export default function HappeningsTab({ token, active }) {
             )}
             <div className="rs-grow rs-min-w-0">
               <a href={e.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="rs-mb-1 rs-type-tiny" style={{ fontWeight: 700, lineHeight: 1.3 }}>
+                <div className="rs-mb-1 rs-type-tiny rs-fw-700" style={{ lineHeight: 1.3 }}>
                   {e.title}
                 </div>
               </a>
-              <div className="rs-mb-1 rs-type-nano" style={{ fontWeight: 600, color: 'var(--primary)' }}>
+              <div className="rs-mb-1 rs-type-nano rs-fw-600 rs-c-accent">
                 {new Date(e.start_time).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
               <div className="rs-card-meta rs-mb-1 rs-flex rs-justify-between rs-type-nano">
                 <span className="rs-nowrap rs-clip rs-ellipsis">{e.venue || e.city}</span>
                 <span className="rs-nowrap">{e.distance_mi} mi</span>
               </div>
-              <div className="rs-type-nano" style={{ fontWeight: 700, background: 'var(--md-surface-container-highest)', display: 'inline-block', padding: '2px 6px', borderRadius: 'var(--md-shape-xs)' }}>
+              <div className="rs-type-nano rs-fw-700" style={{ background: 'var(--md-surface-container-highest)', display: 'inline-block', padding: '2px 6px', borderRadius: 'var(--md-shape-xs)' }}>
                 {e.price_max > 0 ? (
                   e.price_min === e.price_max ? `$${e.price_min}` : `$${e.price_min} - $${e.price_max}`
                 ) : 'Free'}

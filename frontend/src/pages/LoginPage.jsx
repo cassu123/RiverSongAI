@@ -127,7 +127,7 @@ export default function LoginPage({ onSwitchToSignup }) {
         <div className="rs-text-center" style={{ marginBottom: '2rem' }}>
           <div className="rs-flex rs-items-center rs-gap-3 rs-justify-center rs-mb-2">
             <span className="rs-pill is-active rs-type-small" style={{ padding: '7px 11px' }}>RS</span>
-            <span className="rs-type-h3" style={{ fontFamily: 'var(--font-mood)', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
+            <span className="rs-type-h3 rs-fw-600" style={{ fontFamily: 'var(--font-mood)', letterSpacing: '0.12em' }}>RIVER SONG</span>
           </div>
           <div className="rs-card-label rs-muted rs-type-nano">NEURAL LINK INTERFACE</div>
         </div>
@@ -159,7 +159,7 @@ export default function LoginPage({ onSwitchToSignup }) {
             />
           </div>
 
-          {error && <div className="rs-text-center rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+          {error && <div className="rs-text-center rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
 
           <button type="submit" disabled={loading} style={{ ...btnPrimary, opacity: loading ? 0.7 : 1 }}>
             {loading ? 'SYNCHRONIZING...' : 'ESTABLISH LINK'}
@@ -200,7 +200,7 @@ export default function LoginPage({ onSwitchToSignup }) {
             </div>
           )}
 
-          {error && <div className="rs-text-center rs-type-micro" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>}
+          {error && <div className="rs-text-center rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
 
           <button type="submit" disabled={loading} style={{ ...btnPrimary, opacity: loading ? 0.7 : 1 }}>
             {loading ? 'VERIFYING...' : 'VERIFY'}
@@ -210,14 +210,14 @@ export default function LoginPage({ onSwitchToSignup }) {
             <button
               type="button"
               onClick={() => { setUseRecovery(!useRecovery); setError(''); setTotpCode(''); setRecoveryCode('') }}
-              className="rs-pointer rs-type-nano" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface-variant)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
+              className="rs-pointer rs-type-nano rs-fw-700" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface-variant)', letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
             >
               {useRecovery ? 'USE AUTHENTICATOR' : 'USE RECOVERY CODE'}
             </button>
             <button
               type="button"
               onClick={cancelTotp}
-              className="rs-pointer rs-type-nano" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface-variant)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
+              className="rs-pointer rs-type-nano rs-fw-700" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface-variant)', letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
             >
               CANCEL
             </button>
@@ -228,7 +228,7 @@ export default function LoginPage({ onSwitchToSignup }) {
         {!challengeToken && (
         <div className="rs-flex rs-items-center rs-gap-3" style={{ margin: '1.25rem 0' }}>
           <div className="rs-grow" style={{ height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          <span className="rs-muted rs-type-nano" style={{ fontWeight: 700, letterSpacing: '0.1em' }}>OR</span>
+          <span className="rs-muted rs-type-nano rs-fw-700" style={{ letterSpacing: '0.1em' }}>OR</span>
           <div className="rs-grow" style={{ height: 1, background: 'rgba(255,255,255,0.1)' }} />
         </div>
         )}
@@ -250,7 +250,7 @@ export default function LoginPage({ onSwitchToSignup }) {
           <button
             type="button"
             onClick={onSwitchToSignup}
-            className="rs-pointer rs-type-nano" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface-variant)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
+            className="rs-pointer rs-type-nano rs-fw-700" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface-variant)', letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
           >
             NEW OPERATOR? REGISTER HERE
           </button>

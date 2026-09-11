@@ -43,7 +43,7 @@ export default function AdminFeatureSection({ featureVis, token, onChanged }) {
     <Section title="FEATURE VISIBILITY">
       <p className="rs-card-meta rs-mb-4">
         Hide features globally. Admin always sees everything.
-        {saving && <span style={{ marginLeft: 'var(--rs-space-2)', color: 'var(--primary)' }}>SAVING…</span>}
+        {saving && <span className="rs-c-accent" style={{ marginLeft: 'var(--rs-space-2)' }}>SAVING…</span>}
       </p>
       <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
         {(featureVis.all_features || []).map(f => (

@@ -99,8 +99,7 @@ export default function StepTimer({ timer, api, onChanged }) {
         border: done ? '1px solid var(--md-error)' : '1px solid var(--md-outline-variant)',
       }}
     >
-      <span className="rs-mono rs-type-body" style={{
-        fontWeight: 800,
+      <span className="rs-mono rs-type-body rs-fw-800" style={{
         minWidth: 66,
         color: done ? 'var(--md-error)' : 'var(--primary)',
       }}>{mmss(left)}</span>

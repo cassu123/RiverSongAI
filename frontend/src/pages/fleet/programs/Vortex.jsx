@@ -49,7 +49,7 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, refresh, program 
           <MetricStat label="UPTIME" value={fmtUptime(t.uptime_s)} />
           <div className="rs-flex rs-flex-col" style={{ gap: 2 }}>
             <div className="rs-card-label rs-type-nano">CASTING</div>
-            <span className="rs-type-tiny" style={{ fontWeight: 600 }}>{t.casting ? (t.cast_target || 'on') : '—'}</span>
+            <span className="rs-type-tiny rs-fw-600">{t.casting ? (t.cast_target || 'on') : '—'}</span>
           </div>
         </div>
         <div className="rs-flex rs-gap-5">

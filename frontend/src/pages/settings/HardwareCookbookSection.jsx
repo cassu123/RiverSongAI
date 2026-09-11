@@ -22,7 +22,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
                 <div className="rs-card-meta rs-type-micro">No NVIDIA GPU detected.</div>
               ) : hardwareCookbook.hardware.gpus.map(g => (
                 <div key={g.index} className="rs-type-micro">
-                  <div style={{ fontWeight: 600 }}>{g.name}</div>
+                  <div className="rs-fw-600">{g.name}</div>
                   <div className="rs-card-meta rs-type-nano">
                     {g.vram_free_gb} / {g.vram_total_gb} GB free · driver {g.driver_version}
                   </div>
@@ -31,7 +31,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
             </div>
             <div className="rs-card rs-p-3">
               <div className="rs-card-label rs-mb-1 rs-type-nano">RAM</div>
-              <div className="rs-type-micro" style={{ fontWeight: 600 }}>
+              <div className="rs-type-micro rs-fw-600">
                 {hardwareCookbook.hardware.ram_gb.total_gb} GB
               </div>
               <div className="rs-card-meta rs-type-nano">
@@ -40,7 +40,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
             </div>
             <div className="rs-card rs-p-3">
               <div className="rs-card-label rs-mb-1 rs-type-nano">CPU</div>
-              <div className="rs-type-micro rs-clip rs-ellipsis rs-nowrap" style={{ fontWeight: 600 }}>
+              <div className="rs-type-micro rs-clip rs-ellipsis rs-nowrap rs-fw-600">
                 {hardwareCookbook.hardware.cpu.model}
               </div>
               <div className="rs-card-meta rs-type-nano">

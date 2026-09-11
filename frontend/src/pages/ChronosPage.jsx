@@ -298,7 +298,7 @@ export default function ChronosPage({ setAction }) {
                 {isSummarizing ? 'SCRIBING...' : 'AI SUM'}
               </button>
               <button className="rs-pill" onClick={renameNote}>RENAME</button>
-              <button className="rs-pill" onClick={deleteNote} style={{ color: 'var(--md-error)' }}>DELETE</button>
+              <button className="rs-pill rs-c-error" onClick={deleteNote}>DELETE</button>
               <button className={`rs-pill ${editMode ? 'is-active' : ''}`} onClick={() => setEditMode(!editMode)}>
                 {editMode ? 'FINISH' : 'EDIT'}
               </button>

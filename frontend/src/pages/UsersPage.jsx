@@ -206,10 +206,10 @@ export default function UsersPage({ embedded = false }) {
   if (currentUser?.role !== 'admin') {
     return (
       <div className="rs-card rs-text-center" style={{ padding: 'var(--rs-space-7) var(--rs-space-5)', background: '#151c27', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24 }}>
-        <span className="material-symbols-rounded rs-mb-4" style={{ fontSize: '3.2rem', color: 'var(--rs-status-critical)', display: 'block' }}>
+        <span className="material-symbols-rounded rs-mb-4 rs-c-critical" style={{ fontSize: '3.2rem', display: 'block' }}>
           admin_panel_settings
         </span>
-        <h3 style={{ margin: '0 0 var(--rs-space-3)', fontSize: '1.4rem', color: 'var(--fg)' }}>Administrator Clearance Required</h3>
+        <h3 className="rs-c-fg" style={{ margin: '0 0 var(--rs-space-3)', fontSize: '1.4rem' }}>Administrator Clearance Required</h3>
         <p className="rs-muted rs-type-body" style={{ margin: 0, maxWidth: 500, marginInline: 'auto' }}>
           Household member and user account administration is strictly restricted to administrator profiles.
         </p>
@@ -234,7 +234,7 @@ export default function UsersPage({ embedded = false }) {
             <div key={u.id} className="rs-card">
               <div className="rs-card-head rs-mb-4">
                 <span className="rs-card-label rs-type-tiny" style={{ letterSpacing: '0.08em' }}>
-                  MEMBER {u.is_suspended && <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>(SUSPENDED)</span>}
+                  MEMBER {u.is_suspended && <span className="rs-c-error rs-fw-700">(SUSPENDED)</span>}
                 </span>
                 {u.id === currentUser.id ? (
                   <span className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`} style={{ fontSize: 'var(--rs-fs-tiny)', padding: 'var(--rs-space-2) var(--rs-space-4)' }}>
@@ -256,11 +256,11 @@ export default function UsersPage({ embedded = false }) {
                 )}
               </div>
               <div className="rs-flex rs-items-center rs-gap-4">
-                <div className="rs-status-dot rs-flex rs-items-center rs-justify-center rs-type-h3" style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--primary)', color: '#0d1219', fontWeight: 900, animation: 'none' }}>
+                <div className="rs-status-dot rs-flex rs-items-center rs-justify-center rs-type-h3 rs-fw-900" style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--primary)', color: '#0d1219', animation: 'none' }}>
                   {u.display_name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div>
-                  <div className="rs-card-value rs-type-h3" style={{ fontWeight: 700 }}>{u.display_name}</div>
+                  <div className="rs-card-value rs-type-h3 rs-fw-700">{u.display_name}</div>
                   <div className="rs-card-meta rs-type-small rs-muted">{u.email}</div>
                 </div>
               </div>
@@ -268,7 +268,7 @@ export default function UsersPage({ embedded = false }) {
               <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-4">
                 <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
-                    <span className="rs-card-label rs-type-tiny" style={{ color: 'var(--fg)' }}>FORCE PASSWORD CHANGE</span>
+                    <span className="rs-card-label rs-type-tiny rs-c-fg">FORCE PASSWORD CHANGE</span>
                     <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>Requires changing password on next sign-in</span>
                   </div>
                   <button 
@@ -282,7 +282,7 @@ export default function UsersPage({ embedded = false }) {
 
                 <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
-                    <span className="rs-card-label rs-type-tiny" style={{ color: 'var(--fg)' }}>SUSPEND ACCOUNT</span>
+                    <span className="rs-card-label rs-type-tiny rs-c-fg">SUSPEND ACCOUNT</span>
                     <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>Block sign-in and API access immediately</span>
                   </div>
                   <button 
@@ -296,7 +296,7 @@ export default function UsersPage({ embedded = false }) {
 
                 <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
-                    <span className="rs-card-label rs-type-tiny" style={{ color: 'var(--fg)' }}>
+                    <span className="rs-card-label rs-type-tiny rs-c-fg">
                       FREE MODELS ONLY
                     </span>
                     <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>
@@ -318,7 +318,7 @@ export default function UsersPage({ embedded = false }) {
                   {u.id !== currentUser.id && (
                     <>
                       <button className="rs-pill rs-type-tiny" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }} onClick={() => handleImpersonate(u)}>IMPERSONATE</button>
-                      <button className="rs-pill rs-type-tiny" style={{ color: 'var(--md-error)', padding: 'var(--rs-space-2) var(--rs-space-4)' }} onClick={() => handleTerminate(u)}>DELETE USER</button>
+                      <button className="rs-pill rs-type-tiny rs-c-error" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }} onClick={() => handleTerminate(u)}>DELETE USER</button>
                     </>
                   )}
                 </div>
@@ -349,8 +349,8 @@ export default function UsersPage({ embedded = false }) {
             />
           </div>
 
-          {resetError && <div className="rs-mb-4 rs-type-tiny" style={{ color: 'var(--md-error)' }}>{resetError}</div>}
-          {resetSuccess && <div className="rs-mb-4 rs-type-tiny" style={{ color: 'var(--rs-status-nominal)' }}>{resetSuccess}</div>}
+          {resetError && <div className="rs-mb-4 rs-type-tiny rs-c-error">{resetError}</div>}
+          {resetSuccess && <div className="rs-mb-4 rs-type-tiny rs-c-nominal">{resetSuccess}</div>}
 
           <div className="rs-flex rs-gap-3">
             <button type="submit" className="rs-btn-primary rs-grow">SET PASSWORD</button>

@@ -309,8 +309,8 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       <textarea
         ref={inputRef}
         rows={1}
-        className="rs-chat-textarea rs-type-body"
-        style={{ fontWeight: 500 }}
+        className="rs-chat-textarea rs-type-body rs-fw-500"
+       
         placeholder="Ask River Song..."
         value={inputText}
         onChange={e => setInputText(e.target.value)}
@@ -358,16 +358,16 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       
       {embedded && (
         <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
-          <h3 className="rs-m-0 rs-type-h3" style={{ color: 'var(--primary)' }}>Vehicle Assistant</h3>
+          <h3 className="rs-m-0 rs-type-h3 rs-c-accent">Vehicle Assistant</h3>
           <button className="rs-pill" onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
         </div>
       )}
       {!embedded && (
-        <div className="rs-flex rs-gap-2 rs-mb-5 rs-items-center" style={{ justifyContent: 'flex-end' }}>
+        <div className="rs-flex rs-gap-2 rs-mb-5 rs-items-center rs-justify-end">
           <RateIndicator activeModel={selectedModel} token={token} />
-          {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginRight: 'var(--rs-space-3)' }}>SYNCING…</span>}
+          {savingModel && <span className="rs-card-label rs-c-accent" style={{ opacity: 1, marginRight: 'var(--rs-space-3)' }}>SYNCING…</span>}
           <button className="rs-pill" onClick={() => setShowSystem(!showSystem)}>
             <span className="material-symbols-rounded">settings_input_component</span>
           </button>
@@ -385,7 +385,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           <div className="rs-card-inner">
             <div className="rs-card-label">System Directives</div>
             <textarea
-              className="rs-w-full rs-mt-3 rs-type-small rs-mono" style={{ all: 'unset', minHeight: '80px', color: 'var(--fg)' }}
+              className="rs-w-full rs-mt-3 rs-type-small rs-mono rs-c-fg" style={{ all: 'unset', minHeight: '80px' }}
               placeholder="Inject custom neural constraints..."
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
@@ -440,12 +440,11 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
             </div>
           )}
           {error && (
-            <div className="rs-error-banner animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4 rs-type-small" style={{
+            <div className="rs-error-banner animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4 rs-type-small rs-c-critical" style={{
               padding: 'var(--rs-space-3) var(--rs-space-4)',
               borderRadius: 'var(--md-shape-sm)',
               background: 'rgba(220,60,60,0.15)',
               border: '1px solid rgba(220,60,60,0.3)',
-              color: 'var(--rs-status-critical)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>error</span>
               <span className="rs-grow">{error}</span>

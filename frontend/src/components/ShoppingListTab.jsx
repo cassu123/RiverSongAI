@@ -248,7 +248,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         </button>
 
         {(item.qty || item.unit) && (
-          <span className="rs-mono rs-nowrap" style={{ fontWeight: 800, color: 'var(--primary)' }}>
+          <span className="rs-mono rs-nowrap rs-fw-800 rs-c-accent">
             {[item.qty, item.unit].filter(Boolean).join(' ')}
           </span>
         )}
@@ -261,10 +261,9 @@ export default function ShoppingListTab({ api, refreshKey }) {
         <div className="rs-relative">
           <button
             type="button"
-            className="rs-pill rs-gap-1 rs-type-small"
+            className="rs-pill rs-gap-1 rs-type-small rs-fw-700"
             style={{
               padding: '2px 8px',
-              fontWeight: 700,
               border: `1px solid ${storeMeta ? storeMeta.color : 'rgba(255,255,255,0.18)'}`,
               color: storeMeta ? storeMeta.color : 'inherit',
               background: storeMeta ? `color-mix(in srgb, ${storeMeta.color} 15%, transparent)` : 'rgba(255,255,255,0.05)',
@@ -411,13 +410,12 @@ export default function ShoppingListTab({ api, refreshKey }) {
           onChange={e => setUnit(e.target.value)}
         />
         <select
-          className="rs-pill"
+          className="rs-pill rs-fw-600"
           style={{
             minWidth: 110,
             background: 'var(--md-surface-container-low)',
             border: 'none',
             color: 'inherit',
-            fontWeight: 600,
           }}
           aria-label="Store destination"
           value={selectedStore}
@@ -445,7 +443,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
       </form>
 
       {error && (
-        <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{error}</div>
+        <div className="rs-card-meta rs-c-error">{error}</div>
       )}
 
       {loading ? (
@@ -503,7 +501,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         <div className="rs-card" style={{ borderColor: exportResult.cart_url ? '#4ade80' : 'var(--md-outline-variant)' }}>
           <div className="rs-card-inner rs-flex rs-flex-col rs-gap-3">
             <div className="rs-card-head">
-              <span className="rs-card-label" style={{ fontWeight: 800, color: 'var(--primary)' }}>
+              <span className="rs-card-label rs-fw-800 rs-c-accent">
                 {exportResult.store.toUpperCase()} CART EXPORT
               </span>
               <button className="rs-pill" onClick={() => setExportResult(null)}>
@@ -580,7 +578,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         <div className="rs-card">
           <div className="rs-card-inner rs-flex rs-flex-col rs-gap-4">
             <div className="rs-card-head">
-              <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>STORE PRODUCT LINKS & MAPPINGS</span>
+              <span className="rs-card-label rs-fw-900 rs-c-accent">STORE PRODUCT LINKS & MAPPINGS</span>
               <button className="rs-pill" onClick={() => setShowStoreLinks(false)}>
                 <span className="material-symbols-rounded">close</span>
               </button>
@@ -635,7 +633,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                 LINK
               </button>
             </form>
-            {mapError && <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{mapError}</div>}
+            {mapError && <div className="rs-card-meta rs-c-error">{mapError}</div>}
 
             <div className="rs-flex rs-flex-col rs-gap-2">
               {mappings.length === 0 ? (
@@ -647,7 +645,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                     <span className="material-symbols-rounded" style={{ color: meta?.color || 'inherit', fontSize: '1.1rem' }}>
                       {meta?.icon || 'store'}
                     </span>
-                    <span className="rs-grow" style={{ fontWeight: 600 }}>{m.ingredient_name}</span>
+                    <span className="rs-grow rs-fw-600">{m.ingredient_name}</span>
                     <span className="rs-muted rs-mono rs-type-small">{m.store_item_id}</span>
                     <button
                       className="rs-pill rs-p-1 rs-min-w-0"

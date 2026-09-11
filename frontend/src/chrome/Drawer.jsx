@@ -68,7 +68,7 @@ export default function Drawer({
         <div className="rs-drawer-head">
           <div className="rs-flex rs-items-center rs-gap-3">
             <RsMark mark="mono" size={26} />
-            <span className="rs-type-body" style={{ fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>
+            <span className="rs-type-body rs-fw-700 rs-c-fg" style={{ letterSpacing: '-0.01em' }}>
               Spaces & Services
             </span>
           </div>
@@ -128,11 +128,11 @@ export default function Drawer({
 
             {onLogout && (
               <button
-                className="rs-icon-btn"
+                className="rs-icon-btn rs-c-critical"
                 onClick={() => { onClose(); onLogout() }}
                 title="Sign out"
                 aria-label="Sign out"
-                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--rs-status-critical)' }}
+                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)' }}
               >
                 <EnvIcon name="logout" className="rs-icon" />
               </button>
@@ -141,7 +141,7 @@ export default function Drawer({
 
           {userIsAdmin && (
             <div className="rs-mt-3 rs-flex rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-md)', background: 'rgba(255,255,255,0.04)' }}>
-              <span className="rs-type-tiny rs-muted" style={{ fontWeight: 500 }}>Admin Mode</span>
+              <span className="rs-type-tiny rs-muted rs-fw-500">Admin Mode</span>
               <button
                 className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}
                 onClick={() => onAdminToggle(!adminMode)}

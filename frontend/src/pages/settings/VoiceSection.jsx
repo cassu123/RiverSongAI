@@ -54,7 +54,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
 
   if (voiceSettings.provider === 'none') {
     return (
-      <p className="rs-card-meta" style={{ color: 'var(--md-error)' }}>
+      <p className="rs-card-meta rs-c-error">
         TTS is disabled. Set <code>TTS_PROVIDER=piper</code> in <code>.env</code> to enable speech.
       </p>
     )
@@ -109,7 +109,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
           background: 'var(--md-surface-container-high)',
         }}>
           <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
-            <div className="rs-card-label" style={{ color: 'var(--md-primary)' }}>
+            <div className="rs-card-label rs-c-primary">
               ELEVENLABS
             </div>
             <span className="rs-card-label" style={{ color: elevenLabsSettings.api_key ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
@@ -120,7 +120,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
             Set <code>ELEVENLABS_API_KEY</code>, <code>ELEVENLABS_VOICE_ID</code>, and{' '}
             <code>ELEVENLABS_MODEL_ID</code> in <code>.env</code> to enable cloud voices.
             {voiceSettings.provider === 'elevenlabs' && (
-              <span style={{ color: 'var(--rs-status-nominal)', marginLeft: 'var(--rs-space-2)' }}>● ACTIVE</span>
+              <span className="rs-c-nominal" style={{ marginLeft: 'var(--rs-space-2)' }}>● ACTIVE</span>
             )}
           </p>
         </div>
@@ -133,7 +133,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
       )}
 
       {previewErr && (
-        <p className="rs-card-meta" style={{ color: 'var(--md-error)' }}>
+        <p className="rs-card-meta rs-c-error">
           {previewErr}
         </p>
       )}
@@ -177,7 +177,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
                         onClick={() => v.installed && !v.active && handleSelect(v.voice_id)}
                         style={{ opacity: v.installed ? 1 : 0.5, borderColor: v.active ? 'var(--primary)' : undefined }}
                       >
-                        <div className="rs-card-value rs-mb-2 rs-type-body" style={{ fontWeight: 600 }}>
+                        <div className="rs-card-value rs-mb-2 rs-type-body rs-fw-600">
                           {v.display_name}
                         </div>
 
@@ -206,10 +206,10 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
                           </button>
                         )}
 
-                        {!v.installed && <div className="rs-card-meta" style={{ color: 'var(--md-error)', fontWeight: 700 }}>NOT INSTALLED</div>}
+                        {!v.installed && <div className="rs-card-meta rs-c-error rs-fw-700">NOT INSTALLED</div>}
                         {v.active && (
                           <div style={{ position: 'absolute', top: 12, right: 12 }}>
-                             <span className="material-symbols-rounded" style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>check_circle</span>
+                             <span className="material-symbols-rounded rs-c-accent" style={{ fontSize: '1.2rem' }}>check_circle</span>
                           </div>
                         )}
                       </div>

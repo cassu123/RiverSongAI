@@ -186,7 +186,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
         <div className="rs-card is-wide is-elev" style={{ borderTop: '2px solid var(--primary)' }}>
           <div className="rs-card-inner">
             <div className="rs-card-head rs-mb-5">
-              <span className="rs-card-label" style={{ color: 'var(--primary)' }}>ASSET SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
+              <span className="rs-card-label rs-c-accent">ASSET SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
             </div>
 
             {newError && (
@@ -253,11 +253,11 @@ export default function VehiclePage({ setAction, onNavigate }) {
                     value={newVehicle.vehicle_type}
                     onChange={e => setNewVehicle({ ...newVehicle, vehicle_type: e.target.value })}
                   >
-                    <option value="moto" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>Motorcycle</option>
-                    <option value="auto" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>Automobile</option>
-                    <option value="truck" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>Truck</option>
-                    <option value="atv" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>ATV / UTV</option>
-                    <option value="other" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>Other</option>
+                    <option value="moto" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>Motorcycle</option>
+                    <option value="auto" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>Automobile</option>
+                    <option value="truck" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>Truck</option>
+                    <option value="atv" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>ATV / UTV</option>
+                    <option value="other" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>Other</option>
                   </select>
                 </div>
                 <div className="cockpit-input-box">
@@ -280,7 +280,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                 </div>
               </div>
 
-              <div className="rs-flex rs-gap-3" style={{ justifyContent: 'flex-end', paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rs-flex rs-gap-3 rs-justify-end" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 <button type="button" className="rs-pill" onClick={() => setSelectedVehicleId(null)}>
                   CANCEL
                 </button>
@@ -325,7 +325,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
       {/* Hangar Header with Primary Actions */}
       <div className="rs-foyer-head hangar-header">
         <div>
-          <div className="rs-card-label rs-mb-2" style={{ letterSpacing: '0.2em', color: 'var(--primary)', opacity: 0.9 }}>
+          <div className="rs-card-label rs-mb-2 rs-c-accent" style={{ letterSpacing: '0.2em', opacity: 0.9 }}>
             SECTOR GARAGE · FLEET TELEMETRY
           </div>
           <h1 className="rs-greeting">The Hangar</h1>
@@ -409,7 +409,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
       {loading && vehicles.length === 0 ? (
         <div className="rs-card is-wide rs-text-center" style={{ padding: 64 }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '3rem', color: 'var(--primary)', opacity: 0.6, animation: 'spin 2s linear infinite' }}>sync</span>
+          <span className="material-symbols-rounded rs-c-accent" style={{ fontSize: '3rem', opacity: 0.6, animation: 'spin 2s linear infinite' }}>sync</span>
           <div className="card-metric-label rs-mt-4">SCANNING HANGAR TRANSPONDERS...</div>
         </div>
       ) : (
@@ -488,7 +488,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
                 <div className="hangar-card-footer">
                   <span className="hangar-card-scope-hint">
-                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)' }}>tune</span>
+                    <span className="material-symbols-rounded rs-c-accent" style={{ fontSize: '1rem' }}>tune</span>
                     <span>{checkPoints.length} Checkpoints Configured</span>
                   </span>
                   <span className="hangar-card-inspect-btn">

@@ -12,9 +12,9 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
     <Section title="CHRONOS · MEMORY VAULT">
           {/* Header row */}
           <div className="rs-flex rs-items-center rs-gap-3">
-            <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1.6rem', color: 'var(--primary)' }}>history_edu</span>
+            <span className="material-symbols-rounded rs-no-shrink rs-c-accent" style={{ fontSize: '1.6rem' }}>history_edu</span>
             <div className="rs-grow">
-              <div className="rs-type-small" style={{ fontWeight: 600 }}>Local markdown vault · Obsidian-style</div>
+              <div className="rs-type-small rs-fw-600">Local markdown vault · Obsidian-style</div>
               <div className="rs-card-meta">Voice-to-note · Conversation memory · Editable facts · Backlinks</div>
             </div>
             <span className="rs-pill is-active rs-type-nano rs-no-shrink">LIVE</span>
@@ -30,7 +30,7 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
               <div key={path} className="rs-flex rs-flex-col rs-gap-1" style={{ padding: 'var(--rs-space-3) var(--rs-space-3)', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }}>
                 <div className="rs-flex rs-items-center rs-gap-2">
                   <span className="material-symbols-rounded" style={{ fontSize: '0.95rem', color }}>{icon}</span>
-                  <code className="rs-type-nano" style={{ fontWeight: 600 }}>{path}</code>
+                  <code className="rs-type-nano rs-fw-600">{path}</code>
                 </div>
                 <div className="rs-card-meta rs-type-nano">{desc}</div>
               </div>
@@ -56,7 +56,7 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
 
           {/* Status */}
           <div className="rs-flex rs-items-center rs-gap-2" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-sm)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)' }}>
-            <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1rem', color: 'var(--primary)' }}>check_circle</span>
+            <span className="material-symbols-rounded rs-no-shrink rs-c-accent" style={{ fontSize: '1rem' }}>check_circle</span>
             <span className="rs-card-meta rs-type-micro">
               CHRONOS page, CodeMirror editor, backlinks, search, and Scribe daemon are fully operational. Graph view is Phase 3.
             </span>

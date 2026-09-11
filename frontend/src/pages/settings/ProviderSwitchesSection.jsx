@@ -133,7 +133,7 @@ export default function ProviderSwitchesSection({ token }) {
         <strong>Allowed</strong> is the hard gate — when off, nothing routes to that
         provider, including River&rsquo;s automatic model choice and including admins.
         <strong> Users</strong> controls whether non-admin accounts can select it.
-        {busy && <span style={{ marginLeft: 'var(--rs-space-2)', color: 'var(--primary)' }}>Saving…</span>}
+        {busy && <span className="rs-c-accent" style={{ marginLeft: 'var(--rs-space-2)' }}>Saving…</span>}
       </p>
       <p className="rs-card-meta rs-mb-4" style={{ opacity: 0.75 }}>
         Local and free providers are switchable too — costing nothing is not a reason
@@ -197,7 +197,7 @@ export default function ProviderSwitchesSection({ token }) {
               }}
             >
               <div className="rs-min-w-0">
-                <div className="rs-type-tiny" style={{ fontWeight: 600 }}>{meta.name}</div>
+                <div className="rs-type-tiny rs-fw-600">{meta.name}</div>
                 <div className="rs-card-meta rs-type-nano">
                   {blockedReason ? (
                     <span

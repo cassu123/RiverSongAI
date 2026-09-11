@@ -11,8 +11,8 @@ export default function PersonaSection({ personaSettings, setPersonaSettings, sa
   return (
     <Section title="PERSONALITY">
           <div className="rs-mb-3 rs-flex rs-items-center rs-gap-2" style={{ padding: 'var(--rs-space-3)', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)' }}>
-            <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)' }}>warning</span>
-            <span className="rs-type-tiny" style={{ color: 'var(--rs-status-warning)' }}>Advanced — Keep "River Song" references intact or she will lose her identity.</span>
+            <span className="material-symbols-rounded rs-no-shrink rs-c-warning" style={{ fontSize: '1rem' }}>warning</span>
+            <span className="rs-type-tiny rs-c-warning">Advanced — Keep "River Song" references intact or she will lose her identity.</span>
           </div>
           
           <div className="rs-relative">

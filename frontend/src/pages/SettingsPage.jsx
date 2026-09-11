@@ -57,7 +57,7 @@ function SectionStatusWrapper({ status, children }) {
     return (
       <div style={{ opacity: 0.6, pointerEvents: 'none' }}>
         <Section title="ACCESS DENIED">
-          <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>You do not have permission to view this section.</div>
+          <div className="rs-card-meta rs-c-error">You do not have permission to view this section.</div>
         </Section>
       </div>
     )
@@ -66,7 +66,7 @@ function SectionStatusWrapper({ status, children }) {
   return (
     <div style={{ opacity: 0.6 }}>
       <Section title="FAILED TO LOAD">
-        <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>This section could not be loaded. Please check server logs.</div>
+        <div className="rs-card-meta rs-c-error">This section could not be loaded. Please check server logs.</div>
       </Section>
     </div>
   )
@@ -714,13 +714,13 @@ export default function SettingsPage({
       `}</style>
 
       <header className="rs-foyer-head rs-mb-5">
-        <div className="rs-card-label rs-mb-2 rs-flex rs-items-center rs-gap-2" style={{ color: 'var(--primary)' }}>
+        <div className="rs-card-label rs-mb-2 rs-flex rs-items-center rs-gap-2 rs-c-accent">
           <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
             {activeHubTab === 'admin' ? 'shield_person' : activeHubTab === 'users' ? 'group' : activeHubTab === 'profile' ? 'account_circle' : 'tune'}
           </span>
           {activeHubTab === 'admin' ? 'ADMINISTRATOR CONSOLE' : activeHubTab === 'users' ? 'HOUSEHOLD MANAGEMENT' : activeHubTab === 'profile' ? 'PERSONAL IDENTITY' : 'ASSISTANT & HARDWARE'}
         </div>
-        <h1 className="rs-greeting" style={{ fontSize: '2.2rem', fontWeight: 700, margin: '0 0 var(--rs-space-2)' }}>
+        <h1 className="rs-greeting rs-fw-700" style={{ fontSize: '2.2rem', margin: '0 0 var(--rs-space-2)' }}>
           {activeHubTab === 'admin' ? 'Admin & System Control' : activeHubTab === 'users' ? 'Family & Household' : activeHubTab === 'profile' ? 'Identity & Account' : 'Assistant & Voice Settings'}
         </h1>
         <div className="rs-greeting-sub rs-type-body rs-muted">
@@ -784,8 +784,8 @@ export default function SettingsPage({
           borderRadius: 'var(--md-shape-sm)',
         }}>
           <div className="rs-flex rs-items-center rs-gap-2">
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)' }}>warning</span>
-            <span className="rs-type-tiny" style={{ color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+            <span className="material-symbols-rounded rs-c-warning" style={{ fontSize: '1rem' }}>warning</span>
+            <span className="rs-type-tiny rs-c-warning rs-fw-600">
               LLM routing change saved — reload required to take effect.
             </span>
           </div>
@@ -800,7 +800,7 @@ export default function SettingsPage({
         <div
           role="status"
           aria-live="polite"
-          className="rs-flex rs-items-center rs-gap-2 rs-type-tiny" style={{
+          className="rs-flex rs-items-center rs-gap-2 rs-type-tiny rs-fw-600" style={{
             position: 'fixed',
             bottom: 32,
             right: 32,
@@ -813,7 +813,6 @@ export default function SettingsPage({
             color: saveStatus === 'error'
               ? 'var(--md-on-error-container)'
               : 'var(--md-on-primary-container)',
-            fontWeight: 600,
             letterSpacing: '0.06em',
             boxShadow: '0 8px 32px -8px rgba(0,0,0,0.5)',
             border: '1px solid',
@@ -1179,8 +1178,8 @@ export default function SettingsPage({
         
         {wakeWordRestart && (
           <div className="rs-mt-3 rs-flex rs-items-center rs-gap-2" style={{ padding: 'var(--rs-space-3)', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)' }}>
-            <span className="material-symbols-rounded rs-no-shrink" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)' }}>warning</span>
-            <span className="rs-type-tiny" style={{ color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+            <span className="material-symbols-rounded rs-no-shrink rs-c-warning" style={{ fontSize: '1rem' }}>warning</span>
+            <span className="rs-type-tiny rs-c-warning rs-fw-600">
               System restart required to apply changes.
             </span>
           </div>

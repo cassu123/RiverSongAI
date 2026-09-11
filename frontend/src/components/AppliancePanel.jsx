@@ -104,14 +104,14 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
 
           <div className="rs-card-meta rs-mt-4 rs-type-micro">
             {stations.length
-              ? <>This makes it a <strong style={{ color: 'var(--primary)' }}>
+              ? <>This makes it a <strong className="rs-c-accent">
                   {stations.join(', ').replace(/_/g, ' ')}
                 </strong>.</>
               : 'Nothing ticked yet that a meal plan can use.'}
           </div>
 
           {error && (
-            <div className="rs-card-meta rs-mt-2" style={{ color: 'var(--md-error)' }}>
+            <div className="rs-card-meta rs-mt-2 rs-c-error">
               {error}
             </div>
           )}
@@ -145,10 +145,9 @@ function Group({ rows, on, toggle }) {
             type="button"
             onClick={() => toggle(row.key)}
             aria-pressed={active}
-            className="rs-type-micro rs-pointer" style={{
+            className="rs-type-micro rs-pointer rs-fw-800" style={{
               padding: '7px 13px',
               borderRadius: 'var(--md-shape-full)',
-              fontWeight: 800,
               letterSpacing: '0.04em',
               border: active
                 ? '1px solid var(--primary)'
