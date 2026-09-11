@@ -211,7 +211,7 @@ langfuse>=2.0,<3.0
 # -----------------------------------------------------------------------------
 # Option B (library mode). graphiti-core needs a running Neo4j; it no-ops
 # at the provider level when GRAPHITI_ENABLED=false.
-graphiti-core>=0.3
+graphiti-core>=0.30.1
 
 # -----------------------------------------------------------------------------
 # Warden Daemon (Vision)
