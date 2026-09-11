@@ -139,7 +139,7 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
             <div key={m.id} style={{ position: 'relative', width: '150px', height: '100px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
               <img src={`/api/vehicles/media/${m.id}?thumb=true`} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: m.kind === 'video' ? 0.7 : 1 }} alt={m.title} 
                    onError={(e) => { e.target.style.display = 'none'; }} />
-              {m.kind === 'video' && <div style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#fff'}}>▶</div>}
+              {m.kind === 'video' && <div style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--fg)'}}>▶</div>}
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '10px', padding: '4px' }}>
                 {m.title}
               </div>

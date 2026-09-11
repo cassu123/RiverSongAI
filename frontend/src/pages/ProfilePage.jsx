@@ -598,7 +598,7 @@ export default function ProfilePage({
                             {service.name}
                           </div>
                           {isConnected && (
-                            <div style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--rs-status-nominal)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                               <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
                               Connected
                               {meta.email && ` as ${meta.email}`}

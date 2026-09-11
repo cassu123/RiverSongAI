@@ -723,7 +723,7 @@ export default function SettingsPage({
         <h1 className="rs-greeting" style={{ fontSize: '2.2rem', fontWeight: 700, margin: '0 0 6px' }}>
           {activeHubTab === 'admin' ? 'Admin & System Control' : activeHubTab === 'users' ? 'Family & Household' : activeHubTab === 'profile' ? 'Identity & Account' : 'Assistant & Voice Settings'}
         </h1>
-        <div className="rs-greeting-sub" style={{ fontSize: '1.05rem', color: 'rgba(220, 230, 245, 0.75)' }}>
+        <div className="rs-greeting-sub" style={{ fontSize: '1.05rem', color: 'var(--text-muted)' }}>
           {activeHubTab === 'admin'
             ? 'Global backend daemons, provider API routing, tool gating, and capability flags.'
             : activeHubTab === 'users'

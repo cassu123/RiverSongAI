@@ -30,9 +30,9 @@ async function apiFetch(path, token, opts = {}) {
 }
 
 function StockBadge({ qty, threshold }) {
-  if (qty === 0) return <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171', borderColor: '#f87171' }}>OUT</span>;
-  if (qty <= threshold) return <span className="rs-pill" style={{ background: 'rgba(250,204,21,0.1)', color: '#facc15', borderColor: '#facc15' }}>LOW</span>;
-  return <span className="rs-pill" style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80', borderColor: '#4ade80' }}>IN STOCK</span>;
+  if (qty === 0) return <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }}>OUT</span>;
+  if (qty <= threshold) return <span className="rs-pill" style={{ background: 'rgba(250,204,21,0.1)', color: 'var(--rs-status-warning)', borderColor: 'var(--rs-status-warning)' }}>LOW</span>;
+  return <span className="rs-pill" style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--rs-status-nominal)', borderColor: 'var(--rs-status-nominal)' }}>IN STOCK</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +206,7 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
 
   return (
     <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 32, border: '1px solid var(--primary)' }}>
-      {error && <div style={{ color: '#f87171', marginBottom: 16, fontSize: '0.85rem' }}>{error}</div>}
+      {error && <div style={{ color: 'var(--rs-status-critical)', marginBottom: 16, fontSize: '0.85rem' }}>{error}</div>}
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
         <div style={{ width: 160 }}>
           <div 
@@ -335,7 +335,7 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
           <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => setShowListing(!showListing)}>
             {showListing ? 'HIDE' : 'LIST'}
           </button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem', color: '#f87171', borderColor: '#f87171' }} onClick={() => onDelete(product.id)}>DEL</button>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }} onClick={() => onDelete(product.id)}>DEL</button>
         </div>
 
         {showListing && <ListingBuilder product={product} />}
@@ -482,7 +482,7 @@ export default function CommercePage({ setAction }) {
   });
 
   if (wsLoading) return <div className="rs-foyer"><div className="rs-card-meta">Initializing...</div></div>;
-  if (wsError) return <div className="rs-foyer"><div className="rs-card" style={{ color: '#f87171' }}>{wsError}</div></div>;
+  if (wsError) return <div className="rs-foyer"><div className="rs-card" style={{ color: 'var(--rs-status-critical)' }}>{wsError}</div></div>;
 
   return (
     <div className="rs-foyer animate-fade-in">
@@ -582,7 +582,7 @@ function CreateWorkspaceForm({ token, onCreate }) {
     <div className="rs-card animate-fade-in" style={{ maxWidth: 500 }}>
       <span className="rs-card-label" style={{ color: 'var(--primary)' }}>CREATE YOUR FIRST WORKSPACE</span>
       <p className="rs-card-meta" style={{ marginBottom: 20 }}>Workspaces organize your products, stock, and listings.</p>
-      {error && <div style={{ color: '#f87171', marginBottom: 12, fontSize: '0.8rem' }}>{error}</div>}
+      {error && <div style={{ color: 'var(--rs-status-critical)', marginBottom: 12, fontSize: '0.8rem' }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10 }}>
         <input 
           style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }}

@@ -363,11 +363,11 @@ export default function CookPlanTab({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div className="gh-glance-orb-wrap" style={{ width: 48, height: 48 }}>
-                <span className="material-symbols-rounded" style={{ fontSize: 26, color: '#00e5ff' }}>skillet</span>
+                <span className="material-symbols-rounded" style={{ fontSize: 26, color: 'var(--md-primary)' }}>skillet</span>
               </div>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#fff' }}>Start Cooking Guide</h2>
-                <div style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.7)', marginTop: 2 }}>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--fg)' }}>Start Cooking Guide</h2>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>
                   From prep checklist to synchronized hot plating
                 </div>
               </div>
@@ -384,7 +384,7 @@ export default function CookPlanTab({
           {showAppliances && (
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
               {availableEquipment.length === 0 ? (
-                <div style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.6)', padding: 12 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', padding: 12 }}>
                   No kitchen equipment registered. Add your appliances in settings.
                 </div>
               ) : (
@@ -426,13 +426,13 @@ export default function CookPlanTab({
           <div className="gh-card" style={{ border: '1px solid rgba(0, 229, 255, 0.35)', background: 'rgba(0, 229, 255, 0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
-                <div className="gh-sensor-pill" style={{ color: '#00e5ff', background: 'rgba(0, 229, 255, 0.15)', borderColor: 'rgba(0, 229, 255, 0.3)', marginBottom: 8 }}>
+                <div className="gh-sensor-pill" style={{ color: 'var(--md-primary)', background: 'rgba(0, 229, 255, 0.15)', borderColor: 'rgba(0, 229, 255, 0.3)', marginBottom: 8 }}>
                   TONIGHT'S PLANNED DINNER
                 </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff' }}>
+                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--fg)' }}>
                   {todayDinner.recipe_title || todayDinner.label || 'Dinner'}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.7)', marginTop: 4 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 4 }}>
                   Scheduled for today in your weekly meal plan
                 </div>
               </div>
@@ -453,17 +453,17 @@ export default function CookPlanTab({
         <div className="gh-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>Choose from Cookbook</h3>
-              <div style={{ fontSize: '0.82rem', color: 'rgba(220, 230, 245, 0.65)' }}>Select any recipe to start guided cooking immediately</div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--fg)' }}>Choose from Cookbook</h3>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Select any recipe to start guided cooking immediately</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255, 255, 255, 0.06)', padding: '6px 14px', borderRadius: 999, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-              <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'rgba(220, 230, 245, 0.6)' }}>search</span>
+              <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--text-muted)' }}>search</span>
               <input
                 type="text"
                 placeholder="Search recipe..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ all: 'unset', color: '#fff', fontSize: '0.85rem', width: 140 }}
+                style={{ all: 'unset', color: 'var(--fg)', fontSize: '0.85rem', width: 140 }}
               />
             </div>
           </div>
@@ -487,13 +487,13 @@ export default function CookPlanTab({
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#00e5ff', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--md-primary)', textTransform: 'uppercase' }}>
                       {r.meal_type || 'Recipe'} · {r.primary_protein || 'Provisions'}
                     </div>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginTop: 4 }}>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--fg)', marginTop: 4 }}>
                       {r.title}
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: 'rgba(220, 230, 245, 0.6)', marginTop: 4 }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
                       {r.servings || 4} servings · {r.steps?.length || 0} steps
                     </div>
                   </div>
@@ -539,14 +539,14 @@ export default function CookPlanTab({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span className="gh-live-dot" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#00e5ff', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--md-primary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 {cook ? 'ACTIVE COOKING SESSION' : 'COOK PLAN READY'}
               </span>
             </div>
-            <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', marginTop: 4 }}>
+            <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--fg)', marginTop: 4 }}>
               {plan.recipes.map(r => r.title).join(' + ')}
             </div>
-            <div style={{ fontSize: '0.82rem', color: 'rgba(220, 230, 245, 0.7)', marginTop: 4 }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
               {plan.total_minutes} minutes total · {plan.recipes.length} dish{plan.recipes.length === 1 ? '' : 'es'} · {cookSteps.length} cooking steps
             </div>
           </div>
@@ -578,7 +578,7 @@ export default function CookPlanTab({
 
         {/* Eat At Time Picker */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255, 255, 255, 0.08)', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'rgba(220, 230, 245, 0.8)' }}>TARGET SERVE TIME:</span>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>TARGET SERVE TIME:</span>
           <input
             type="time"
             className="rs-pill"
@@ -587,11 +587,11 @@ export default function CookPlanTab({
             onChange={e => reschedule(e.target.value)}
           />
           {serveTime ? (
-            <span style={{ fontSize: '0.8rem', color: '#00e5ff' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--md-primary)' }}>
               Start by {planStart ? planStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'now'} to eat on time
             </span>
           ) : (
-            <span style={{ fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.5)' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Set a serve time to convert countdowns into real clock times
             </span>
           )}
@@ -635,7 +635,7 @@ export default function CookPlanTab({
       {guidePhase === 'prep' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ padding: '0 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.7)' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Gather provisions and prepare equipment before heat goes on:
             </span>
             <button
@@ -656,11 +656,11 @@ export default function CookPlanTab({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 4, height: 18, borderRadius: 2, background: colorFor[r.id] || '#00e5ff' }} />
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--fg)' }}>
                     {r.title} · Measure & Prep
                   </h3>
                 </div>
-                <span style={{ fontSize: '0.78rem', color: 'rgba(220, 230, 245, 0.6)' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                   {(r.ingredients || []).filter(i => done.has(i.key)).length} / {(r.ingredients || []).length} prepped
                 </span>
               </div>
@@ -687,7 +687,7 @@ export default function CookPlanTab({
                       <span className="material-symbols-rounded" style={{ fontSize: 26, color: isDone ? '#4ade80' : 'rgba(220, 230, 245, 0.5)' }}>
                         {isDone ? 'check_circle' : 'radio_button_unchecked'}
                       </span>
-                      <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 800, color: '#00e5ff', fontSize: '1.05rem', minWidth: 70 }}>
+                      <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 800, color: 'var(--md-primary)', fontSize: '1.05rem', minWidth: 70 }}>
                         {[ing.qty, ing.unit].filter(Boolean).join(' ') || '—'}
                       </span>
                       <span style={{ flex: 1, fontSize: '1.1rem', fontWeight: 600, color: isDone ? 'rgba(220, 230, 245, 0.5)' : '#fff', textDecoration: isDone ? 'line-through' : 'none' }}>
@@ -703,7 +703,7 @@ export default function CookPlanTab({
           {/* Knife work & preliminary prep steps */}
           {prepSteps.length > 0 && (
             <div className="gh-card">
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--fg)' }}>
                 Preliminary Prep & Knife Work
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -731,7 +731,7 @@ export default function CookPlanTab({
                         <div style={{ fontSize: '0.95rem', color: isDone ? 'rgba(220, 230, 245, 0.5)' : '#fff', textDecoration: isDone ? 'line-through' : 'none' }}>
                           {s.text}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'rgba(220, 230, 245, 0.6)', marginTop: 4 }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
                           {s.recipe_title} · {stationLabel(s.station)}
                         </div>
                       </div>
@@ -746,8 +746,8 @@ export default function CookPlanTab({
           <div className="gh-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>Appliance Stations & Adaptation</h3>
-                <div style={{ fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.65)' }}>Swap appliances to adapt cooking methods for your hardware</div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--fg)' }}>Appliance Stations & Adaptation</h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Swap appliances to adapt cooking methods for your hardware</div>
               </div>
               <button className="gh-glance-action" onClick={() => setShowAppliances(!showAppliances)}>
                 <span className="material-symbols-rounded">settings</span>
@@ -758,7 +758,7 @@ export default function CookPlanTab({
             {showAppliances && (
               <div style={{ marginBottom: 16 }}>
                 {availableEquipment.length === 0 ? (
-                  <div style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.6)', padding: 12 }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', padding: 12 }}>
                     No kitchen equipment registered.
                   </div>
                 ) : (
@@ -791,7 +791,7 @@ export default function CookPlanTab({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {plan.recipes.map(r => (
                 <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12 }}>
-                  <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem', minWidth: 160 }}>{r.title}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--fg)', fontSize: '0.9rem', minWidth: 160 }}>{r.title}</span>
                   <select
                     className="rs-pill"
                     style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: '#fff', fontSize: '0.82rem', flex: 1 }}
@@ -811,7 +811,7 @@ export default function CookPlanTab({
                       <option key={k} value={k}>Cook in {label.toLowerCase()}</option>
                     ))}
                   </select>
-                  {swapping === r.id && <span style={{ fontSize: '0.75rem', color: '#00e5ff' }}>Adapting recipe…</span>}
+                  {swapping === r.id && <span style={{ fontSize: '0.75rem', color: 'var(--md-primary)' }}>Adapting recipe…</span>}
                 </div>
               ))}
             </div>
@@ -844,7 +844,7 @@ export default function CookPlanTab({
               </button>
             </div>
 
-            <span style={{ fontSize: '0.82rem', color: 'rgba(220, 230, 245, 0.7)' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
               {cookSteps.filter(s => done.has(s.key)).length} of {cookSteps.length} steps completed
             </span>
           </div>
@@ -881,7 +881,7 @@ export default function CookPlanTab({
                     </span>
                   </div>
 
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '1.05rem', fontWeight: 800, color: '#00e5ff' }}>
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '1.05rem', fontWeight: 800, color: 'var(--md-primary)' }}>
                     STEP {activeStepIdx + 1} OF {cookSteps.length} · {timeLabel(currentStep.start_min)}
                   </span>
                 </div>
@@ -895,7 +895,7 @@ export default function CookPlanTab({
                 {timerSeconds(currentStep) > 0 && (
                   <div className="gh-cook-timer-widget">
                     <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(220, 230, 245, 0.7)', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                         STEP DURATION {currentStep.by_eye && '· JUDGE BY EYE'}
                       </div>
                       <div className="gh-cook-timer-display">
@@ -958,13 +958,13 @@ export default function CookPlanTab({
                     alignItems: 'center',
                     gap: 12,
                   }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(220, 230, 245, 0.5)', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                       UP NEXT:
                     </span>
-                    <span style={{ fontSize: '0.88rem', color: 'rgba(220, 230, 245, 0.85)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ fontSize: '0.88rem', color: 'var(--fg)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {nextStep.text}
                     </span>
-                    <span style={{ fontSize: '0.78rem', color: 'rgba(220, 230, 245, 0.6)' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                       {stationLabel(nextStep.station)}
                     </span>
                   </div>
@@ -972,10 +972,10 @@ export default function CookPlanTab({
               </div>
             ) : (
               <div className="gh-card" style={{ padding: 48, textAlign: 'center' }}>
-                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', marginBottom: 8 }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--fg)', marginBottom: 8 }}>
                   No Active Cooking Steps
                 </div>
-                <div style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.7)', marginBottom: 20 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 20 }}>
                   This meal plan only consists of preliminary mise en place. Complete your prep work or advance to plating.
                 </div>
                 <button
@@ -1050,21 +1050,21 @@ export default function CookPlanTab({
                         </span>
                       </button>
 
-                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.8rem', fontWeight: 800, color: '#00e5ff', minWidth: 50 }}>
+                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.8rem', fontWeight: 800, color: 'var(--md-primary)', minWidth: 50 }}>
                         {timeLabel(s.start_min)}
                       </span>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.92rem', color: '#fff', textDecoration: isDone ? 'line-through' : 'none' }}>
+                        <div style={{ fontSize: '0.92rem', color: 'var(--fg)', textDecoration: isDone ? 'line-through' : 'none' }}>
                           {s.text}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'rgba(220, 230, 245, 0.6)', marginTop: 2 }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
                           {s.recipe_title} · {stationLabel(s.station)}
                         </div>
                       </div>
 
                       {timerSeconds(s) > 0 && (
-                        <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'rgba(220, 230, 245, 0.5)' }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--text-muted)' }}>
                           timer
                         </span>
                       )}
@@ -1096,10 +1096,10 @@ export default function CookPlanTab({
             </span>
           </div>
 
-          <h2 style={{ fontSize: '2.3rem', fontWeight: 800, color: '#fff', margin: '0 0 10px 0' }}>
+          <h2 style={{ fontSize: '2.3rem', fontWeight: 800, color: 'var(--fg)', margin: '0 0 10px 0' }}>
             Dinner is Served!
           </h2>
-          <p style={{ fontSize: '1.15rem', color: 'rgba(220, 230, 245, 0.85)', maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.45 }}>
+          <p style={{ fontSize: '1.15rem', color: 'var(--fg)', maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.45 }}>
             All dishes are synchronized and complete. Allow hot roasted proteins to rest 5 minutes before carving to retain moisture.
           </p>
 
@@ -1111,7 +1111,7 @@ export default function CookPlanTab({
               borderRadius: 12,
               background: 'rgba(74, 222, 128, 0.12)',
               border: '1px solid rgba(74, 222, 128, 0.3)',
-              color: '#4ade80',
+              color: 'var(--rs-status-nominal)',
               fontSize: '0.88rem',
               fontWeight: 600,
             }}>

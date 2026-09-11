@@ -222,7 +222,7 @@ function PlatformDetail({
       </div>
 
       {loading && <div className="rs-card-meta" style={{ fontStyle: 'italic', fontSize: '1rem', marginBottom: 24 }}>River is analysing your data...</div>}
-      {error && <div style={{ color: '#f87171', fontSize: '0.9rem', marginBottom: 24, fontWeight: 700 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--rs-status-critical)', fontSize: '0.9rem', marginBottom: 24, fontWeight: 700 }}>{error}</div>}
 
       {insights && !loading && (
         <div style={{ 
@@ -362,7 +362,7 @@ function AddDataModal({ platform, onClose, onSave }) {
               </div>
             ))}
           </div>
-          {err && <div style={{ color: '#f87171', fontWeight: 700, fontSize: '0.8rem' }}>{err}</div>}
+          {err && <div style={{ color: 'var(--rs-status-critical)', fontWeight: 700, fontSize: '0.8rem' }}>{err}</div>}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 40 }}>
@@ -670,7 +670,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {err && <div className="rs-card is-wide" style={{ color: '#f87171', borderColor: '#f87171' }}>{err}</div>}
+        {err && <div className="rs-card is-wide" style={{ color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }}>{err}</div>}
 
         {/* Summary Stats */}
         {snapshots.length > 0 && (
@@ -768,7 +768,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="rs-card-meta" style={{ fontSize: '1rem' }}>Your store is currently linked. River is syncing orders and inventory telemetry in the background.</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginTop: 16 }}>
-                    <button className="rs-pill" style={{ color: '#f87171', fontWeight: 900, textDecoration: 'underline' }} onClick={() => { setShowShopifyModal(false); handleDisconnectShopify() }}>DISCONNECT</button>
+                    <button className="rs-pill" style={{ color: 'var(--rs-status-critical)', fontWeight: 900, textDecoration: 'underline' }} onClick={() => { setShowShopifyModal(false); handleDisconnectShopify() }}>DISCONNECT</button>
                     <div style={{ display: 'flex', gap: 12 }}>
                       <button className="rs-pill" onClick={() => setShowShopifyModal(false)}>CLOSE</button>
                       <button className="rs-btn-primary" onClick={() => setShopifyStatus(s => ({ ...s, connected: false }))}>RECONNECT</button>

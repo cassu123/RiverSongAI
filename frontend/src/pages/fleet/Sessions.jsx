@@ -174,9 +174,9 @@ export default function Sessions() {
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: 10, borderRadius: 8, maxHeight: 300, overflowY: 'auto' }}>
                       {sessionDetails.events.map((e, idx) => (
                         <div key={idx} style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9em' }}>
-                          <span style={{ color: 'grey', marginRight: 10 }}>{new Date(e.timestamp + 'Z').toLocaleTimeString()}</span>
+                          <span style={{ color: 'var(--text-muted)', marginRight: 10 }}>{new Date(e.timestamp + 'Z').toLocaleTimeString()}</span>
                           <strong>{e.event}</strong>
-                          <span style={{ color: 'grey', marginLeft: 10 }}>{e.data}</span>
+                          <span style={{ color: 'var(--text-muted)', marginLeft: 10 }}>{e.data}</span>
                         </div>
                       ))}
                     </div>

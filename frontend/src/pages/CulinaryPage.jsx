@@ -100,14 +100,14 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
                   </button>
                   {exportResult ? (
                     <div style={{ padding: 16, background: 'rgba(74,222,128,0.1)', border: '1px solid #4ade80', borderRadius: 8 }}>
-                      <div style={{ color: '#4ade80', fontWeight: 800, marginBottom: 8 }}>EXPORT SUCCESSFUL</div>
+                      <div style={{ color: 'var(--rs-status-nominal)', fontWeight: 800, marginBottom: 8 }}>EXPORT SUCCESSFUL</div>
                       {exportResult.cart_url ? (
                          <a href={exportResult.cart_url} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ display: 'inline-flex', textDecoration: 'none' }}>OPEN WALMART CART</a>
                       ) : (
                          <div>No items were mapped to Walmart products.</div>
                       )}
                       {exportResult.unmapped?.length > 0 && (
-                         <div style={{ marginTop: 12, fontSize: '0.95rem', color: '#f87171' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
+                         <div style={{ marginTop: 12, fontSize: '0.95rem', color: 'var(--rs-status-critical)' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
                       )}
                     </div>
                   ) : (
@@ -657,9 +657,9 @@ export default function CulinaryPage({ setAction }) {
           <div className="gh-card" style={{ padding: '14px 20px' }}>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ flex: 2, minWidth: 220, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)' }}>
-                <span className="material-symbols-rounded" style={{ fontSize: 20, color: 'rgba(220,230,245,0.6)' }}>search</span>
+                <span className="material-symbols-rounded" style={{ fontSize: 20, color: 'var(--text-muted)' }}>search</span>
                 <input
-                  style={{ all: 'unset', width: '100%', fontSize: '0.95rem', color: '#fff' }}
+                  style={{ all: 'unset', width: '100%', fontSize: '0.95rem', color: 'var(--fg)' }}
                   placeholder="Search recipes, ingredients..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -706,7 +706,7 @@ export default function CulinaryPage({ setAction }) {
                   </div>
                   <div style={{ padding: 20 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#00e5ff', textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--md-primary)', textTransform: 'uppercase' }}>
                         {r.meal_type}
                       </span>
                       <button
@@ -721,8 +721,8 @@ export default function CulinaryPage({ setAction }) {
                         <span>Cook</span>
                       </button>
                     </div>
-                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', lineHeight: 1.3 }}>{r.title}</div>
-                    <div style={{ marginTop: 14, display: 'flex', gap: 14, fontSize: '0.95rem', color: 'rgba(220,230,245,0.8)' }}>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--fg)', lineHeight: 1.3 }}>{r.title}</div>
+                    <div style={{ marginTop: 14, display: 'flex', gap: 14, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
                       <span>{r.primary_protein?.toUpperCase() || 'NO PROTEIN'}</span>
                       <span>·</span>
                       <span style={{ fontFamily: 'var(--font-mono)' }}>{r.servings} SERVINGS</span>
@@ -752,7 +752,7 @@ export default function CulinaryPage({ setAction }) {
                   </div>
                 </div>
                 <div className="rs-card-value" style={{ fontSize: '1.5rem' }}>{item.name}</div>
-                {item.substitute && <div className="rs-card-meta" style={{ marginTop: 8 }}>PREFERRED SUBSTITUTE: <span style={{ color: '#00e5ff', fontWeight: 800 }}>{item.substitute.toUpperCase()}</span></div>}
+                {item.substitute && <div className="rs-card-meta" style={{ marginTop: 8 }}>PREFERRED SUBSTITUTE: <span style={{ color: 'var(--md-primary)', fontWeight: 800 }}>{item.substitute.toUpperCase()}</span></div>}
                 
                 {recommendations[item.id] && (
                   <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -762,7 +762,7 @@ export default function CulinaryPage({ setAction }) {
                         await api.patch(`/household/banned/${item.id}`, { substitute: rec.name });
                         fetchData('cookbook');
                       }}>
-                        <span style={{ fontWeight: 700, color: '#00e5ff', marginRight: 10 }}>{rec.name}</span>
+                        <span style={{ fontWeight: 700, color: 'var(--md-primary)', marginRight: 10 }}>{rec.name}</span>
                         <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>{rec.reason}</span>
                       </div>
                     ))}
@@ -822,8 +822,8 @@ export default function CulinaryPage({ setAction }) {
             <div className="gh-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>This Week's Dinner Menu</h3>
-                  <div style={{ fontSize: '0.8rem', color: 'rgba(220,230,245,0.65)' }}>Household dinner calendar and ingredient procurement</div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--fg)' }}>This Week's Dinner Menu</h3>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Household dinner calendar and ingredient procurement</div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="gh-glance-action" onClick={async () => {
@@ -866,7 +866,7 @@ export default function CulinaryPage({ setAction }) {
                         </div>
                         {w.entry ? (
                           <>
-                            <div style={{ fontWeight: 750, fontSize: '1.15rem', color: '#fff', lineHeight: 1.35 }}>
+                            <div style={{ fontWeight: 750, fontSize: '1.15rem', color: 'var(--fg)', lineHeight: 1.35 }}>
                               {w.entry.recipe_title || w.entry.label || 'Planned'}
                             </div>
                             <div style={{ fontSize: '0.75rem', color: w.entry.status === 'cooked' ? '#4ade80' : '#00e5ff', marginTop: 6, fontWeight: 700 }}>
@@ -897,7 +897,7 @@ export default function CulinaryPage({ setAction }) {
             {/* Dinner Proposals & Voting */}
             {proposals.length > 0 && (
               <div className="gh-card">
-                <h3 style={{ margin: '0 0 14px 0', fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
+                <h3 style={{ margin: '0 0 14px 0', fontSize: '1.15rem', fontWeight: 700, color: 'var(--fg)' }}>
                   Household Dinner Proposals
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
@@ -909,11 +909,11 @@ export default function CulinaryPage({ setAction }) {
                             {p.status.toUpperCase()} PROPOSAL
                           </span>
                           <div style={{ display: 'flex', gap: 6 }}>
-                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.75rem', color: '#4ade80', background: 'rgba(74,222,128,0.1)' }}>{p.votes_yes.length} YES</span>
-                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.75rem', color: '#f87171', background: 'rgba(248,113,113,0.1)' }}>{p.votes_no.length} NO</span>
+                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.75rem', color: 'var(--rs-status-nominal)', background: 'rgba(74,222,128,0.1)' }}>{p.votes_yes.length} YES</span>
+                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: '0.75rem', color: 'var(--rs-status-critical)', background: 'rgba(248,113,113,0.1)' }}>{p.votes_no.length} NO</span>
                           </div>
                         </div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: 14 }}>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--fg)', marginBottom: 14 }}>
                           {p.recipe?.title}
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
@@ -942,8 +942,8 @@ export default function CulinaryPage({ setAction }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {!activePrep ? (
               <div className="gh-card" style={{ textAlign: 'center', padding: 48 }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: '#fff' }}>No Active Prep Session</h3>
-                <p style={{ color: 'rgba(220,230,245,0.7)', fontSize: '0.9rem', marginBottom: 20 }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: 'var(--fg)' }}>No Active Prep Session</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: 20 }}>
                   Stage multiple dishes to cook concurrently with synchronized timing.
                 </p>
                 <button className="gh-cook-btn-next" style={{ display: 'inline-flex', padding: '0 24px' }} onClick={async () => {
@@ -955,10 +955,10 @@ export default function CulinaryPage({ setAction }) {
               <div className="gh-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#fff' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--fg)' }}>
                       Active Prep: {activePrep.label || 'Multi-Dish Meal'}
                     </h3>
-                    <div style={{ fontSize: '0.82rem', color: 'rgba(220,230,245,0.65)' }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                       {activePrep.recipes?.length || 0} dishes staged
                     </div>
                   </div>
@@ -984,7 +984,7 @@ export default function CulinaryPage({ setAction }) {
                   {(activePrep.recipes || []).map((pr, i) => (
                     <div key={i} style={{ padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>{pr.recipe_title}</div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--fg)' }}>{pr.recipe_title}</div>
                         <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={async () => {
                           await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
                           fetchData('plan');
@@ -1086,7 +1086,7 @@ export default function CulinaryPage({ setAction }) {
                   </span>
                   <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>
                 </div>
-                <div className="rs-card-value" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff' }}>{item.name}</div>
+                <div className="rs-card-value" style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--fg)' }}>{item.name}</div>
                 <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
                   <button className="rs-pill is-active" style={{ flex: 1 }} onClick={() => setAdjustItem(item)}>ADJUST</button>
                   <button className="rs-pill" onClick={() => {
@@ -1109,8 +1109,8 @@ export default function CulinaryPage({ setAction }) {
     <div className="gh-kitchen-stage animate-fade-in">
       {/* Header */}
       <div className="rs-foyer-head" style={{ marginBottom: 20 }}>
-        <h1 className="rs-greeting" style={{ fontSize: '2.5rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Kitchen</h1>
-        <div className="rs-greeting-sub" style={{ fontSize: '1.15rem', color: 'rgba(220, 230, 245, 0.85)', marginTop: 6 }}>Cookbook, meal plans, autonomous cooking guides & groceries.</div>
+        <h1 className="rs-greeting" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--fg)', letterSpacing: '-0.02em' }}>Kitchen</h1>
+        <div className="rs-greeting-sub" style={{ fontSize: '1.15rem', color: 'var(--fg)', marginTop: 6 }}>Cookbook, meal plans, autonomous cooking guides & groceries.</div>
       </div>
 
       {/* Top Google Home Category Nav Bar (Sub-navigation) */}

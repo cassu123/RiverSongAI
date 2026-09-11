@@ -159,7 +159,7 @@ export default function InventoryPage({ setAction }) {
             <span className="material-symbols-rounded">barcode_scanner</span>
             <span className="rs-speak-actions-label">SCAN</span>
           </button>
-          <button className="rs-btn-primary" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 24px', background: 'rgba(250,204,21,0.2)', color: '#facc15' }} disabled={!homeId}>
+          <button className="rs-btn-primary" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 24px', background: 'rgba(250,204,21,0.2)', color: 'var(--rs-status-warning)' }} disabled={!homeId}>
             <span className="material-symbols-rounded">fact_check</span>
             <span className="rs-speak-actions-label">AUDIT</span>
           </button>
@@ -335,8 +335,8 @@ export default function InventoryPage({ setAction }) {
                 
                 {(item.receipt_url || item.warranty_url) && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                    {item.receipt_url && <span className="rs-card-meta" style={{ color: '#4ade80' }}><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>receipt</span> Receipt</span>}
-                    {item.warranty_url && <span className="rs-card-meta" style={{ color: '#4ade80' }}><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>verified</span> Warranty</span>}
+                    {item.receipt_url && <span className="rs-card-meta" style={{ color: 'var(--rs-status-nominal)' }}><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>receipt</span> Receipt</span>}
+                    {item.warranty_url && <span className="rs-card-meta" style={{ color: 'var(--rs-status-nominal)' }}><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle' }}>verified</span> Warranty</span>}
                   </div>
                 )}
                 

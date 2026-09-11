@@ -159,7 +159,7 @@ export default function ConversationPage({ setAction }) {
 
       {error && (
         <div className="rs-speak-error">
-          <span style={{ color: '#f87171', fontSize: '0.8rem' }}>{error}</span>
+          <span style={{ color: 'var(--rs-status-critical)', fontSize: '0.8rem' }}>{error}</span>
         </div>
       )}
 

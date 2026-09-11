@@ -110,7 +110,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
         <h2 style={{ marginTop: 0, marginBottom: 8, fontSize: '2rem' }}>Sector Audit</h2>
         <p className="rs-card-meta">Verify physical presence of operational assets.</p>
 
-        {error && <div style={{ color: '#f87171', padding: 8, background: 'rgba(248,113,113,0.1)', marginBottom: 16 }}>{error}</div>}
+        {error && <div style={{ color: 'var(--rs-status-critical)', padding: 8, background: 'rgba(248,113,113,0.1)', marginBottom: 16 }}>{error}</div>}
 
         {loading ? (
           <div>INITIALIZING AUDIT SUBSYSTEM...</div>
@@ -119,7 +119,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
             <span className="material-symbols-rounded" style={{ fontSize: '4rem', opacity: 0.2, marginBottom: 16 }}>fact_check</span>
             {audit && audit.status === 'completed' && (
               <div style={{ marginBottom: 32 }}>
-                <div style={{ color: '#4ade80', fontSize: '1.2rem', marginBottom: 16 }}>AUDIT COMPLETED SUCCESSFULLY</div>
+                <div style={{ color: 'var(--rs-status-nominal)', fontSize: '1.2rem', marginBottom: 16 }}>AUDIT COMPLETED SUCCESSFULLY</div>
                 <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
                   <button className="rs-btn-primary" onClick={() => downloadDiscrepancy(false)} style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)' }}>
                     <span className="material-symbols-rounded">picture_as_pdf</span>
@@ -162,7 +162,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
 
             <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 400px' }}>
-                <h3 style={{ fontSize: '1.1rem', color: '#4ade80', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--rs-status-nominal)', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                   <span>SCANNED</span>
                   <span>({audit.scanned?.length || 0})</span>
                 </h3>
@@ -179,7 +179,7 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                 ))}
               </div>
               <div style={{ flex: '1 1 400px' }}>
-                <h3 style={{ fontSize: '1.1rem', color: '#f87171', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--rs-status-critical)', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                   <span>MISSING</span>
                   <span>({audit.missing?.length || 0})</span>
                 </h3>
@@ -200,12 +200,12 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
             <div style={{ marginTop: 32, padding: 24, background: 'var(--md-surface-container)', borderRadius: 12 }}>
               <textarea 
                 className="rs-chat-input"
-                style={{ width: '100%', height: 80, padding: 12, marginBottom: 16, borderRadius: 8, background: 'var(--md-surface-container-high)', border: 'none', color: 'white' }}
+                style={{ width: '100%', height: 80, padding: 12, marginBottom: 16, borderRadius: 8, background: 'var(--md-surface-container-high)', border: 'none', color: 'var(--fg)' }}
                 placeholder="Audit completion notes (optional)..."
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
               />
-              <button className="rs-btn-primary" onClick={completeAudit} disabled={completing} style={{ width: '100%', justifyContent: 'center', height: 56, background: 'rgba(74,222,128,0.2)', color: '#4ade80' }}>
+              <button className="rs-btn-primary" onClick={completeAudit} disabled={completing} style={{ width: '100%', justifyContent: 'center', height: 56, background: 'rgba(74,222,128,0.2)', color: 'var(--rs-status-nominal)' }}>
                 <span className="material-symbols-rounded">done_all</span>
                 {completing ? 'FINALIZING...' : 'FINALIZE AUDIT'}
               </button>

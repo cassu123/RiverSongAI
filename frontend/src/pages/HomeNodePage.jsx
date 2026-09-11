@@ -260,7 +260,7 @@ export default function HomeNodePage({ setAction }) {
       <div className="gh-glance-bar">
         <div className="gh-glance-left">
           <div className="gh-glance-orb-wrap">
-            <span className="material-symbols-rounded" style={{ color: '#00e5ff', fontSize: 22 }}>
+            <span className="material-symbols-rounded" style={{ color: 'var(--md-primary)', fontSize: 22 }}>
               {status?.reachable ? 'home' : 'cloud_off'}
             </span>
           </div>
@@ -335,7 +335,7 @@ export default function HomeNodePage({ setAction }) {
               onClick={() => callAction(s.entity_id, 'turn_on')}
               disabled={acting === s.entity_id}
             >
-              <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#00e5ff' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--md-primary)' }}>
                 auto_awesome
               </span>
               <span>{s.name}</span>
@@ -401,7 +401,7 @@ export default function HomeNodePage({ setAction }) {
           <span className="material-symbols-rounded" style={{ fontSize: 48, color: 'var(--warn)', marginBottom: 12 }}>
             cloud_off
           </span>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fff', marginBottom: 8 }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--fg)', marginBottom: 8 }}>
             Home Assistant Unreachable
           </h2>
           <p className="rs-card-meta" style={{ maxWidth: 440, margin: '0 auto 20px auto' }}>
@@ -473,7 +473,7 @@ export default function HomeNodePage({ setAction }) {
               <span className="material-symbols-rounded" style={{ fontSize: 44, color: 'var(--text-muted)', marginBottom: 12 }}>
                 devices
               </span>
-              <p className="rs-card-meta" style={{ fontSize: '1rem', color: '#fff', marginBottom: 16 }}>
+              <p className="rs-card-meta" style={{ fontSize: '1rem', color: 'var(--fg)', marginBottom: 16 }}>
                 No active devices found in Home Assistant.
               </p>
               <button className="gh-glance-action" style={{ margin: '0 auto' }} onClick={runSync} disabled={syncing}>
@@ -893,7 +893,7 @@ function NotConfigured() {
           borderRadius: '16px',
           fontFamily: 'var(--font-mono)',
           fontSize: '0.85rem',
-          color: '#00e5ff',
+          color: 'var(--md-primary)',
           border: '1px solid rgba(0, 229, 255, 0.2)'
         }}>
           <div>HOME_ASSISTANT_URL=http://homeassistant.local:8123</div>

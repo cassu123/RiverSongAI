@@ -41,7 +41,7 @@ export default function RateIndicator({ activeModel, token }) {
       fontSize: '0.65rem',
       marginLeft: 12,
       background: 'rgba(16, 185, 129, 0.15)',
-      color: '#10b981',
+      color: 'var(--rs-status-nominal)',
       border: '1px solid rgba(16, 185, 129, 0.3)',
       fontWeight: 600
     }} title="NVIDIA NIM Requests Per Minute">

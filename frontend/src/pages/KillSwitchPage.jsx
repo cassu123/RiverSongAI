@@ -166,7 +166,7 @@ export default function KillSwitchPage() {
                   background: 'var(--md-surface-container)', 
                   border: '1px solid rgba(255, 51, 34, 0.3)', 
                   borderRadius: 'var(--md-shape-xl)',
-                  color: 'white',
+                  color: 'var(--fg)',
                   padding: '12px 16px',
                   outline: 'none'
                 }}

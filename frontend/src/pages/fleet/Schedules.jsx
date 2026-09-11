@@ -127,7 +127,7 @@ export default function Schedules() {
                     </td>
                     <td style={{ padding: 10 }}>{s.name}</td>
                     <td style={{ padding: 10 }}>{p ? p.name : 'Unknown'}</td>
-                    <td style={{ padding: 10 }}>{renderCron(s.cron_utc)}<br/><small style={{color:'grey'}}>{s.timezone_display}</small></td>
+                    <td style={{ padding: 10 }}>{renderCron(s.cron_utc)}<br/><small style={{color: 'var(--text-muted)'}}>{s.timezone_display}</small></td>
                     <td style={{ padding: 10 }}>{s.next_run ? new Date(s.next_run + 'Z').toLocaleString() : 'Pending'}</td>
                     <td style={{ padding: 10 }}>
                       <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(s)}>Edit</button>

@@ -115,7 +115,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
         <div className="rs-card">
           <div className="rs-card-inner">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <span className="material-symbols-rounded" style={{color: '#00aaff', fontSize: '2rem'}}>local_library</span>
+              <span className="material-symbols-rounded" style={{color: 'var(--md-primary)', fontSize: '2rem'}}>local_library</span>
               <div>
                 <div style={{fontWeight: 700}}>Libby / OverDrive</div>
                 <div className="rs-card-meta">Live loans and holds telemetry</div>

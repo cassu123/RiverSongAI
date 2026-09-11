@@ -102,7 +102,7 @@ export default function EarthTab({ token, active }) {
     </div>
   )
   
-  if (error) return <div style={{ padding: 20, color: 'red' }}>Error: {error}</div>
+  if (error) return <div style={{ padding: 20, color: 'var(--rs-status-critical)' }}>Error: {error}</div>
   if (!data) return null
 
   const { eonet = [], neows = [], ocearch = [] } = data

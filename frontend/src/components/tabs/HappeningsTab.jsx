@@ -25,7 +25,7 @@ export default function HappeningsTab({ token, active }) {
     </div>
   )
   
-  if (error) return <div style={{ padding: 20, color: 'red' }}>Error: {error}</div>
+  if (error) return <div style={{ padding: 20, color: 'var(--rs-status-critical)' }}>Error: {error}</div>
   if (!data) return null
 
   const { trending = [], events_nearby = [] } = data
@@ -42,7 +42,7 @@ export default function HappeningsTab({ token, active }) {
               width: 24, height: 24, borderRadius: 4, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: t.source === 'hackernews' ? '#ff6600' : '#ff4500',
-              color: '#fff', fontSize: '14px', fontWeight: 800
+              color: 'var(--fg)', fontSize: '14px', fontWeight: 800
             }}>
               {t.source === 'hackernews' ? 'Y' : 'r'}
             </div>

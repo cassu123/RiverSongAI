@@ -443,7 +443,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 16px', marginBottom: 16, borderRadius: 10,
               background: 'rgba(220,60,60,0.15)', border: '1px solid rgba(220,60,60,0.3)',
-              color: '#f08080', fontSize: '0.9rem',
+              color: 'var(--rs-status-critical)', fontSize: '0.9rem',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>error</span>
               <span style={{ flex: 1 }}>{error}</span>

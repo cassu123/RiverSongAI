@@ -148,7 +148,7 @@ function RoutineHistory({ token }) {
             <span className="rs-card-label">{l.delivered ? 'DELIVERED' : 'BLOCKED'}</span>
           </div>
           <div className="rs-card-value">{l.title}</div>
-          {l.reason && <div className="rs-card-meta" style={{ color: '#ff6b6b' }}>{l.reason}</div>}
+          {l.reason && <div className="rs-card-meta" style={{ color: 'var(--rs-status-critical)' }}>{l.reason}</div>}
         </div>
       ))}
     </div>

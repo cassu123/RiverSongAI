@@ -206,11 +206,11 @@ export default function UsersPage({ embedded = false }) {
   if (currentUser?.role !== 'admin') {
     return (
       <div className="rs-card" style={{ textAlign: 'center', padding: '48px 24px', background: '#151c27', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24 }}>
-        <span className="material-symbols-rounded" style={{ fontSize: '3.2rem', color: '#f87171', marginBottom: 16, display: 'block' }}>
+        <span className="material-symbols-rounded" style={{ fontSize: '3.2rem', color: 'var(--rs-status-critical)', marginBottom: 16, display: 'block' }}>
           admin_panel_settings
         </span>
-        <h3 style={{ margin: '0 0 10px', fontSize: '1.4rem', color: '#fff' }}>Administrator Clearance Required</h3>
-        <p style={{ color: 'rgba(220, 230, 245, 0.75)', fontSize: '1.05rem', margin: 0, maxWidth: 500, marginInline: 'auto' }}>
+        <h3 style={{ margin: '0 0 10px', fontSize: '1.4rem', color: 'var(--fg)' }}>Administrator Clearance Required</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', margin: 0, maxWidth: 500, marginInline: 'auto' }}>
           Household member and user account administration is strictly restricted to administrator profiles.
         </p>
       </div>
@@ -261,15 +261,15 @@ export default function UsersPage({ embedded = false }) {
                 </div>
                 <div>
                   <div className="rs-card-value" style={{ fontSize: '1.3rem', fontWeight: 700 }}>{u.display_name}</div>
-                  <div className="rs-card-meta" style={{ fontSize: '0.95rem', color: 'rgba(220, 230, 245, 0.75)' }}>{u.email}</div>
+                  <div className="rs-card-meta" style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>{u.email}</div>
                 </div>
               </div>
               
               <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
-                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.9)' }}>FORCE PASSWORD CHANGE</span>
-                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.55)', marginTop: 2 }}>Requires changing password on next sign-in</span>
+                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'var(--fg)' }}>FORCE PASSWORD CHANGE</span>
+                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Requires changing password on next sign-in</span>
                   </div>
                   <button 
                     className={`rs-pill ${u.force_password_change ? 'is-active' : ''}`}
@@ -282,8 +282,8 @@ export default function UsersPage({ embedded = false }) {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
-                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.9)' }}>SUSPEND ACCOUNT</span>
-                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.55)', marginTop: 2 }}>Block sign-in and API access immediately</span>
+                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'var(--fg)' }}>SUSPEND ACCOUNT</span>
+                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Block sign-in and API access immediately</span>
                   </div>
                   <button 
                     className={`rs-pill ${u.is_suspended ? 'is-active' : ''}`}
@@ -296,10 +296,10 @@ export default function UsersPage({ embedded = false }) {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div>
-                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'rgba(220, 230, 245, 0.9)' }}>
+                    <span className="rs-card-label" style={{ fontSize: '0.85rem', color: 'var(--fg)' }}>
                       FREE MODELS ONLY
                     </span>
-                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.55)', marginTop: 2 }}>
+                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
                       Restricts "Let River Decide" to local + free-tier models
                     </span>
                   </div>
@@ -351,7 +351,7 @@ export default function UsersPage({ embedded = false }) {
           </div>
 
           {resetError && <div style={{ color: 'var(--md-error)', fontSize: '0.8rem', marginBottom: 16 }}>{resetError}</div>}
-          {resetSuccess && <div style={{ color: '#4ade80', fontSize: '0.8rem', marginBottom: 16 }}>{resetSuccess}</div>}
+          {resetSuccess && <div style={{ color: 'var(--rs-status-nominal)', fontSize: '0.8rem', marginBottom: 16 }}>{resetSuccess}</div>}
 
           <div style={{ display: 'flex', gap: 12 }}>
             <button type="submit" className="rs-btn-primary" style={{ flex: 1 }}>SET PASSWORD</button>
