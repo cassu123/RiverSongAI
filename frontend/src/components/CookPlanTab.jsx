@@ -1008,10 +1008,10 @@ export default function CookPlanTab({
                           ? 'rgba(0, 229, 255, 0.12)'
                           : isDone
                           ? 'rgba(255, 255, 255, 0.02)'
-                          : 'rgba(255, 255, 255, 0.04)',
+                          : 'var(--rs-veil-1)',
                         border: isCurrent
                           ? '1px solid rgba(0, 229, 255, 0.4)'
-                          : '1px solid rgba(255, 255, 255, 0.08)',
+                          : '1px solid var(--rs-hairline)',
                         opacity: isDone ? 0.5 : 1,
                       }}
                     >
