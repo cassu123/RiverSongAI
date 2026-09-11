@@ -622,7 +622,7 @@ export default function ProfilePage({
                           className="rs-pill"
                           disabled
                           title="This integration is not available yet."
-                          style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px', justifyContent: 'center', opacity: 0.5 }}
+                          style={{ color: 'var(--text-muted)', padding: '6px 16px', fontSize: 'var(--rs-fs-nano)', minWidth: '110px', justifyContent: 'center' }}
                         >
                           COMING SOON
                         </button>

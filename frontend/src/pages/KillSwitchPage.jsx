@@ -215,7 +215,7 @@ export default function KillSwitchPage() {
               "After reset, restart the server process to resume conversation handling."
             ].map((text, i) => (
               <div key={i} style={{ display: 'flex', gap: 12, fontSize: 'var(--rs-fs-tiny)' }}>
-                <span style={{ opacity: 0.5, fontSize: 'var(--rs-fs-nano)' }}>0{i+1}</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>0{i+1}</span>
                 <span className="rs-card-meta" style={{ color: 'inherit', opacity: 0.8 }}>{text}</span>
               </div>
             ))}

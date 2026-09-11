@@ -52,8 +52,7 @@ export function InlineSettingsSection({
           {subtitle && (
             <span
               className="rs-card-meta"
-              style={{
-                fontSize: 'var(--rs-fs-nano)', opacity: 0.5, marginLeft: 6,
+              style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginLeft: 6,
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
               }}
             >
@@ -85,7 +84,7 @@ export function InlineSettingsSection({
 export function SettingsRow({ label, children }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.45, marginBottom: 8 }}>
+      <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 8 }}>
         {label}
       </div>
       {children}
@@ -160,7 +159,7 @@ export default function TabSettingsPanel({ open, onClose, panelRef, title = 'SET
       minWidth: 280, maxWidth: 340,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 800, letterSpacing: '0.1em', opacity: 0.6 }}>{title}</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 800, letterSpacing: '0.1em' }}>{title}</span>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', cursor: 'pointer', padding: 4,
           color: 'var(--md-on-surface-variant)', display: 'flex',

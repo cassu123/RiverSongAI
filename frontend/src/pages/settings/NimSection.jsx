@@ -146,7 +146,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span className="rs-card-meta">Requests this minute</span>
             <span style={{ fontWeight: 700, color: barColor, fontSize: 'var(--rs-fs-small)', fontVariantNumeric: 'tabular-nums' }}>
-              {nimCalls}<span style={{ opacity: 0.5, fontWeight: 400 }}> / {NIM_RATE_LIMIT}</span>
+              {nimCalls}<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> / {NIM_RATE_LIMIT}</span>
             </span>
           </div>
           <div style={{ height: 8, borderRadius: 4, background: 'var(--md-sys-color-surface-variant)', overflow: 'hidden' }}>
@@ -199,7 +199,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
         ].map(({ name, tag }) => (
           <div key={name} className="rs-pill" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--rs-fs-nano)', padding: '3px 10px' }}>
             <span>{name}</span>
-            <span style={{ opacity: 0.5, fontSize: 'var(--rs-fs-nano)' }}>· {tag}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>· {tag}</span>
           </div>
         ))}
       </div>

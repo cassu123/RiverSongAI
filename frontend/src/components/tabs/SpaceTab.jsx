@@ -76,7 +76,7 @@ export default function SpaceTab({ token, active }) {
               </div>
             </div>
 
-            <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5, marginBottom: 8 }}>FLARES (24H)</div>
+            <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 8 }}>FLARES (24H)</div>
             {solar.flares_24h?.length > 0 ? (
               solar.flares_24h.map((f, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < solar.flares_24h.length - 1 ? '1px solid var(--md-outline-variant)' : 'none' }}>
@@ -138,7 +138,7 @@ export default function SpaceTab({ token, active }) {
                 color: l.status === 'Go' ? 'var(--primary)' : 'var(--md-on-surface-variant)'
               }}>
                 {new Date(l.net).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                <span style={{ opacity: 0.5, marginLeft: 6, fontWeight: 400 }}>({l.status})</span>
+                <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontWeight: 400 }}>({l.status})</span>
               </div>
             </div>
           </div>

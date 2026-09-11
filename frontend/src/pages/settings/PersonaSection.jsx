@@ -24,7 +24,7 @@ export default function PersonaSection({ personaSettings, setPersonaSettings, sa
               placeholder="River Song system prompt..."
               rows={12}
             />
-            <div style={{ position: 'absolute', bottom: 12, right: 16, fontSize: 'var(--rs-fs-nano)', opacity: 0.5, pointerEvents: 'none' }}>
+            <div style={{ color: 'var(--text-muted)', position: 'absolute', bottom: 12, right: 16, fontSize: 'var(--rs-fs-nano)', pointerEvents: 'none' }}>
               {personaSettings.system_prompt.length} chars
             </div>
           </div>

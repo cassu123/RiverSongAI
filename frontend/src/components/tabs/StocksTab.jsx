@@ -31,7 +31,7 @@ function LineChart({ data }) {
         <polyline points={pts} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
       </svg>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>
+        <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
           {data[0]?.date} → {data[data.length - 1]?.date}
         </span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-micro)', fontWeight: 700, color }}>
@@ -53,7 +53,7 @@ function relTime(iso) {
 
 function NewsList({ items }) {
   if (!items.length) return (
-    <div className="rs-card-meta" style={{ padding: '12px 0', fontSize: 'var(--rs-fs-micro)', opacity: 0.5 }}>No recent news.</div>
+    <div className="rs-card-meta" style={{ color: 'var(--text-muted)', padding: '12px 0', fontSize: 'var(--rs-fs-micro)' }}>No recent news.</div>
   )
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -270,7 +270,7 @@ export default function StocksTab({ token, active }) {
 
   const watchlist = settings?.watchlist || []
   const colHeader = (label, align = 'left') => (
-    <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.45, textAlign: align }}>{label}</div>
+    <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: align }}>{label}</div>
   )
 
   return (
@@ -328,7 +328,7 @@ export default function StocksTab({ token, active }) {
                 }}>
                   <span style={{ fontWeight: 800, fontSize: 'var(--rs-fs-tiny)', color: 'var(--primary)', minWidth: 52 }}>{r.ticker}</span>
                   <span className="rs-card-meta" style={{ flex: 1, fontSize: 'var(--rs-fs-micro)' }}>{r.name}</span>
-                  <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>{r.region}</span>
+                  <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{r.region}</span>
                 </button>
               ))}
             </div>
@@ -376,7 +376,7 @@ export default function StocksTab({ token, active }) {
       {/* Chart pane */}
       {settings?.show_charts && selectedTicker && (
         <div style={{ marginTop: 20 }}>
-          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5, marginBottom: 10 }}>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
             {selectedTicker} · 30-DAY CHART
           </div>
           {chartLoading ? (
@@ -384,7 +384,7 @@ export default function StocksTab({ token, active }) {
           ) : chart?.length ? (
             <LineChart data={chart} />
           ) : (
-            <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.5 }}>Chart data unavailable (API limit may be reached).</div>
+            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Chart data unavailable (API limit may be reached).</div>
           )}
         </div>
       )}
@@ -392,11 +392,11 @@ export default function StocksTab({ token, active }) {
       {/* News pane */}
       {settings?.show_news && selectedTicker && (
         <div style={{ marginTop: 20 }}>
-          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5, marginBottom: 10 }}>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
             {selectedTicker} · RECENT NEWS
           </div>
           {newsLoading ? (
-            <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.5 }}>Loading…</div>
+            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Loading…</div>
           ) : (
             <NewsList items={news} />
           )}

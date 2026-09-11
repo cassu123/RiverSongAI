@@ -79,7 +79,7 @@ export default function NewsTab({ token, active }) {
   const renderSourcePicker = () => {
     if (!Object.keys(catMeta).length) {
       return (
-        <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.5 }}>
+        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>
           Loading source catalogue…
         </div>
       )
@@ -104,7 +104,7 @@ export default function NewsTab({ token, active }) {
                 >
                   {meta?.icon || 'rss_feed'}
                 </span>
-                <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6 }}>
+                <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
                   {/* A category arriving without a label took the whole Feeds
                       page down with a render fault; fall back to its key. */}
                   {(meta?.label || cat).toUpperCase()}

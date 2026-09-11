@@ -37,7 +37,7 @@ export default function SignupPage({ onSwitchToLogin }) {
             <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-body)', padding: '8px 12px' }}>RS</span>
             <span style={{ fontFamily: 'var(--font-mood)', fontSize: 'var(--rs-fs-h3)', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
-          <div className="rs-card-label" style={{ opacity: 0.5, fontSize: 'var(--rs-fs-nano)' }}>NEW OPERATOR REGISTRATION</div>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>NEW OPERATOR REGISTRATION</div>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

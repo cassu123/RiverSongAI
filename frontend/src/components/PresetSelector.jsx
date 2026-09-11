@@ -109,7 +109,7 @@ export default function PresetSelector({ onApply, onManage }) {
                   {p.is_default && <span style={{ marginRight: 4, opacity: 0.7 }}>★</span>}
                   {p.name}
                 </span>
-                {applying === p.id && <span style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6 }}>APPLYING…</span>}
+                {applying === p.id && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>APPLYING…</span>}
               </button>
             ))}
             {onManage && (

@@ -129,13 +129,13 @@ export default function LoginPage({ onSwitchToSignup }) {
             <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-small)', padding: '7px 11px' }}>RS</span>
             <span style={{ fontFamily: 'var(--font-mood)', fontSize: 'var(--rs-fs-h3)', letterSpacing: '0.12em', fontWeight: 600 }}>RIVER SONG</span>
           </div>
-          <div className="rs-card-label" style={{ opacity: 0.45, fontSize: 'var(--rs-fs-nano)' }}>NEURAL LINK INTERFACE</div>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>NEURAL LINK INTERFACE</div>
         </div>
 
         {!challengeToken ? (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)', opacity: 0.7 }}>IDENTIFIER</div>
+            <div className="rs-card-label" style={{ color: 'var(--text-muted)', marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)' }}>IDENTIFIER</div>
             <input
               type="email"
               style={inputStyle}
@@ -148,7 +148,7 @@ export default function LoginPage({ onSwitchToSignup }) {
           </div>
 
           <div>
-            <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)', opacity: 0.7 }}>PASS-KEY</div>
+            <div className="rs-card-label" style={{ color: 'var(--text-muted)', marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)' }}>PASS-KEY</div>
             <input
               type="password"
               style={inputStyle}
@@ -172,7 +172,7 @@ export default function LoginPage({ onSwitchToSignup }) {
           </div>
           {!useRecovery ? (
             <div>
-              <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)', opacity: 0.7 }}>6-DIGIT CODE</div>
+              <div className="rs-card-label" style={{ color: 'var(--text-muted)', marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)' }}>6-DIGIT CODE</div>
               <input
                 type="text"
                 inputMode="numeric"
@@ -187,7 +187,7 @@ export default function LoginPage({ onSwitchToSignup }) {
             </div>
           ) : (
             <div>
-              <div className="rs-card-label" style={{ marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)', opacity: 0.7 }}>RECOVERY CODE</div>
+              <div className="rs-card-label" style={{ color: 'var(--text-muted)', marginBottom: 6, paddingLeft: 2, fontSize: 'var(--rs-fs-nano)' }}>RECOVERY CODE</div>
               <input
                 type="text"
                 style={inputStyle}
@@ -210,14 +210,14 @@ export default function LoginPage({ onSwitchToSignup }) {
             <button
               type="button"
               onClick={() => { setUseRecovery(!useRecovery); setError(''); setTotpCode(''); setRecoveryCode('') }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit', opacity: 0.6 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
             >
               {useRecovery ? 'USE AUTHENTICATOR' : 'USE RECOVERY CODE'}
             </button>
             <button
               type="button"
               onClick={cancelTotp}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit', opacity: 0.6 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
             >
               CANCEL
             </button>
@@ -228,7 +228,7 @@ export default function LoginPage({ onSwitchToSignup }) {
         {!challengeToken && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '1.25rem 0' }}>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          <span style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.1em', opacity: 0.4 }}>OR</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.1em' }}>OR</span>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
         </div>
         )}
@@ -250,7 +250,7 @@ export default function LoginPage({ onSwitchToSignup }) {
           <button
             type="button"
             onClick={onSwitchToSignup}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit', opacity: 0.6 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-surface-variant)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.08em', textDecoration: 'underline', fontFamily: 'inherit' }}
           >
             NEW OPERATOR? REGISTER HERE
           </button>

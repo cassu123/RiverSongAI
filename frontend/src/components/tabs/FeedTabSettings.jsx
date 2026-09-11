@@ -270,7 +270,7 @@ export function FeedTabsManager({ prefs, savePrefs }) {
   const p = prefs || {}
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6 }}>SHOW THESE TABS</div>
+      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>SHOW THESE TABS</div>
       {OPTIONAL_TABS.map(t => (
         <Toggle
           key={t.key}

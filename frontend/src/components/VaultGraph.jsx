@@ -345,7 +345,7 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
       </div>
 
       <div style={{ position: 'absolute', top: 10, right: 12, pointerEvents: 'none' }}>
-        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.35 }}>
+        <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
           scroll · zoom  ·  drag canvas · pan  ·  drag node · reposition  ·  click node · open
         </span>
       </div>

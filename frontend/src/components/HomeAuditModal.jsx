@@ -168,11 +168,11 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                 </h3>
                 {Object.keys(scannedByLoc).sort().map(loc => (
                   <div key={loc} style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 'var(--rs-fs-tiny)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{loc}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{loc}</div>
                     {scannedByLoc[loc].map(i => (
                       <div key={i.id} style={{ padding: '8px 12px', background: 'rgba(74,222,128,0.05)', borderRadius: 4, marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
                         <span>{i.name}</span>
-                        <span style={{ opacity: 0.5, fontSize: 'var(--rs-fs-tiny)', fontFamily: 'var(--font-mono)' }}>{i.ein}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', fontFamily: 'var(--font-mono)' }}>{i.ein}</span>
                       </div>
                     ))}
                   </div>
@@ -185,11 +185,11 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
                 </h3>
                 {Object.keys(missingByLoc).sort().map(loc => (
                   <div key={loc} style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 'var(--rs-fs-tiny)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{loc}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{loc}</div>
                     {missingByLoc[loc].map(i => (
                       <div key={i.id} style={{ padding: '8px 12px', background: 'rgba(248,113,113,0.05)', borderRadius: 4, marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
                         <span>{i.name}</span>
-                        <span style={{ opacity: 0.5, fontSize: 'var(--rs-fs-tiny)', fontFamily: 'var(--font-mono)' }}>{i.ein}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', fontFamily: 'var(--font-mono)' }}>{i.ein}</span>
                       </div>
                     ))}
                   </div>

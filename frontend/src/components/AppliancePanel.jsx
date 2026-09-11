@@ -93,8 +93,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
           <Group rows={scheduled} on={on} toggle={toggle} />
           {other.length > 0 && (
             <>
-              <div className="rs-card-meta" style={{
-                fontSize: 'var(--rs-fs-nano)', opacity: 0.6, margin: '14px 0 8px',
+              <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', margin: '14px 0 8px',
               }}>
                 ON THE MACHINE, NOT PART OF A PLAN
               </div>

@@ -128,7 +128,7 @@ export default function ConversationPage({ setAction }) {
         {convState === 'idle' && (
           <div style={{
             marginTop: 12, fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)', 
-            color: 'var(--primary)', opacity: 0.7, textAlign: 'center', minHeight: 80,
+            color: 'var(--primary)', textAlign: 'center', minHeight: 80,
             pointerEvents: 'none'
           }}>
             {sysLogs.map((log, i) => (
@@ -198,7 +198,7 @@ export default function ConversationPage({ setAction }) {
           </div>
         )}
         {messages.length === 0 && !streamingContent && convState === 'listening' && (
-          <div style={{ fontSize: 'var(--rs-fs-small)', opacity: 0.5, textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
+          <div style={{ fontSize: 'var(--rs-fs-small)', textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
         )}
       </div>
     </div>

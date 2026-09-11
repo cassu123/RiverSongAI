@@ -118,7 +118,7 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
           Room Sweep
           <button className="rs-pill" onClick={handleFinish} style={{ padding: '4px 12px', fontSize: 'var(--rs-fs-small)' }}>Done</button>
         </h2>
-        <p style={{ opacity: 0.7, margin: 0, marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Captured this session: <strong>{count}</strong> items</p>
+        <p style={{ color: 'var(--text-muted)', margin: 0, marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Captured this session: <strong>{count}</strong> items</p>
         
         <div className="rs-form-group" style={{ marginBottom: 24 }}>
           <label>Room / Location</label>

@@ -199,7 +199,7 @@ export default function EnvironmentPage({ setAction }) {
                     {act.icon} {act.label}
                   </div>
 
-                  <div style={{ marginTop: 20, width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)', opacity: 0.7 }}>
+                  <div style={{ color: 'var(--text-muted)', marginTop: 20, width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)' }}>
                     <span>{r.temperature ? `${r.temperature}°F` : '--°F'}</span>
                     <span style={{ color: r.lights_on ? 'var(--warn)' : 'inherit' }}>
                       {r.lights_on ? '◉ LIGHTS ON' : '◌ LIGHTS OFF'}
@@ -247,7 +247,7 @@ export default function EnvironmentPage({ setAction }) {
                 </div>
 
                 <div style={{ margin: '20px 0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-nano)', marginBottom: 6, opacity: 0.7 }}>
+                  <div style={{ color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-nano)', marginBottom: 6 }}>
                     <span>BATTERY</span>
                     <span>{rover.battery_pct}% ({rover.battery_v}V)</span>
                   </div>
@@ -276,7 +276,7 @@ export default function EnvironmentPage({ setAction }) {
                   </div>
                 </div>
 
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>
+                <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)' }}>
                   ◈ GPS: {rover.lat.toFixed(6)}, {rover.lon.toFixed(6)}
                 </div>
               </div>

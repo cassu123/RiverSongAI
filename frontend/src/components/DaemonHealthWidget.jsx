@@ -199,7 +199,6 @@ function DaemonRow({ name, alive, port, status, age, first }) {
             fontSize: 'var(--rs-fs-nano)',
             letterSpacing: '0.04em',
             color: C.dim,
-            opacity: 0.6,
             flexShrink: 0,
           }}
         >

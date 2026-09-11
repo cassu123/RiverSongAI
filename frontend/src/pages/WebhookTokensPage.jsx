@@ -135,7 +135,7 @@ export default function WebhookTokensPage({ setAction }) {
             >COPY</button>
             <button className="rs-pill" onClick={() => setFreshlyMinted(null)}>DISMISS</button>
           </div>
-          <div style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6, marginTop: 8 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 8 }}>
             This is the only time the plaintext is shown. Only a sha256 digest is stored.
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function WebhookTokensPage({ setAction }) {
                   color: 'var(--bg-base)',
                 }}>{revoked ? 'REVOKED' : expired ? 'EXPIRED' : 'ACTIVE'}</span>
               </div>
-              <div style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6, marginTop: 4 }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 4 }}>
                 ID {t.id} · USES {t.use_count}{t.last_used_at ? ` · LAST ${t.last_used_at}` : ''}
               </div>
               {(t.scopes || []).length > 0 && (
@@ -215,7 +215,7 @@ export default function WebhookTokensPage({ setAction }) {
                 </div>
               )}
               {t.expires_at && (
-                <div style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.55, marginTop: 6 }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 6 }}>
                   EXPIRES {t.expires_at}
                 </div>
               )}
@@ -266,11 +266,10 @@ export default function WebhookTokensPage({ setAction }) {
                 </div>
                 <div style={{ opacity: 0.7, marginBottom: 2 }}>ACTOR {e.actor || '—'}</div>
                 {!audit.tokenId && (
-                  <div style={{ opacity: 0.5, fontSize: 'var(--rs-fs-nano)' }}>TOKEN {e.token_id}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>TOKEN {e.token_id}</div>
                 )}
                 {e.detail && (
-                  <pre style={{
-                    margin: '4px 0 0', fontSize: 'var(--rs-fs-nano)', opacity: 0.7,
+                  <pre style={{ color: 'var(--text-muted)', margin: '4px 0 0', fontSize: 'var(--rs-fs-nano)',
                     whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                   }}>{e.detail}</pre>
                 )}

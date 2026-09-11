@@ -177,7 +177,7 @@ export default function SetupWizard() {
   return (
     <div className="rs-card p-5 md:p-8" style={{ maxWidth: 800, margin: '0 auto' }}>
       <h2 style={{ marginBottom: 8 }}>Setup Wizard: {id}</h2>
-      <div style={{ marginBottom: 24, fontSize: 'var(--rs-fs-small)', opacity: 0.7 }}>Step {step} of 8</div>
+      <div style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Step {step} of 8</div>
 
       <form onSubmit={step === 8 ? (e)=>{e.preventDefault();handleSave()} : handleNext}>
         {step === 1 && (

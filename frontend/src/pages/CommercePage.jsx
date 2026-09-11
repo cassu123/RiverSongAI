@@ -311,7 +311,7 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
       <div style={{ position: 'relative', height: 180, background: 'rgba(0,0,0,0.2)' }}>
         {product.image_data
           ? <img src={product.image_data} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3, fontSize: '2rem' }}>
+          : <div style={{ color: 'var(--text-muted)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
               {product.category?.slice(0,3).toUpperCase() || 'IMG'}
             </div>
         }

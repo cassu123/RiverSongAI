@@ -123,9 +123,7 @@ export function MusicDiscoveryCard({
               }}>
                 {track.title}
               </div>
-              <div style={{ 
-                fontSize: 'var(--rs-fs-micro)', 
-                opacity: 0.6,
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)',
                 whiteSpace: 'nowrap', 
                 overflow: 'hidden', 
                 textOverflow: 'ellipsis'

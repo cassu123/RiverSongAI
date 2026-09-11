@@ -165,7 +165,7 @@ export default function MemoryPage({ setAction }) {
     const kind = m.source_kind || 'conversation'
     const ref = m.source_ref ? ` (${m.source_ref})` : ''
     const date = new Date(m.created_at || m.last_updated).toLocaleDateString()
-    return <span style={{ opacity: 0.6, fontSize: 'var(--rs-fs-nano)' }}>Learned from {kind}{ref}, {date}</span>
+    return <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>Learned from {kind}{ref}, {date}</span>
   }
 
   return (

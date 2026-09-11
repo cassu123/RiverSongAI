@@ -124,15 +124,15 @@ export default function RemoteOllamaPage({ setAction }) {
                 color: 'var(--bg-base)',
               }}>{r.last_health?.toUpperCase() || 'UNKNOWN'}</span>
             </div>
-            <div style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.7, marginTop: 4 }}>{r.base_url}</div>
-            {r.notes && <div style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.6, marginTop: 6 }}>{r.notes}</div>}
+            <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 4 }}>{r.base_url}</div>
+            {r.notes && <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 6 }}>{r.notes}</div>}
             {(r.last_models || []).length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
                 {r.last_models.slice(0, 6).map((m, i) => (
                   <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{m}</span>
                 ))}
                 {r.last_models.length > 6 && (
-                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', opacity: 0.5 }}>+{r.last_models.length - 6}</span>
+                  <span className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>+{r.last_models.length - 6}</span>
                 )}
               </div>
             )}

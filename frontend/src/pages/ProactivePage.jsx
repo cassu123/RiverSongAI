@@ -67,11 +67,11 @@ export default function ProactivePage({ embedded = false }) {
   const quietHoursFields = (
     <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Start (Hour 0-23)</label>
+        <label style={{ color: 'var(--text-muted)', display: 'block', fontSize: 12, marginBottom: 4 }}>Start (Hour 0-23)</label>
         <input type="number" className="rs-input" min="0" max="23" value={prefs.quiet_start ?? ''} onChange={e => setPrefs({...prefs, quiet_start: e.target.value === '' ? null : parseInt(e.target.value)})} placeholder="e.g. 22" />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, opacity: 0.7, marginBottom: 4 }}>End (Hour 0-23)</label>
+        <label style={{ color: 'var(--text-muted)', display: 'block', fontSize: 12, marginBottom: 4 }}>End (Hour 0-23)</label>
         <input type="number" className="rs-input" min="0" max="23" value={prefs.quiet_end ?? ''} onChange={e => setPrefs({...prefs, quiet_end: e.target.value === '' ? null : parseInt(e.target.value)})} placeholder="e.g. 7" />
       </div>
     </div>
@@ -79,7 +79,7 @@ export default function ProactivePage({ embedded = false }) {
 
   const pushSeverityField = (
     <div>
-      <label style={{ display: 'block', fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Minimum Severity for Push</label>
+      <label style={{ color: 'var(--text-muted)', display: 'block', fontSize: 12, marginBottom: 4 }}>Minimum Severity for Push</label>
       <select className="rs-input" value={prefs.min_push_severity} onChange={e => setPrefs({...prefs, min_push_severity: e.target.value})}>
         <option value="info">Info (All)</option>
         <option value="warning">Warning</option>

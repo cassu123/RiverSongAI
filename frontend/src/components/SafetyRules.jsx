@@ -207,7 +207,7 @@ export default function SafetyRules() {
                       Also matched: {result.others.join(', ')}
                     </div>
                   )}
-                  <div style={{ marginTop: 6, opacity: 0.6, fontSize: 'var(--rs-fs-tiny)' }}>
+                  <div style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 'var(--rs-fs-tiny)' }}>
                     Local time {result.localTime}
                   </div>
                 </div>

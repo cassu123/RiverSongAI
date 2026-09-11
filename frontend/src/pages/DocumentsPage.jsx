@@ -204,11 +204,11 @@ export default function DocumentsPage({ setAction }) {
             style={{ textAlign: 'left', padding: '8px 10px' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
-              {d.pinned && <span style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.7 }}>★</span>}
+              {d.pinned && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>★</span>}
               <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {d.title || 'Untitled'}
               </span>
-              <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>{d.kind?.toUpperCase()}</span>
+              <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{d.kind?.toUpperCase()}</span>
             </div>
           </button>
         ))}

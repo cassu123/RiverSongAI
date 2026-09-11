@@ -364,7 +364,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           </div>
         )}
 
-        <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.75 }}>
+        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
           Token counts are reported by {meta.label}. Dollar figures are estimates from the
           rate table in the model registry — check {meta.console} for the authoritative bill.
         </div>
@@ -379,7 +379,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
             style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--rs-fs-nano)', padding: '3px 10px' }}
           >
             <span style={{ fontFamily: 'monospace' }}>{name}</span>
-            <span style={{ opacity: 0.5, fontSize: 'var(--rs-fs-nano)' }}>· {tag}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>· {tag}</span>
           </div>
         ))}
       </div>

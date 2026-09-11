@@ -215,7 +215,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
                       <tr key={i} style={{ borderTop: '1px solid var(--md-outline-variant)' }}>
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ fontWeight: 600 }}>{row.model}</div>
-                          <div style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6 }}>{row.provider.toUpperCase()}</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{row.provider.toUpperCase()}</div>
                         </td>
                         <td style={{ textAlign: 'right', padding: '12px 16px', fontVariantNumeric: 'tabular-nums' }}>{row.calls}</td>
                         <td style={{ textAlign: 'right', padding: '12px 16px', color: row.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)', fontWeight: 600 }}>

@@ -57,7 +57,7 @@ export default function ReassignHomeModal({ homeId, homes, token, onClose, onCom
         ) : (
           <form onSubmit={handleReassign}>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 'var(--rs-fs-tiny)', opacity: 0.7, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Destination Home</label>
+              <label style={{ color: 'var(--text-muted)', display: 'block', fontSize: 'var(--rs-fs-tiny)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Destination Home</label>
               <select 
                 className="rs-input" 
                 style={{ width: '100%', background: 'var(--md-surface-container)' }} 

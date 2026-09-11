@@ -34,7 +34,7 @@ function Section({ title, status, message, children }) {
         <StatusPill status={status} />
       </div>
       {message && (
-        <div style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.7, marginBottom: 8 }}>{message}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>{message}</div>
       )}
       {children}
     </div>
@@ -110,8 +110,8 @@ export default function SlaePage({ setAction }) {
                   <span style={{ opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{r.name}</span>
                   <span style={{ opacity: 0.7 }}>
                     {r.provider}/{r.model}
-                    {r.json_mode && <span style={{ marginLeft: 6, fontSize: 'var(--rs-fs-nano)', opacity: 0.7 }}>JSON</span>}
-                    <span style={{ marginLeft: 8, fontSize: 'var(--rs-fs-nano)', opacity: 0.45 }}>T={r.temperature}</span>
+                    {r.json_mode && <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 'var(--rs-fs-nano)' }}>JSON</span>}
+                    <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: 'var(--rs-fs-nano)' }}>T={r.temperature}</span>
                   </span>
                   <span title={inv ? `${inv.ts} (${inv.elapsed_ms ?? '—'} ms)` : 'No invocations yet'} style={{
                     width: 8, height: 8, borderRadius: '50%', background: dot, alignSelf: 'center',
@@ -132,7 +132,7 @@ export default function SlaePage({ setAction }) {
           </div>
         )}
         {(langfuse.recent_traces || []).length > 0 && (
-          <div style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.7 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>
             {langfuse.recent_traces.length} recent traces.
           </div>
         )}

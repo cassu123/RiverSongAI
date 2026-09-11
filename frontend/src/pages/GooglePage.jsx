@@ -310,11 +310,11 @@ export default function GooglePage() {
                               </span>
                             </div>
                             <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg.subject}</div>
-                            {t.summary && <div style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.7, marginTop: 4, lineHeight: 1.35 }}>{t.summary}</div>}
+                            {t.summary && <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 4, lineHeight: 1.35 }}>{t.summary}</div>}
                             {(t.tags || []).length > 0 && (
                               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
                                 {t.tags.slice(0, 4).map((tag, i) => (
-                                  <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', opacity: 0.7 }}>{tag}</span>
+                                  <span key={i} className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{tag}</span>
                                 ))}
                               </div>
                             )}
@@ -468,7 +468,7 @@ export default function GooglePage() {
               </div>
               <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', color: 'inherit', opacity: 0.8, margin: '12px 0' }}>{desc}</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {tags.map(t => <span key={t} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.7 }}>{t}</span>)}
+                {tags.map(t => <span key={t} className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{t}</span>)}
               </div>
             </div>
           ))}

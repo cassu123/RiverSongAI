@@ -658,7 +658,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                       {meta?.icon || 'store'}
                     </span>
                     <span style={{ flex: 1, fontWeight: 600 }}>{m.ingredient_name}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.6, fontSize: 'var(--rs-fs-small)' }}>{m.store_item_id}</span>
+                    <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-small)' }}>{m.store_item_id}</span>
                     <button
                       className="rs-pill"
                       aria-label={`Unlink ${m.ingredient_name}`}

@@ -311,7 +311,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {edited.steps?.map((step, i) => (
                         <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                          <span style={{ marginTop: 12, fontFamily: 'var(--font-mono)', opacity: 0.7, fontWeight: 900 }}>{String(i+1).padStart(2, '0')}</span>
+                          <span style={{ color: 'var(--text-muted)', marginTop: 12, fontFamily: 'var(--font-mono)', fontWeight: 900 }}>{String(i+1).padStart(2, '0')}</span>
                           <textarea 
                             className="rs-pill" 
                             style={{ flex: 1, minHeight: 60, borderRadius: 16, background: 'var(--md-surface-container-low)', border: 'none', padding: '12px 16px', lineHeight: 1.7, resize: 'vertical' }} 
@@ -392,7 +392,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                        {recipe.steps.map((s, i) => (
                          <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.7, fontWeight: 900, marginTop: 4 }}>{String(i+1).padStart(2, '0')}</span>
+                            <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 900, marginTop: 4 }}>{String(i+1).padStart(2, '0')}</span>
                             <div style={{ flex: 1, lineHeight: 1.6 }}>{s}</div>
                          </div>
                        ))}
@@ -874,7 +874,7 @@ export default function CulinaryPage({ setAction }) {
                             </div>
                           </>
                         ) : (
-                          <div style={{ opacity: 0.4, fontSize: 'var(--rs-fs-tiny)', fontStyle: 'italic' }}>Open</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', fontStyle: 'italic' }}>Open</div>
                         )}
                       </div>
 

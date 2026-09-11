@@ -133,7 +133,7 @@ function GameCard({ game, onClick }) {
         <StatusBadge game={game} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {game.venue && (
-            <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.4 }}>{game.venue}</span>
+            <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{game.venue}</span>
           )}
           {clickable && (
             <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', opacity: 0.35 }}>chevron_right</span>
@@ -180,7 +180,7 @@ function LeagueGrid({ favorites, onToggle }) {
     <div>
       {Object.entries(PICKER_GROUPS).map(([cat, leagues]) => (
         <div key={cat} style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.4, marginBottom: 8 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 8 }}>
             {cat.toUpperCase()}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -246,7 +246,7 @@ function NewsArticleCard({ a }) {
             {a.source?.toUpperCase()}
           </span>
           {a.category && (
-            <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.4 }}>
+            <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
               {a.category.toUpperCase()}
             </span>
           )}
@@ -266,7 +266,7 @@ function NewsArticleCard({ a }) {
             {a.summary}
           </div>
         )}
-        <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.35, marginTop: 6 }}>
+        <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 6 }}>
           {a.published_at ? new Date(a.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
         </div>
       </div>
@@ -359,7 +359,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       {/* Header card — big score line */}
       <div className="rs-card" style={{ padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.55 }}>
+          <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
             {(event.league_id || '').toUpperCase()}
           </span>
           <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: statusText.toLowerCase().includes('final') ? '#4ade80' : '#f87171' }}>
@@ -375,20 +375,20 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
 
       {loading && (
         <div style={{ padding: '32px 0', textAlign: 'center' }}>
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.6 }}>Loading box score…</div>
+          <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Loading box score…</div>
         </div>
       )}
 
       {/* Team stats comparison */}
       {!loading && statNames.length > 0 && (
         <div className="rs-card" style={{ padding: 16, marginBottom: 16 }}>
-          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 12, opacity: 0.6 }}>TEAM STATS</div>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>TEAM STATS</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px 12px', alignItems: 'center' }}>
-            <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', textAlign: 'left', opacity: 0.5 }}>
+            <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: 'left' }}>
               {away.team?.abbreviation || 'AWAY'}
             </div>
             <div></div>
-            <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', textAlign: 'right', opacity: 0.5 }}>
+            <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: 'right' }}>
               {home.team?.abbreviation || 'HOME'}
             </div>
             {statNames.map(({ name, label }) => (
@@ -396,7 +396,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
                 <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-micro)', textAlign: 'left' }}>
                   {awayBy[name] ?? '—'}
                 </div>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', textAlign: 'center', opacity: 0.55 }}>
+                <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: 'center' }}>
                   {label}
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-micro)', textAlign: 'right' }}>
@@ -411,7 +411,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
       {/* Player leaders */}
       {!loading && leaders.length > 0 && (
         <div className="rs-card" style={{ padding: 16 }}>
-          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 12, opacity: 0.6 }}>LEADERS</div>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>LEADERS</div>
           {leaders.map((teamBlock, ti) => (
             <div key={ti} style={{ marginBottom: 14 }}>
               <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--primary)', marginBottom: 6 }}>
@@ -427,7 +427,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
                     borderBottom: ci < (teamBlock.leaders.length - 1) ? '1px solid var(--md-outline-variant)' : 'none',
                   }}>
                     <div>
-                      <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>{cat.displayName?.toUpperCase()}</div>
+                      <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{cat.displayName?.toUpperCase()}</div>
                       <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)' }}>
                         {athleteEntry.athlete?.displayName || '—'}
                       </div>
@@ -830,12 +830,12 @@ function ScoresView({
         ) : (
           <div>
             {myTeamsMode && fixtures.length > 0 && games.length > 0 && (
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.4, marginBottom: 8 }}>RESULTS</div>
+              <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 8 }}>RESULTS</div>
             )}
             {games.map(g => <GameCard key={g.id} game={g} onClick={() => openEvent(g)} />)}
             {myTeamsMode && fixtures.length > 0 && (
               <>
-                <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.4, margin: '16px 0 8px' }}>UPCOMING</div>
+                <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', margin: '16px 0 8px' }}>UPCOMING</div>
                 {fixtures.map(g => <GameCard key={g.id} game={g} onClick={() => openEvent(g)} />)}
               </>
             )}
@@ -857,7 +857,7 @@ function NewsView({
   const activeCount = selectedNewsSources.length
   const renderPicker = () => {
     if (!Object.keys(newsCatMeta).length) {
-      return <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.5 }}>Loading source catalogue…</div>
+      return <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Loading source catalogue…</div>
     }
     return (
       <div
@@ -874,7 +874,7 @@ function NewsView({
             <div key={cat}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '0.85rem', opacity: 0.7 }}>{meta.icon}</span>
-                <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.6 }}>{meta.label.toUpperCase()}</span>
+                <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{meta.label.toUpperCase()}</span>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {catSources.map(src => {

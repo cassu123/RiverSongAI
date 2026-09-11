@@ -233,7 +233,7 @@ export default function WeatherTab({ token, active }) {
         <SettingsRow label="LOCATION">
           <LocationSearch onSelect={handleLocationSelect} />
           {settings?.location_query && (
-            <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: 6, opacity: 0.6 }}>
+            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 6 }}>
               {settings.location_query.split(',').slice(0, 3).join(',')}
             </div>
           )}
@@ -381,9 +381,9 @@ function DetailCard({ label, value, sub, color, badge }) {
   return (
     <div className="rs-wx-panel is-detail">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5, marginBottom: 4 }}>{label}</div>
+        <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>{label}</div>
         {badge && (
-          <div style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 4, opacity: 0.7, whiteSpace: 'nowrap' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 4, whiteSpace: 'nowrap' }}>
             {badge}
           </div>
         )}
@@ -394,7 +394,7 @@ function DetailCard({ label, value, sub, color, badge }) {
         {value}
       </div>
       {sub && (
-        <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.55, marginTop: 2 }}>{sub}</div>
+        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 2 }}>{sub}</div>
       )}
     </div>
   )
@@ -465,7 +465,7 @@ function HourlyStrip({ hourly, unit }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.55, marginBottom: 12 }}>NEXT 24 HOURS</div>
+      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>NEXT 24 HOURS</div>
       <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 4 }}>
         <div style={{ width: W, position: 'relative' }}>
           {/* Curve overlay */}
@@ -582,7 +582,7 @@ function DailyForecast({ daily, unit }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.55, marginBottom: 12 }}>7-DAY FORECAST</div>
+      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>7-DAY FORECAST</div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {daily.map((d, i) => {
           const minPct = d.temp_min != null ? ((d.temp_min - weekMin) / weekRange) * 100 : 0
@@ -655,11 +655,11 @@ function SunCard({ sunrise, sunset }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.55, marginBottom: 12 }}>SUN</div>
+      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>SUN</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap' }}>
         <div style={{ textAlign: 'center', minWidth: 60 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(78% 0.16 75)' }}>wb_twilight</span>
-          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5, marginTop: 4 }}>SUNRISE</div>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 4 }}>SUNRISE</div>
           <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>
             {fmtClockTime(sunrise)}
           </div>
@@ -675,7 +675,7 @@ function SunCard({ sunrise, sunset }) {
         </svg>
         <div style={{ textAlign: 'center', minWidth: 60 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(60% 0.18 30)' }}>bedtime</span>
-          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5, marginTop: 4 }}>SUNSET</div>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 4 }}>SUNSET</div>
           <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>
             {fmtClockTime(sunset)}
           </div>

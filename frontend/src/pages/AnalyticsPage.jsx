@@ -66,7 +66,7 @@ function metricLabel(key) {
 
 function LineChart({ data, color, height = 80 }) {
   if (!data || data.length < 2) return (
-    <div style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5, fontStyle: 'italic', height, display: 'flex', alignItems: 'center' }}>
+    <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontStyle: 'italic', height, display: 'flex', alignItems: 'center' }}>
       Not enough data
     </div>
   )
@@ -603,7 +603,7 @@ export default function AnalyticsPage() {
             <span style={{ color: 'var(--md-on-surface)', fontWeight: 900 }}>SYSTEM // ANALYTICS / COMMAND</span>
           </div>
           <h1 className="rs-page-title" style={{ fontSize: '4rem', marginBottom: 8 }}>Analytics</h1>
-          <div style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 500, opacity: 0.7, maxWidth: '60ch' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-body)', fontWeight: 500, maxWidth: '60ch' }}>
             Commercial performance, audience growth, and multi-channel telemetry.
           </div>
         </header>

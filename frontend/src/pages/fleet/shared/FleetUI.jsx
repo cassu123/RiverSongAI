@@ -34,7 +34,7 @@ export function MetricStat({ label, value, unit, accent }) {
       <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</div>
       <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-h3)', fontVariantNumeric: 'tabular-nums',
         color: accent || 'var(--text-primary, inherit)' }}>
-        {value}{unit && <span style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.55, fontWeight: 500 }}> {unit}</span>}
+        {value}{unit && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', fontWeight: 500 }}> {unit}</span>}
       </div>
     </div>
   )
@@ -58,7 +58,7 @@ export function BatteryBar({ pct }) {
 export function Sparkline({ data, field, height = 44, color = 'var(--primary, #6ea8fe)' }) {
   const pts = (data || []).map(d => Number(d?.[field])).filter(v => Number.isFinite(v))
   if (pts.length < 2) {
-    return <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.5 }}>waiting for telemetry…</div>
+    return <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>waiting for telemetry…</div>
   }
   const w = 240, h = height
   const min = Math.min(...pts), max = Math.max(...pts)

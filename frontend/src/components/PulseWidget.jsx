@@ -248,7 +248,6 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
             fontSize: 'var(--rs-fs-nano)',
             letterSpacing: '0.04em',
             color: C.dim,
-            opacity: 0.6,
             marginRight: 4,
           }}>
             {badge}
@@ -259,7 +258,6 @@ function PulseRow({ icon, iconColor, label, time, badge, children }) {
           fontSize: 'var(--rs-fs-nano)',
           letterSpacing: '0.04em',
           color: C.dim,
-          opacity: 0.75,
         }}>
           {time}
         </span>

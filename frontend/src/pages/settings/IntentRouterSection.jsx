@@ -96,8 +96,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                       {r.reachable ? r.display_name : 'No provider available'}
                     </span>
                     {where && (
-                      <span className="rs-pill" style={{
-                        fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', opacity: 0.7, flexShrink: 0,
+                      <span className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', flexShrink: 0,
                         background: where === 'local' ? 'color-mix(in srgb, var(--primary) 12%, transparent)' :
                           where === 'NIM' ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)' :
                             'color-mix(in srgb, var(--md-sys-color-secondary) 12%, transparent)',

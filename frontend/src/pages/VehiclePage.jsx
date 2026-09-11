@@ -474,7 +474,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                       {odo > 0 ? (
                         <>{odo.toLocaleString()} <span className="card-metric-unit">{unit}</span></>
                       ) : (
-                        <span style={{ opacity: 0.6, fontSize: 'var(--rs-fs-small)' }}>Not set</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-small)' }}>Not set</span>
                       )}
                     </div>
                   </div>
