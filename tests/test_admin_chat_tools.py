@@ -63,7 +63,7 @@ async def test_admin_chat_tools_list_and_update(app_store):
         assert mow_tool["enabled"] is False
 
         # Verify execute_tool directly blocks disabled tools
-        from core.tools import execute_tool
+        from core.tools.registry import execute_tool
         block_msg = await execute_tool(
             "mow_command",
             {"command": "start"},

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
 
 export default function GoogleCallbackPage({ onSuccess }) {
   const { loginWithGoogle } = useAuth()
@@ -33,7 +33,7 @@ export default function GoogleCallbackPage({ onSuccess }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '1rem', color: 'var(--primary)', fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}>
       {error
-        ? <><span style={{ color: 'var(--error, #f44)' }}>{error}</span><a href="/" style={{ color: 'var(--primary)', fontSize: '0.85rem' }}>Back to sign in</a></>
+        ? <><span style={{ color: 'var(--error, #f44)' }}>{error}</span><a href="/" style={{ color: 'var(--primary)', fontSize: 'var(--rs-fs-tiny)' }}>Back to sign in</a></>
         : <span>SIGNING IN WITH GOOGLE...</span>
       }
     </div>

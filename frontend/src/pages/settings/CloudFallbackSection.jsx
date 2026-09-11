@@ -22,7 +22,7 @@ const PROVIDER_NAMES = {
 export default function CloudFallbackSection({ llmSettings, saveFallback, enabledProviders, models }) {
   return (
     <Section title="CLOUD FALLBACK">
-        <p className="rs-card-meta" style={{ marginBottom: 12 }}>
+        <p className="rs-card-meta rs-mb-3">
           Admin only. When local models are unavailable, River falls back to a cloud
           provider. Anthropic Claude and Google Gemini are supported; usage and cost
           are tracked in Token Usage below.
@@ -36,12 +36,12 @@ export default function CloudFallbackSection({ llmSettings, saveFallback, enable
         />
 
         {llmSettings?.cloud_fallback_enabled && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginTop: 16 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rs-mt-4">
             <div className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Provider</span>
+              <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>Provider</span>
               <select
-                className="settings-select"
-                style={{ width: '100%' }}
+                className="settings-select rs-w-full"
+               
                 value={llmSettings?.cloud_fallback_provider || ''}
                 onChange={e => saveFallback({ cloud_fallback_provider: e.target.value, cloud_fallback_model: '' })}
               >
@@ -56,10 +56,10 @@ export default function CloudFallbackSection({ llmSettings, saveFallback, enable
 
             {llmSettings?.cloud_fallback_provider && (
               <div className="rs-card-meta">
-                <span className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>Model</span>
+                <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>Model</span>
                 <select
-                  className="settings-select"
-                  style={{ width: '100%' }}
+                  className="settings-select rs-w-full"
+                 
                   value={llmSettings?.cloud_fallback_model || ''}
                   onChange={e => saveFallback({ cloud_fallback_model: e.target.value })}
                 >

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
-import MaintenancePulse from '../components/MaintenancePulse.jsx'
+import { useAuth } from '@context/AuthContext'
+import MaintenancePulse from '@components/MaintenancePulse.jsx'
 import Sheet from '../chrome/Sheet.jsx'
-import ChatInterface from '../components/ChatInterface.jsx'
+import ChatInterface from '@components/ChatInterface.jsx'
 
 /**
  * VehiclePage — Spatial Intelligence v2.0
@@ -174,18 +174,18 @@ export default function VehiclePage({ setAction, onNavigate }) {
   if (selectedVehicleId === 'NEW') {
     return (
       <div className="rs-hangar-page rs-mode-hangar animate-page-in">
-        <div className="rs-foyer-head" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+        <div className="rs-foyer-head rs-flex rs-items-center rs-gap-3 rs-mb-5">
           <button className="rs-pill" onClick={() => setSelectedVehicleId(null)}>
             <span className="material-symbols-rounded">arrow_back</span>
             <span>HANGAR</span>
           </button>
           <span className="rs-header-sep" style={{ opacity: 0.3 }}>/</span>
-          <h1 className="rs-greeting" style={{ margin: 0 }}>Register New Asset</h1>
+          <h1 className="rs-greeting rs-m-0">Register New Asset</h1>
         </div>
 
         <div className="rs-card is-wide is-elev" style={{ borderTop: '2px solid var(--primary)' }}>
           <div className="rs-card-inner">
-            <div className="rs-card-head" style={{ marginBottom: 20 }}>
+            <div className="rs-card-head rs-mb-5">
               <span className="rs-card-label" style={{ color: 'var(--primary)' }}>ASSET SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
             </div>
 
@@ -344,7 +344,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
       </div>
 
       {error && (
-        <div className="mp-error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div className="mp-error rs-flex rs-items-center rs-justify-between rs-gap-3 rs-flex-wrap rs-mb-4" role="alert">
           <span>Could not load the fleet: {error}</span>
           <button className="rs-pill" onClick={fetchVehicles}>RETRY</button>
         </div>
@@ -401,8 +401,8 @@ export default function VehiclePage({ setAction, onNavigate }) {
       </div>
 
       {/* Sector Vehicles Grid */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
-        <span className="card-metric-label" style={{ fontSize: '0.72rem', letterSpacing: '0.12em' }}>
+      <div className="rs-flex rs-justify-between rs-items-center rs-mt-3 rs-mb-2">
+        <span className="card-metric-label" style={{ fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.12em' }}>
           SECTOR VEHICLES ({vehicles.length})
         </span>
       </div>
@@ -410,7 +410,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
       {loading && vehicles.length === 0 ? (
         <div className="rs-card is-wide" style={{ padding: 64, textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '3rem', color: 'var(--primary)', opacity: 0.6, animation: 'spin 2s linear infinite' }}>sync</span>
-          <div className="card-metric-label" style={{ marginTop: 16 }}>SCANNING HANGAR TRANSPONDERS...</div>
+          <div className="card-metric-label rs-mt-4">SCANNING HANGAR TRANSPONDERS...</div>
         </div>
       ) : (
         <div className="hangar-fleet-cards-grid">
@@ -474,7 +474,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                       {odo > 0 ? (
                         <>{odo.toLocaleString()} <span className="card-metric-unit">{unit}</span></>
                       ) : (
-                        <span style={{ opacity: 0.6, fontSize: '0.95rem' }}>Not set</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-small)' }}>Not set</span>
                       )}
                     </div>
                   </div>

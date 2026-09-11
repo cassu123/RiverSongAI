@@ -126,12 +126,12 @@ export default function VoiceIDSection({ token }) {
 
   return (
     <Section title="VOICE ID">
-      <div style={{ marginBottom: 16 }}>
+      <div className="rs-mb-4">
         {status.enrolled ? (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <div className="rs-flex rs-items-start rs-gap-2">
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--rs-status-nominal)', flexShrink: 0, marginTop: 1 }}>check_circle</span>
             <div>
-              <div style={{ color: 'var(--rs-status-nominal)', fontSize: '0.875rem', fontWeight: 600 }}>
+              <div style={{ color: 'var(--rs-status-nominal)', fontSize: 'var(--rs-fs-small)', fontWeight: 600 }}>
                 ENROLLED — {status.sample_count} SAMPLES
               </div>
               <div className="rs-card-meta">
@@ -146,7 +146,7 @@ export default function VoiceIDSection({ token }) {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div className="rs-flex rs-gap-3 rs-items-center">
         <button 
           className="rs-btn-primary" 
           onClick={startEnroll} 
@@ -169,10 +169,10 @@ export default function VoiceIDSection({ token }) {
           display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginTop: 8,
           background: 'color-mix(in srgb, var(--md-error) 10%, transparent)',
           border: '1px solid color-mix(in srgb, var(--md-error) 35%, transparent)',
-          borderRadius: 8, fontSize: '0.8rem',
+          borderRadius: 8, fontSize: 'var(--rs-fs-tiny)',
         }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--md-error)', flexShrink: 0 }}>warning</span>
-          <span style={{ flex: 1 }}>Delete your voice prints? River Song will no longer recognize your voice.</span>
+          <span className="rs-grow">Delete your voice prints? River Song will no longer recognize your voice.</span>
           <button className="rs-pill" style={{ color: 'var(--md-error)', cursor: 'pointer' }} onClick={deleteEnrollment}>DELETE</button>
           <button className="rs-pill" style={{ cursor: 'pointer' }} onClick={() => setConfirmDelete(false)}>CANCEL</button>
         </div>

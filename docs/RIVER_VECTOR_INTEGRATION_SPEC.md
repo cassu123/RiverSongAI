@@ -493,7 +493,7 @@ Event types: `session_started`, `row_complete`, `row_skipped`, `obstacle_avoided
 
 ## 6. API Contract
 
-All routes mount under `/api/vector/`. New router file: `api/routes/vector_fleet.py`.
+All routes mount under `/api/vector/`. New router file: `api/routes/fleet/vector_fleet.py`.
 
 ### 6.1 Device-facing (`X-Unit-Token` required after claim)
 
@@ -720,7 +720,7 @@ while running:
             sleep(1)
 ```
 
-**Server side (`api/routes/vector_fleet.py::command_stream`):**
+**Server side (`api/routes/fleet/vector_fleet.py::command_stream`):**
 
 ```python
 async def command_stream(unit_id: str, ...) -> Response:
@@ -1045,7 +1045,7 @@ Performed in this order:
 - Idempotent migrations from existing partial `vector_units` / `vector_alerts` (created in earlier work).
 - Indexes per §5.
 
-### 14.2 Route file `api/routes/vector_fleet.py`
+### 14.2 Route file `api/routes/fleet/vector_fleet.py`
 - Replace existing partial implementation.
 - Implement all device-facing endpoints (§6.1), discovery (§6.2), and UI-facing endpoints (§6.3).
 - Implement long-poll endpoint per §7.

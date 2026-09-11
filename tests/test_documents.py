@@ -122,7 +122,7 @@ class TestRouteSurface:
     def test_router_importable(self):
         # Routes file must import cleanly even when the flag is off — it should
         # only consult the flag inside per-request handlers.
-        from api.routes import documents as docs_route
+        from api.routes.feeds import documents as docs_route
         assert docs_route.router.prefix == "/api/documents"
         # CRUD endpoints all registered
         paths = {r.path for r in docs_route.router.routes}

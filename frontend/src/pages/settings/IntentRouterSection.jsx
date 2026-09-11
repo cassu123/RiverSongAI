@@ -53,9 +53,9 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
           )}
 
           {/* Sensitivity selector — min 44px touch targets */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
             <span className="rs-card-meta" style={{ margin: 0, flexShrink: 0 }}>Signal sensitivity</span>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="rs-flex rs-gap-2">
               {[
                 { n: 1, label: 'High',          desc: 'Routes on 1+ match' },
                 { n: 2, label: 'Balanced',      desc: 'Routes on 2+ matches' },
@@ -64,7 +64,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                 <button
                   key={n}
                   className={`rs-pill is-tappable${intentRouterSettings.min_hits === n ? ' is-active' : ''}`}
-                  style={{ fontSize: '0.75rem', minHeight: 44, minWidth: 44, padding: '0 14px', cursor: 'pointer' }}
+                  style={{ fontSize: 'var(--rs-fs-micro)', minHeight: 44, minWidth: 44, padding: '0 14px', cursor: 'pointer' }}
                   onClick={() => saveIntentRouter({ min_hits: n })}
                   aria-pressed={intentRouterSettings.min_hits === n}
                 >
@@ -87,17 +87,16 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                   : r.provider ? 'cloud' : null
               return (
                 <div key={r.intent} style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 10, opacity: r.reachable ? 1 : 0.6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div className="rs-flex rs-items-center rs-gap-2">
                     <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.75 }}>{INTENT_ICONS[r.intent] || 'chat'}</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{r.label}</span>
+                    <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 600 }}>{r.label}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                    <span className="rs-card-meta" style={{ fontSize: '0.68rem', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div className="rs-flex rs-items-center rs-justify-between rs-gap-2">
+                    <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {r.reachable ? r.display_name : 'No provider available'}
                     </span>
                     {where && (
-                      <span className="rs-pill" style={{
-                        fontSize: '0.65rem', padding: '1px 6px', opacity: 0.7, flexShrink: 0,
+                      <span className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '1px 6px', flexShrink: 0,
                         background: where === 'local' ? 'color-mix(in srgb, var(--primary) 12%, transparent)' :
                           where === 'NIM' ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)' :
                             'color-mix(in srgb, var(--md-sys-color-secondary) 12%, transparent)',
@@ -105,7 +104,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
                     )}
                   </div>
                   {r.fell_back && (
-                    <span className="rs-card-meta" style={{ fontSize: '0.62rem', opacity: 0.8 }}>
+                    <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', opacity: 0.8 }}>
                       {r.first_choice_display_name} unavailable
                     </span>
                   )}
@@ -113,7 +112,7 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
               )
             })}
             {(intentRouterSettings.routes || []).length === 0 && (
-              <p className="rs-card-meta" style={{ fontSize: '0.7rem' }}>Routing map unavailable.</p>
+              <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Routing map unavailable.</p>
             )}
           </div>
         </Section>

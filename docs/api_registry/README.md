@@ -20,18 +20,18 @@ planned) see `docs/INTEGRATIONS.md`.
 | `alpha_vantage.txt` | Alpha Vantage | Markets | ✅ | `providers/feeds/stocks.py` |
 | `amazon_seller.txt` | Amazon SP-API | Commerce / Analytics | ✅ | `providers/commerce/amazon.py`, analytics route |
 | `ebay_analytics.txt` | eBay | Analytics | 🔜 planned | — |
-| `etsy_analytics.txt` | Etsy | Analytics | ✅ | `api/routes/analytics.py` (5-platform list) |
-| `facebook_analytics.txt` | Facebook | Analytics | ✅ | `api/routes/analytics.py` |
+| `etsy_analytics.txt` | Etsy | Analytics | ✅ | `api/routes/domains/analytics.py` (5-platform list) |
+| `facebook_analytics.txt` | Facebook | Analytics | ✅ | `api/routes/domains/analytics.py` |
 | `google_oauth.txt` | Google OAuth (Calendar, Gmail, Maps, Tasks, YT Music, Books) | Productivity | ✅ | `providers/google/*.py` |
 | `home_assistant.txt` | Home Assistant | Smart Home | ✅ | `providers/smart_home/home_assistant.py` |
-| `instagram_analytics.txt` | Instagram | Analytics | ✅ | `api/routes/analytics.py` |
+| `instagram_analytics.txt` | Instagram | Analytics | ✅ | `api/routes/domains/analytics.py` |
 | `news_api.txt` | NewsAPI.org | Feeds | ✅ | `providers/feeds/news.py` |
 | `ollama_llm.txt` | Ollama | LLM (local) | ✅ | `providers/llm/ollama.py` |
 | `pinterest_analytics.txt` | Pinterest | Analytics | 🔜 planned | — |
 | `piper_tts.txt` | Piper TTS | TTS (local) | ✅ | `providers/tts/piper.py` |
 | `shopify_analytics.txt` | Shopify | Commerce + Analytics | ✅ commerce, 🔜 analytics | `providers/commerce/shopify.py` |
 | `sports_api.txt` | TheSportsDB | Feeds | ✅ | `providers/feeds/sports.py` |
-| `tiktok_analytics.txt` | TikTok | Analytics | ✅ | `api/routes/analytics.py` |
+| `tiktok_analytics.txt` | TikTok | Analytics | ✅ | `api/routes/domains/analytics.py` |
 | `twitter_x_analytics.txt` | Twitter / X | Analytics | 🔜 planned | — |
 | `walmart_seller.txt` | Walmart Marketplace | Commerce | ⚠️ scaffold | `providers/commerce/walmart.py` |
 | `weather_api.txt` | OpenWeatherMap | Feeds | ✅ | `providers/feeds/weather.py` |

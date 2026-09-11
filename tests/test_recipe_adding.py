@@ -64,7 +64,7 @@ def test_manual_recipe_is_created_and_listed(chef):
 def test_manual_recipe_needs_no_ai_model(chef, monkeypatch):
     """Manual entry is the fallback the other two routes point at, so it must
     not quietly depend on Ollama being up."""
-    import api.routes.culinary as culinary
+    import api.routes.domains.culinary as culinary
 
     async def explode(*a, **k):
         raise AssertionError("manual entry must not call the model")
@@ -114,7 +114,7 @@ def test_ingest_with_no_source_explains_all_three_options(chef):
 def test_pasted_text_reaches_the_parser(chef, monkeypatch):
     """The new route. Ollama is stubbed — this asserts the wiring, not the
     model's parsing ability."""
-    import api.routes.culinary as culinary
+    import api.routes.domains.culinary as culinary
 
     seen = {}
 
@@ -140,7 +140,7 @@ def test_pasted_text_that_yields_nothing_points_at_manual_entry(chef, monkeypatc
     """When the local model is down this is the likely failure, and sending
     someone to re-check their paste instead of their daemon wastes their
     time."""
-    import api.routes.culinary as culinary
+    import api.routes.domains.culinary as culinary
 
     async def dead_ollama(prompt):
         raise RuntimeError("connection refused")
@@ -177,7 +177,7 @@ def test_oversized_paste_is_refused_before_any_model_call(chef, monkeypatch):
     """Each chunk is one sequential call to a single local model, so an
     unbounded paste is an unbounded queue — one user pasting a book keeps
     every other room's turn waiting behind it."""
-    import api.routes.culinary as culinary
+    import api.routes.domains.culinary as culinary
 
     async def explode(prompt):
         raise AssertionError("must reject before calling the model")
@@ -194,7 +194,7 @@ def test_oversized_paste_is_refused_before_any_model_call(chef, monkeypatch):
 
 
 def test_a_normal_length_paste_is_still_accepted(chef, monkeypatch):
-    import api.routes.culinary as culinary
+    import api.routes.domains.culinary as culinary
 
     async def fake(prompt):
         return '{"title": "Long But Fine", "ingredients": [], "steps": ["Cook."]}'

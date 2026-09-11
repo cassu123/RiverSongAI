@@ -79,7 +79,7 @@ export default function NewsTab({ token, active }) {
   const renderSourcePicker = () => {
     if (!Object.keys(catMeta).length) {
       return (
-        <div className="rs-card-meta" style={{ fontSize: '0.72rem', opacity: 0.5 }}>
+        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>
           Loading source catalogue…
         </div>
       )
@@ -97,20 +97,20 @@ export default function NewsTab({ token, active }) {
           if (!catSources.length) return null
           return (
             <div key={cat}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <div className="rs-flex rs-items-center rs-gap-2 rs-mb-2">
                 <span
                   className="material-symbols-rounded"
                   style={{ fontSize: '0.85rem', color: 'var(--md-on-surface-variant)', opacity: 0.7 }}
                 >
                   {meta?.icon || 'rss_feed'}
                 </span>
-                <span className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.6 }}>
+                <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
                   {/* A category arriving without a label took the whole Feeds
                       page down with a render fault; fall back to its key. */}
                   {(meta?.label || cat).toUpperCase()}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div className="rs-flex rs-gap-2 rs-flex-wrap">
                 {catSources.map(src => {
                   const isOn = selected.some(s => s.url === src.url)
                   return (
@@ -123,7 +123,7 @@ export default function NewsTab({ token, active }) {
                           : [...selected, src]
                         saveSources(next)
                       }}
-                      style={{ fontSize: '0.62rem' }}
+                      style={{ fontSize: 'var(--rs-fs-nano)' }}
                     >
                       {(src.name || src.url || '').toUpperCase()}
                     </button>
@@ -162,7 +162,7 @@ export default function NewsTab({ token, active }) {
           >
             newspaper
           </span>
-          <div className="rs-card-label" style={{ marginBottom: 8 }}>NO SOURCES SELECTED</div>
+          <div className="rs-card-label rs-mb-2">NO SOURCES SELECTED</div>
           <div className="rs-card-meta">Expand the Sources panel above and pick a few feeds.</div>
         </div>
       ) : (
@@ -217,11 +217,11 @@ function ArticleCard({ article: a }) {
 
 function NewsSkeletons() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="rs-flex rs-flex-col rs-gap-3">
       {[0, 1, 2, 3, 4].map(i => (
         <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div style={{ width: 80, height: 64, borderRadius: 6, background: 'var(--md-outline-variant)', flexShrink: 0, opacity: 0.4 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="rs-grow rs-flex rs-flex-col rs-gap-2">
             <div style={{ height: 9, width: '35%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.5 }} />
             <div style={{ height: 12, width: '85%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
             <div style={{ height: 12, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
@@ -236,7 +236,7 @@ function ErrorState({ message, onRetry }) {
   return (
     <div style={{ padding: '32px 0', textAlign: 'center' }}>
       <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.3, display: 'block', marginBottom: 8 }}>wifi_off</span>
-      <div className="rs-card-meta" style={{ marginBottom: 12 }}>{message}</div>
+      <div className="rs-card-meta rs-mb-3">{message}</div>
       <button className="rs-pill" onClick={onRetry}>RETRY</button>
     </div>
   )

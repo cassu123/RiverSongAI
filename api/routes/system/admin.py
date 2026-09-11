@@ -1,0 +1,826 @@
+# =============================================================================
+# api/routes/admin.py
+#
+# Endpoints (admin role required):
+#   GET   /api/admin/users           -- list all users
+#   PATCH /api/admin/users/{user_id} -- approve or change role
+# =============================================================================
+
+from __future__ import annotations
+
+import logging
+import uuid
+from typing import List, Optional
+
+import bcrypt
+from core.family_migration import (
+    count_family_data,
+    migrate_member_to_family,
+    reassign_culinary_household,
+)
+
+from fastapi import APIRouter, Request, Header
+from pydantic import BaseModel
+
+from api.routes.system.features import ALL_FEATURES, ALL_FEATURE_KEYS
+
+from core.auth import decode_token, create_access_token
+from core.errors import bad_request, forbidden, not_found, unauthorized
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+def _get_store(request: Request):
+    if hasattr(request.app.state, "memory_manager") and request.app.state.memory_manager:
+        return request.app.state.memory_manager._store
+    # main.py's lifespan always sets this. Reaching here means the app was
+    # built without it, which is a wiring fault, not a request-level one.
+    raise RuntimeError("memory_manager is not attached to app.state")
+
+
+async def _require_admin(request: Request,
+                         authorization: Optional[str]) -> dict:
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        parts = authorization.split(" ", 1)
+        if len(parts) > 1:
+            token = parts[1].strip()
+    if not token and request:
+        token = request.cookies.get("access_token")
+    if not token:
+        raise unauthorized("Not authenticated.")
+    payload = await decode_token(token)
+    if not payload:
+        raise unauthorized("Invalid or expired token.")
+    if payload.get("role") != "admin":
+        raise forbidden("Admin access required.")
+    return payload
+
+
+class UpdateUserBody(BaseModel):
+    role: Optional[str] = None
+    is_approved: Optional[bool] = None
+    force_password_change: Optional[bool] = None
+    is_suspended: Optional[bool] = None
+    # When True, this user's "Let River Decide" routing may only select models
+    # that cost nothing per token -- local Ollama and free-tier cloud.
+    free_models_only: Optional[bool] = None
+
+
+class AdminChangePasswordBody(BaseModel):
+    new_password: str
+
+
+class ModelVisibilityBody(BaseModel):
+    hidden_voices: list[str] = []
+    hidden_llms: list[str] = []
+
+
+VALID_ROLES = {"admin", "parent", "user", "child", "guest"}
+
+
+@router.get("/users")
+async def list_users(request: Request,
+                     authorization: Optional[str] = Header(default=None)):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    return await store.list_users()
+
+
+@router.patch("/users/{user_id}")
+async def update_user(
+    user_id: str,
+    body: UpdateUserBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+
+    if body.role is not None and body.role not in VALID_ROLES:
+        raise bad_request(
+            f"Invalid role. Must be one of: {', '.join(VALID_ROLES)}")
+
+    # Prevent admin from demoting themselves
+    if payload["sub"] == user_id and body.role and body.role != "admin":
+        raise bad_request("You cannot change your own role.")
+
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    await store.update_user(user_id, role=body.role, is_approved=body.is_approved, force_password_change=body.force_password_change, is_suspended=body.is_suspended, free_models_only=body.free_models_only)
+    logger.info(
+        "Admin %s updated user %s: role=%s approved=%s force_password_change=%s is_suspended=%s free_models_only=%s",
+        payload["sub"],
+        user_id,
+        body.role,
+        body.is_approved,
+        body.force_password_change,
+        body.is_suspended,
+        body.free_models_only)
+
+    updated = await store.get_user_by_id(user_id)
+    if updated:
+        updated.pop("password_hash", None)
+    return updated
+
+
+@router.post("/users/{user_id}/password")
+async def change_user_password(
+    user_id: str,
+    body: AdminChangePasswordBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+
+    if len(body.new_password) < 12:
+        raise bad_request("Password must be at least 12 characters.")
+
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    new_hash = bcrypt.hashpw(
+        body.new_password.encode("utf-8"),
+        bcrypt.gensalt()).decode("utf-8")
+    await store.update_user_password(user_id, new_hash, force_change=True)
+    logger.info(
+        "Admin %s reset password for user %s and forced change",
+        payload["sub"],
+        user_id)
+
+    return {"success": True, "message": "Password updated successfully."}
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+
+    # Prevent admin from deleting themselves
+    if payload["sub"] == user_id:
+        raise bad_request("You cannot terminate your own account.")
+
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    await store.delete_user(user_id)
+    logger.info("Admin %s terminated user %s", payload["sub"], user_id)
+
+    return {"success": True, "message": "User terminated successfully."}
+
+
+@router.post("/users/{user_id}/force-logout")
+async def force_logout(
+    user_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    await store.force_logout(user_id)
+    logger.info("Admin %s forced logout for user %s", payload["sub"], user_id)
+
+    return {"success": True, "message": "User active sessions invalidated."}
+
+
+@router.post("/users/{user_id}/impersonate")
+async def impersonate_user(
+    user_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+
+    store = _get_store(request)
+    target = await store.get_user_by_id(user_id)
+    if not target:
+        raise not_found("User not found.")
+
+    admin_id = payload["sub"]
+    if admin_id == user_id:
+        raise bad_request("You cannot impersonate yourself.")
+
+    # Create a token for the target user, but note the impersonator
+    token = create_access_token(
+        user_id=target["id"],
+        email=target["email"],
+        role=target["role"],
+        impersonator_id=admin_id)
+    logger.info(
+        "Admin %s initiated impersonation of user %s",
+        admin_id,
+        user_id)
+
+    if target:
+        target.pop("password_hash", None)
+    return {"access_token": token, "token_type": "bearer",
+            "impersonated_user": target}
+
+# =============================================================================
+# Model visibility
+# =============================================================================
+
+
+@router.get("/model-visibility")
+async def get_model_visibility(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    config = await store.get_admin_config()
+
+    hidden_voices = config.get("hidden_voices", [])
+    hidden_llms = config.get("hidden_llms", [])
+
+    # Full catalogs so the admin UI can render all toggles without a second
+    # call
+    import os
+    from config.settings import get_settings
+    from providers.tts.voice_registry import VoiceRegistry
+    from providers.llm.registry import LLMRegistry
+
+    settings = get_settings()
+    model_dir = os.path.dirname(
+        settings.piper_model_path) if settings.piper_model_path else ""
+
+    try:
+        import kokoro  # noqa: F401
+        kokoro_ok = True
+    except ImportError:
+        kokoro_ok = False
+
+    all_voices = []
+    for e in VoiceRegistry.list_all():
+        if e.engine == "kokoro" and not kokoro_ok:
+            continue
+        installed_path = os.path.join(
+            model_dir, e.filename) if model_dir and e.filename else ""
+        all_voices.append({
+            "voice_id": e.voice_id,
+            "display_name": e.display_name,
+            "engine": e.engine,
+            "accent": e.accent,
+            "installed": bool(installed_path and os.path.exists(installed_path)),
+            "hidden": e.voice_id in hidden_voices,
+        })
+
+    all_llms = []
+    for m in [*LLMRegistry.list_local(), *LLMRegistry.list_cloud()]:
+        all_llms.append({
+            "model_id": m.model_id,
+            "display_name": m.display_name,
+            "provider": m.provider,
+            "is_cloud": m.is_cloud,
+            "hidden": m.model_id in hidden_llms,
+        })
+
+    return {
+        "hidden_voices": hidden_voices,
+        "hidden_llms": hidden_llms,
+        "all_voices": all_voices,
+        "all_llms": all_llms,
+    }
+
+
+@router.put("/model-visibility")
+async def set_model_visibility(
+    body: ModelVisibilityBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    config = await store.get_admin_config()
+    config["hidden_voices"] = body.hidden_voices
+    config["hidden_llms"] = body.hidden_llms
+    await store.set_admin_config(config)
+    logger.info("Admin updated model visibility: %d voices hidden, %d LLMs hidden",
+                len(body.hidden_voices), len(body.hidden_llms))
+    return {"hidden_voices": body.hidden_voices,
+            "hidden_llms": body.hidden_llms}
+
+
+# =============================================================================
+# Feature visibility (global show/hide per feature key)
+# =============================================================================
+
+class FeatureVisibilityBody(BaseModel):
+    hidden_features: list[str] = []
+
+
+@router.get("/feature-visibility")
+async def get_feature_visibility(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    config = await store.get_admin_config()
+    hidden = config.get("hidden_features", [])
+    return {
+        "hidden_features": hidden,
+        "all_features": [
+            {**f, "hidden": f["key"] in hidden}
+            for f in ALL_FEATURES
+        ],
+    }
+
+
+@router.put("/feature-visibility")
+async def set_feature_visibility(
+    body: FeatureVisibilityBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    # Validate keys, allowing retired keys like environment without error
+    invalid = [k for k in body.hidden_features if k not in ALL_FEATURE_KEYS and k != "environment"]
+    if invalid:
+        raise bad_request(f"Unknown feature keys: {invalid}")
+    sanitized = [k for k in body.hidden_features if k in ALL_FEATURE_KEYS]
+    store = _get_store(request)
+    config = await store.get_admin_config()
+    config["hidden_features"] = sanitized
+    await store.set_admin_config(config)
+    logger.info(
+        "Admin updated feature visibility: %d features hidden", len(
+            body.hidden_features))
+    return {"hidden_features": body.hidden_features}
+
+
+@router.get("/feature-flags")
+async def get_feature_flags(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    from config.settings import get_settings, Settings
+    
+    settings = get_settings()
+    flags = []
+    
+    for field_name, field_info in Settings.model_fields.items():
+        if field_name.endswith("_enabled"):
+            flags.append({
+                "key": field_name,
+                "env_var": field_name.upper(),
+                "enabled": getattr(settings, field_name),
+                "description": field_info.description or ""
+            })
+            
+    # Sort alphabetically by key for better usability
+    flags.sort(key=lambda x: x["key"])
+    
+    return {"flags": flags}
+
+
+# =============================================================================
+# Chat & Voice Tools Management Matrix
+# =============================================================================
+
+TOOL_METADATA_MAP = {
+    # 3D & Development
+    "design_3d_model": {"label": "3D CAD Modeler", "category": "3D & Engineering", "icon": "view_in_ar"},
+    "run_sandbox_code": {"label": "Code Sandbox Runner", "category": "Development", "icon": "terminal"},
+    "code_interpreter": {"label": "Local Code Interpreter", "category": "Development", "icon": "code"},
+    "render_diagram": {"label": "Mermaid Diagram Generator", "category": "3D & Engineering", "icon": "schema"},
+    
+    # Search & Intelligence
+    "web_search": {"label": "Real-time Web Search", "category": "Search & Intel", "icon": "public"},
+    "deep_research": {"label": "Autonomous Deep Research", "category": "Search & Intel", "icon": "travel_explore"},
+    "get_weather": {"label": "NWS Weather & Forecasts", "category": "Search & Intel", "icon": "wb_sunny"},
+    "generate_image": {"label": "AI Image Generation", "category": "Media", "icon": "image"},
+    
+    # Memory & Notes (Chronos)
+    "remember_fact": {"label": "Remember User Fact", "category": "Memory & Notes", "icon": "psychology"},
+    "recall_memory": {"label": "Recall Facts & Context", "category": "Memory & Notes", "icon": "saved_search"},
+    "forget_memory": {"label": "Forget / Delete Memory", "category": "Memory & Notes", "icon": "delete_forever"},
+    "save_vault_note": {"label": "Save Chronos Vault Note", "category": "Memory & Notes", "icon": "note_add"},
+    "read_vault_note": {"label": "Read Chronos Vault Note", "category": "Memory & Notes", "icon": "menu_book"},
+    "search_vault": {"label": "Search Chronos Vault", "category": "Memory & Notes", "icon": "search"},
+    "take_note": {"label": "Quick Voice Note", "category": "Memory & Notes", "icon": "mic"},
+    "append_note": {"label": "Append to Note", "category": "Memory & Notes", "icon": "post_add"},
+    "journal": {"label": "Daily Journal Entry", "category": "Memory & Notes", "icon": "book"},
+    "find_notes": {"label": "Find Notes by Keyword", "category": "Memory & Notes", "icon": "find_in_page"},
+    "read_note": {"label": "Read Daily Note", "category": "Memory & Notes", "icon": "description"},
+    
+    # Smart Home & Fleet
+    "mow_command": {"label": "Voyager Mower Robotics & E-Stop", "category": "Fleet & Robotics", "icon": "agriculture"},
+    "home_assistant_command": {"label": "Home Assistant IoT Control", "category": "Smart Home", "icon": "home"},
+    "get_device_state": {"label": "Get IoT Device State", "category": "Smart Home", "icon": "sensors"},
+    "list_vehicles": {"label": "List Garage Vehicles", "category": "Vehicles", "icon": "directions_car"},
+    "record_odometer": {"label": "Record Vehicle Odometer", "category": "Vehicles", "icon": "speed"},
+    "find_parts": {"label": "Find Vehicle Parts", "category": "Vehicles", "icon": "build"},
+    "query_vehicle_manual": {"label": "Query Vehicle Manual RAG", "category": "Vehicles", "icon": "menu_book"},
+    
+    # Inventory & Commerce
+    "add_asset": {"label": "Add Inventory Asset", "category": "Stash & Inventory", "icon": "inventory_2"},
+    "find_asset": {"label": "Find Stash Asset", "category": "Stash & Inventory", "icon": "search"},
+    "asset_summary": {"label": "Asset Valuation Summary", "category": "Stash & Inventory", "icon": "bar_chart"},
+    "registry_health": {"label": "Inventory Registry Health", "category": "Stash & Inventory", "icon": "health_and_safety"},
+    "warranty_check": {"label": "Warranty Expiration Check", "category": "Stash & Inventory", "icon": "verified_user"},
+    "add_shopping_list": {"label": "Add to Shopping List", "category": "Shopping", "icon": "add_shopping_cart"},
+    "read_shopping_list": {"label": "Read Shopping List", "category": "Shopping", "icon": "shopping_cart"},
+    "search_commerce_products": {"label": "Search Store Products", "category": "Commerce", "icon": "storefront"},
+    "create_commerce_sale": {"label": "Create Commerce Order", "category": "Commerce", "icon": "point_of_sale"},
+    "generate_business_report": {"label": "Generate Store Report", "category": "Commerce", "icon": "analytics"},
+    
+    # Google Workspace & Workflows
+    "calendar_event": {"label": "Google Calendar Events", "category": "Google Workspace", "icon": "calendar_month"},
+    "add_google_task": {"label": "Add Google Task", "category": "Google Workspace", "icon": "task_alt"},
+    "list_google_tasks": {"label": "List Google Tasks", "category": "Google Workspace", "icon": "checklist"},
+    "search_emails": {"label": "Gmail Email Triage", "category": "Google Workspace", "icon": "mail"},
+    "search_google_books": {"label": "Google Books Lookup", "category": "Google Workspace", "icon": "menu_book"},
+    "trigger_n8n_workflow": {"label": "n8n Webhook Automations", "category": "Workflows", "icon": "webhook"},
+    
+    # Browser Automation
+    "browser_navigate": {"label": "Browser: Navigate URL", "category": "Browser Automation", "icon": "open_in_browser"},
+    "browser_extract_text": {"label": "Browser: Extract Page Text", "category": "Browser Automation", "icon": "article"},
+    "browser_click": {"label": "Browser: Click Element", "category": "Browser Automation", "icon": "touch_app"},
+    "browser_screenshot": {"label": "Browser: Take Screenshot", "category": "Browser Automation", "icon": "photo_camera"},
+    "browser_vision_on_page": {"label": "Browser: Vision Analysis", "category": "Browser Automation", "icon": "visibility"},
+}
+
+
+class ChatToolsUpdateBody(BaseModel):
+    disabled_tools: list[str] = []
+
+
+@router.get("/chat-tools")
+async def get_chat_tools(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Retrieve all chat and voice tools categorized with current enabled/disabled state."""
+    await _require_admin(request, authorization)
+    from core.tools.schemas import TOOL_SCHEMAS
+    store = _get_store(request)
+    config = await store.get_admin_config()
+    disabled = set(config.get("disabled_tools", []))
+    
+    tools = []
+    for t in TOOL_SCHEMAS:
+        name = t["name"]
+        meta = TOOL_METADATA_MAP.get(name, {
+            "label": name.replace("_", " ").title(),
+            "category": "Other Tools",
+            "icon": "handyman",
+        })
+        tools.append({
+            "name": name,
+            "label": meta["label"],
+            "category": meta["category"],
+            "icon": meta["icon"],
+            "description": t.get("description", ""),
+            "enabled": name not in disabled,
+        })
+        
+    return {
+        "disabled_tools": list(disabled),
+        "tools": tools,
+    }
+
+
+@router.put("/chat-tools")
+async def set_chat_tools(
+    body: ChatToolsUpdateBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Update disabled status for chat & voice tools."""
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    config = await store.get_admin_config()
+    config["disabled_tools"] = body.disabled_tools
+    await store.set_admin_config(config)
+    logger.info("Admin updated chat tools: %d tools disabled", len(body.disabled_tools))
+    return {"disabled_tools": body.disabled_tools}
+
+
+
+# =============================================================================
+# Family management — parent-child link assignment
+# =============================================================================
+
+class ParentChildBody(BaseModel):
+    parent_id: str
+    child_id: str
+
+
+@router.get("/family")
+async def list_family(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    links = await store.list_all_parent_child()
+    users = await store.list_users()
+    return {"links": links, "users": users}
+
+
+@router.post("/family")
+async def add_family_link(
+    body: ParentChildBody,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    store = _get_store(request)
+
+    parent = await store.get_user_by_id(body.parent_id)
+    child = await store.get_user_by_id(body.child_id)
+    if not parent:
+        raise not_found("Parent user not found.")
+    if not child:
+        raise not_found("Child user not found.")
+    if body.parent_id == body.child_id:
+        raise bad_request("Parent and child cannot be the same user.")
+
+    await store.add_parent_child(body.parent_id, body.child_id)
+
+    # Auto-promote parent's role to 'parent' if they're a plain user
+    if parent["role"] == "user":
+        await store.update_user(body.parent_id, role="parent")
+
+    logger.info(
+        "Admin %s linked parent %s → child %s",
+        payload["sub"],
+        body.parent_id,
+        body.child_id)
+    return {"parent_id": body.parent_id, "child_id": body.child_id}
+
+
+@router.delete("/family/{parent_id}/{child_id}")
+async def remove_family_link(
+    parent_id: str,
+    child_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    store = _get_store(request)
+    await store.remove_parent_child(parent_id, child_id)
+
+    # If parent now has no children, demote back to user
+    remaining = await store.get_children_of_parent(parent_id)
+    if not remaining:
+        parent = await store.get_user_by_id(parent_id)
+        if parent and parent["role"] == "parent":
+            await store.update_user(parent_id, role="user")
+
+    logger.info("Admin %s removed parent %s → child %s link",
+                payload["sub"], parent_id, child_id)
+    return {"removed": True}
+
+
+# =============================================================================
+# Family Groups — shared access to culinary / inventory / store / maintenance
+# =============================================================================
+
+VALID_MODULES = {"culinary", "inventory", "store", "maintenance"}
+VALID_RELATIONS = {"parent", "child", "spouse", "guardian", "member", "other"}
+
+
+class FamilyGroupCreate(BaseModel):
+    name: str
+    shared_modules: List[str] = [
+        "culinary",
+        "inventory",
+        "store",
+        "maintenance"]
+
+
+class FamilyGroupUpdate(BaseModel):
+    name: Optional[str] = None
+    shared_modules: Optional[List[str]] = None
+
+
+class FamilyMemberAdd(BaseModel):
+    profile_id: str
+    relationship: str = "member"
+
+
+@router.get("/family-groups")
+async def list_family_groups(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    store = _get_store(request)
+    groups = await store.list_family_groups()
+    users = await store.list_users()
+    return {"groups": groups, "users": users}
+
+
+@router.post("/family-groups", status_code=201)
+async def create_family_group(
+    body: FamilyGroupCreate,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    invalid = [m for m in body.shared_modules if m not in VALID_MODULES]
+    if invalid:
+        raise bad_request(f"Invalid modules: {invalid}")
+    store = _get_store(request)
+    group_id = str(uuid.uuid4())
+    group = await store.create_family_group(group_id, body.name.strip(), body.shared_modules)
+    logger.info("Admin %s created family group %s (%s)",
+                payload["sub"], group_id, body.name)
+    return group
+
+
+@router.patch("/family-groups/{group_id}")
+async def update_family_group(
+    group_id: str,
+    body: FamilyGroupUpdate,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    await _require_admin(request, authorization)
+    if body.shared_modules is not None:
+        invalid = [m for m in body.shared_modules if m not in VALID_MODULES]
+        if invalid:
+            raise bad_request(f"Invalid modules: {invalid}")
+    store = _get_store(request)
+    result = await store.update_family_group(group_id, body.name, body.shared_modules)
+    if not result:
+        raise not_found("Family group not found.")
+    return result
+
+
+@router.delete("/family-groups/{group_id}", status_code=204)
+async def delete_family_group(
+    group_id: str,
+    request: Request,
+    reassign_to: Optional[str] = None,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Dissolve a family group.
+
+    Deleting the group used to drop the group row and its memberships and
+    nothing else, which left everything filed under "family:<group_id>" with
+    no owner that resolves to it. The rows were not removed -- they became
+    unreachable, for every member at once, silently.
+
+    So the group is only dissolved once its shared data has somewhere to go.
+    Pass `reassign_to` with a member's profile id to hand them the shared
+    household; without it, a group that still owns data is refused and the
+    counts are reported. There is no way to split a shared household back
+    into the parts each member contributed -- nothing records who added what
+    -- so naming an heir is the honest operation, and refusing is better than
+    guessing.
+    """
+    payload = await _require_admin(request, authorization)
+    store = _get_store(request)
+    group = await store.get_family_group(group_id)
+    if not group:
+        raise not_found("Family group not found.")
+
+    holdings = count_family_data(group_id)
+    if holdings and not reassign_to:
+        raise bad_request(
+            f"Family group still owns data: {holdings}. Pass reassign_to=<profile_id> "
+            f"to hand it to a member, or empty the group's modules first. "
+            f"Deleting now would leave these rows with no owner and no way to reach them."
+        )
+
+    if reassign_to and holdings:
+        heir_group = await store.get_user_family_group(reassign_to)
+        if not heir_group or heir_group["id"] != group_id:
+            raise bad_request(
+                "reassign_to must be a current member of this group.")
+
+        # Only invoke culinary reassignment when culinary is present
+        if "culinary" in holdings:
+            result = reassign_culinary_household(group_id, reassign_to)
+            if not result.get("reassigned"):
+                raise bad_request(
+                    f"Could not reassign the shared household: {result}. "
+                    f"Nothing was deleted.")
+            logger.info(
+                "Admin %s reassigned family group %s culinary data to %s: %s",
+                payload["sub"], group_id, reassign_to, result)
+
+        # Only culinary has a reassignment path. Anything else still held is
+        # reported rather than quietly dropped along with the group.
+        remaining = {k: v for k, v in count_family_data(group_id).items()
+                     if k != "culinary"}
+        if remaining:
+            raise bad_request(
+                f"Culinary data was reassigned, but these modules are still owned "
+                f"by the group and have no reassignment path yet: {remaining}. "
+                f"The group was not deleted.")
+
+    await store.delete_family_group(group_id)
+    logger.info("Admin %s deleted family group %s (reassigned to %s)",
+                payload["sub"], group_id, reassign_to or "nobody")
+
+
+@router.post("/family-groups/{group_id}/members", status_code=201)
+async def add_family_member(
+    group_id: str,
+    body: FamilyMemberAdd,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+):
+    payload = await _require_admin(request, authorization)
+    if body.relationship not in VALID_RELATIONS:
+        raise bad_request(
+            f"Invalid relationship. Choose from: {', '.join(VALID_RELATIONS)}")
+    store = _get_store(request)
+    group = await store.get_family_group(group_id)
+    if not group:
+        raise not_found("Family group not found.")
+    user = await store.get_user_by_id(body.profile_id)
+    if not user:
+        raise not_found("User not found.")
+    result = await store.add_family_member(group_id, body.profile_id, body.relationship)
+    logger.info(
+        "Admin %s added %s to family group %s as %s",
+        payload["sub"],
+        body.profile_id,
+        group_id,
+        body.relationship)
+
+    # Migrate any existing personal module data to the shared family scope
+    summary = migrate_member_to_family(
+        group_id, body.profile_id, group["shared_modules"])
+    logger.info("Auto-migration for %s → group %s: %s",
+                body.profile_id[:8], group_id[:8], summary)
+
+    return {**result, "migration": summary}
+
+
+@router.delete("/family-groups/{group_id}/members/{profile_id}",
+               status_code=204)
+async def remove_family_member(
+    group_id: str,
+    profile_id: str,
+    request: Request,
+    confirm: bool = False,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Remove a member from a family group.
+
+    Joining a group moves that member's recipes, homes, vehicles and
+    workspaces to the shared owner, and in culinary's case deletes their
+    personal household outright. Leaving does not move any of it back, and
+    it cannot: nothing records who contributed which row, and the rest of
+    the group is still using it. So the member leaves with an empty
+    module and the group keeps everything they brought.
+
+    That may well be what you want -- a shared pantry belongs to the house,
+    not to whoever stocked it. What is not acceptable is that it used to
+    happen silently on a bare DELETE. Now the counts are reported and the
+    call is refused until `confirm=true`, so the decision is made rather
+    than discovered afterwards.
+    """
+    payload = await _require_admin(request, authorization)
+    store = _get_store(request)
+
+    # list_family_groups rather than get_family_group: only the list form
+    # carries the membership rows, and whether this is the last member changes
+    # what the warning has to say.
+    groups = await store.list_family_groups()
+    group = next((g for g in groups if g["id"] == group_id), None)
+    if not group:
+        raise not_found("Family group not found.")
+
+    holdings = count_family_data(group_id)
+    remaining = [m for m in (group.get("members") or [])
+                 if m["profile_id"] != profile_id]
+
+    if holdings and not confirm:
+        raise bad_request(
+            f"This group holds shared data: {holdings}. Removing this member "
+            f"does not give any of it back -- it stays with the group, and "
+            f"their personal modules will be empty. Re-send with confirm=true "
+            f"to proceed."
+            + ("" if remaining else
+               " They are also the last member, so nothing will be able to "
+               "reach this data afterwards; dissolve the group with "
+               "reassign_to instead.")
+        )
+
+    await store.remove_family_member(group_id, profile_id)
+    logger.info(
+        "Admin %s removed %s from family group %s (group still holds %s)",
+        payload["sub"], profile_id, group_id, holdings or "nothing")

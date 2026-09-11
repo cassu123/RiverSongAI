@@ -86,7 +86,7 @@ class TestRouteSurface:
         assert getattr(get_settings(), "session_presets_enabled", False) is True
 
     def test_router_importable(self):
-        from api.routes import session_presets as p
+        from api.routes.ai import session_presets as p
         assert p.router.prefix == "/api/presets"
         paths = {r.path for r in p.router.routes}
         assert "/api/presets"                  in paths

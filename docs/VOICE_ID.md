@@ -174,7 +174,7 @@ lifetime. There is no GPU path.
 
 ## Files
 
-- `api/routes/voice_id.py` — HTTP surface (4 endpoints).
+- `api/routes/auth/voice_id.py` — HTTP surface (4 endpoints).
 - `providers/voice_id/voice_id_provider.py` — encoder + enroll +
   identify + delete + status.
 - `providers/memory/sqlite_store.py` — `voice_id_events` table for

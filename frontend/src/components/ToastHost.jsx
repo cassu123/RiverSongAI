@@ -47,7 +47,7 @@ export default function ToastHost() {
               border: `1px solid ${c.border}`,
               borderRadius: 8,
               color: c.text,
-              fontSize: '0.8rem',
+              fontSize: 'var(--rs-fs-tiny)',
               cursor: 'pointer',
               boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             }}

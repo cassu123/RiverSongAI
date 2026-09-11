@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@context/AuthContext'
 
 /**
  * The built-in safety pack and anything authored on top of it.
@@ -133,13 +133,13 @@ export default function SafetyRules() {
       </div>
 
       {rules && rules.length === 0 && (
-        <p className="rs-card-meta" style={{ fontSize: '0.95rem' }}>
+        <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)' }}>
           No alert rules yet. The built-in pack is created on startup once
           Home Assistant is configured.
         </p>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+      <div className="rs-flex rs-flex-col rs-gap-3 rs-mt-2">
         {(rules || []).map(rule => {
           const tone = SEVERITY_TONE[rule.severity] || SEVERITY_TONE.info
           const showing = result && result.ruleId === rule.id
@@ -150,32 +150,32 @@ export default function SafetyRules() {
               opacity: rule.enabled ? 1 : 0.55,
             }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '1.05rem', fontWeight: 700 }}>{rule.name}</span>
-                <span style={{ fontSize: '0.85rem', color: tone, fontWeight: 700,
+                <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700 }}>{rule.name}</span>
+                <span style={{ fontSize: 'var(--rs-fs-tiny)', color: tone, fontWeight: 700,
                                letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   {rule.severity}
                 </span>
                 {rule.builtin && (
-                  <span className="rs-pill" style={{ fontSize: '0.85rem' }}>BUILT-IN</span>
+                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}>BUILT-IN</span>
                 )}
-                <div style={{ flex: 1 }} />
+                <div className="rs-grow" />
                 <button className={rule.enabled ? 'rs-pill is-active' : 'rs-pill'}
-                        style={{ fontSize: '0.85rem' }}
+                        style={{ fontSize: 'var(--rs-fs-tiny)' }}
                         onClick={() => toggle(rule)} disabled={busy === rule.id}>
                   {rule.enabled ? 'ON' : 'MUTED'}
                 </button>
               </div>
 
-              <div className="rs-card-meta" style={{ fontSize: '0.95rem', marginTop: 6 }}>
+              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', marginTop: 6 }}>
                 Watches {watching(rule)}.
               </div>
 
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                <button className="rs-pill" style={{ fontSize: '0.85rem' }}
+              <div className="rs-flex rs-gap-2 rs-mt-3 rs-flex-wrap">
+                <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}
                         onClick={() => test(rule, false)} disabled={busy === rule.id}>
                   TEST
                 </button>
-                <button className="rs-pill" style={{ fontSize: '0.85rem' }}
+                <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}
                         onClick={() => test(rule, true)} disabled={busy === rule.id}
                         title="Fires the real alert, including push">
                   SEND FOR REAL
@@ -185,7 +185,7 @@ export default function SafetyRules() {
               {showing && (
                 <div style={{
                   marginTop: 10, padding: 12, borderRadius: 8,
-                  background: 'rgba(0,0,0,0.22)', fontSize: '0.95rem',
+                  background: 'rgba(0,0,0,0.22)', fontSize: 'var(--rs-fs-small)',
                   border: `1px solid ${result.ok ? 'var(--secondary)' : 'var(--warn)'}`,
                 }}>
                   <div style={{ fontWeight: 700, color: result.ok ? 'var(--secondary)' : 'var(--warn)' }}>
@@ -207,7 +207,7 @@ export default function SafetyRules() {
                       Also matched: {result.others.join(', ')}
                     </div>
                   )}
-                  <div style={{ marginTop: 6, opacity: 0.6, fontSize: '0.85rem' }}>
+                  <div style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 'var(--rs-fs-tiny)' }}>
                     Local time {result.localTime}
                   </div>
                 </div>
@@ -218,11 +218,11 @@ export default function SafetyRules() {
       </div>
 
       {error && (
-        <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span className="rs-card-meta" style={{ fontSize: '0.95rem', color: 'var(--md-error)' }}>
+        <div className="rs-mt-3 rs-flex rs-gap-3 rs-items-center rs-flex-wrap">
+          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--md-error)' }}>
             {error}
           </span>
-          <button className="rs-pill" style={{ fontSize: '0.85rem' }} onClick={load}>
+          <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }} onClick={load}>
             RETRY
           </button>
         </div>

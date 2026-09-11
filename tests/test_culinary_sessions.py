@@ -282,8 +282,8 @@ def test_a_timer_survives_the_process_that_started_it(headers, recipe_id):
                            headers=headers).json()["id"]
 
     async def _backdate():
-        from api.routes.culinary import _Session
-        from culinary.models import CookingTimer
+        from api.routes.domains.culinary import _Session
+        from domains.culinary.models import CookingTimer
 
         db = _Session()
         try:
@@ -386,7 +386,7 @@ def test_voice_and_http_move_the_same_session(headers, recipe_id):
     "Next" over the microphone and "Next" tapped on a wall panel must be the
     same operation, not two implementations that drift.
     """
-    from api.routes.culinary_sessions import voice_command
+    from api.routes.domains.culinary_sessions import voice_command
 
     sid = _start(headers, recipe_id)["id"]
 
@@ -405,7 +405,7 @@ def test_voice_and_http_move_the_same_session(headers, recipe_id):
 
 
 def test_voice_answers_how_much(headers, recipe_id):
-    from api.routes.culinary_sessions import voice_command
+    from api.routes.domains.culinary_sessions import voice_command
 
     _start(headers, recipe_id, servings=8)
     spoken = asyncio.run(voice_command("cook-test-user", "how_much", "flour"))
@@ -419,7 +419,7 @@ def test_voice_how_much_falls_through_for_non_recipe_questions(headers, recipe_i
     None sends it back to the LLM; answering it out of the ingredient list
     would be confidently wrong.
     """
-    from api.routes.culinary_sessions import voice_command
+    from api.routes.domains.culinary_sessions import voice_command
 
     _start(headers, recipe_id)
     assert asyncio.run(
@@ -430,7 +430,7 @@ def test_voice_how_much_falls_through_for_non_recipe_questions(headers, recipe_i
 
 
 def test_voice_sets_and_reports_timers(headers, recipe_id):
-    from api.routes.culinary_sessions import voice_command
+    from api.routes.domains.culinary_sessions import voice_command
 
     sid = _start(headers, recipe_id)["id"]
     client.post(f"/api/culinary/sessions/{sid}/step",
@@ -447,7 +447,7 @@ def test_voice_sets_and_reports_timers(headers, recipe_id):
 
 def test_voice_is_silent_when_nobody_is_cooking():
     """No session means this was never a cooking command; the LLM takes it."""
-    from api.routes.culinary_sessions import voice_command
+    from api.routes.domains.culinary_sessions import voice_command
 
     assert asyncio.run(voice_command("cook-test-user", "next")) is None
 
@@ -488,7 +488,7 @@ def kitchen_unit(headers):
 
 def test_step_changes_reach_the_kitchen_screen(headers, recipe_id, kitchen_unit):
     """A step that only reached one of the three screens is the bug this fixes."""
-    from core.vortex_surfaces import get_surface_publisher
+    from core.vortex.surfaces import get_surface_publisher
 
     sid = _start(headers, recipe_id)["id"]
     client.post(f"/api/culinary/sessions/{sid}/step",
@@ -505,7 +505,7 @@ def test_step_changes_reach_the_kitchen_screen(headers, recipe_id, kitchen_unit)
 
 def test_ending_a_session_takes_the_card_down(headers, recipe_id, kitchen_unit):
     """A card left to expire is a card that stayed up after it stopped mattering."""
-    from core.vortex_surfaces import get_surface_publisher
+    from core.vortex.surfaces import get_surface_publisher
 
     sid = _start(headers, recipe_id)["id"]
     assert asyncio.run(get_surface_publisher().find("cooking-step")) is not None

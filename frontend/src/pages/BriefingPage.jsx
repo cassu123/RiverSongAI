@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import { apiFetch, toast } from '../lib/api.js'
-import RsMarkdown from '../components/RsMarkdown.jsx'
-import { MusicDiscoveryCard } from '../components/widgets/MusicDiscoveryCard.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
+import { apiFetch, toast } from '@lib/api.js'
+import RsMarkdown from '@components/RsMarkdown.jsx'
+import { MusicDiscoveryCard } from '@components/widgets/MusicDiscoveryCard.jsx'
 
 /**
  * BriefingPage — Daily Briefing

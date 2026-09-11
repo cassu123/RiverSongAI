@@ -7,7 +7,7 @@ build:
 	@cd frontend && npm run build
 
 dev:
-	@bash dev.sh
+	@bash scripts/dev.sh
 
 restart:
 	@sudo systemctl restart river-song

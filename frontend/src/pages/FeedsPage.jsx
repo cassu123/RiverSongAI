@@ -7,8 +7,8 @@
 // and mounts the container.
 
 import React, { useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import FeedTabsContainer from '../components/FeedTabsContainer.jsx'
+import { useAuth } from '@context/AuthContext'
+import FeedTabsContainer from '@components/FeedTabsContainer.jsx'
 
 export default function FeedsPage({ setAction }) {
   const { token } = useAuth()

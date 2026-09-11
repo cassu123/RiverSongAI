@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import ConversationPanel   from './ConversationPanel.jsx'
-import { useAuth }         from '../context/AuthContext.jsx'
+import { useAuth }         from '@context/AuthContext.jsx'
 import RateIndicator       from './RateIndicator.jsx'
 import ModelPickerPopover  from './ModelPickerPopover.jsx'
-import { useConversation } from '../hooks/useConversation.js'
+import { useConversation } from '@hooks/useConversation.js'
 import { API_BASE } from '../utils/useApi.js'
 
 function fmtDate(iso) {
@@ -310,7 +310,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
         ref={inputRef}
         rows={1}
         className="rs-chat-textarea"
-        style={{ fontSize: '1.05rem', fontWeight: 500 }}
+        style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 500 }}
         placeholder="Ask River Song..."
         value={inputText}
         onChange={e => setInputText(e.target.value)}
@@ -357,8 +357,8 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
     <div className={`rs-foyer ${embedded ? 'is-embedded' : ''}`} style={embedded ? { padding: 0, height: '100%', display: 'flex', flexDirection: 'column' } : {}}>
       
       {embedded && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>Vehicle Assistant</h3>
+        <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
+          <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-h3)', color: 'var(--primary)' }}>Vehicle Assistant</h3>
           <button className="rs-pill" onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
@@ -381,11 +381,11 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       )}
 
       {showSystem && (
-        <div className="rs-card is-elev animate-fade-in" style={{ marginBottom: 24 }}>
+        <div className="rs-card is-elev animate-fade-in rs-mb-5">
           <div className="rs-card-inner">
             <div className="rs-card-label">System Directives</div>
             <textarea
-              style={{ all: 'unset', width: '100%', marginTop: 12, fontSize: '0.92rem', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
+              style={{ all: 'unset', width: '100%', marginTop: 12, fontSize: 'var(--rs-fs-small)', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
               placeholder="Inject custom neural constraints..."
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
@@ -397,7 +397,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       {showHistory ? (
         <div className="rs-card-flow">
           {historySessions.length === 0 ? (
-            <div className="rs-card-meta" style={{ padding: 48, textAlign: 'center' }}>Neural archives empty.</div>
+            <div className="rs-card-meta rs-p-7 rs-text-center">Neural archives empty.</div>
           ) : (
             historySessions.map(s => (
               <div key={s.id} className="rs-card is-tappable is-wide animate-page-in" onClick={() => loadSession(s.id)}>
@@ -414,7 +414,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       ) : (
         <div className="rs-thread" style={{ paddingBottom: embedded ? '20px' : '120px', flex: 1, overflowY: 'auto' }}>
           {viewingSession && (
-            <div style={{ marginBottom: 24 }}>
+            <div className="rs-mb-5">
               <button className="rs-pill is-active" onClick={() => setViewingSession(null)}>
                  <span className="material-symbols-rounded">live_tv</span>
                  RETURN TO LIVE STREAM
@@ -426,10 +426,10 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 16px', marginBottom: 16, borderRadius: 10,
               background: 'rgba(230,170,60,0.13)', border: '1px solid rgba(230,170,60,0.3)',
-              color: '#e6c07b', fontSize: '0.9rem',
+              color: '#e6c07b', fontSize: 'var(--rs-fs-small)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>info</span>
-              <span style={{ flex: 1 }}>
+              <span className="rs-grow">
                 {modelNotice.name} is unavailable{modelNotice.reason ? ` — ${modelNotice.reason}` : '.'}
                 {modelNotice.usingName ? ` Using ${modelNotice.usingName} for now.` : ' Pick another model to continue.'}
               </span>
@@ -443,10 +443,10 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 16px', marginBottom: 16, borderRadius: 10,
               background: 'rgba(220,60,60,0.15)', border: '1px solid rgba(220,60,60,0.3)',
-              color: '#f08080', fontSize: '0.9rem',
+              color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-small)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>error</span>
-              <span style={{ flex: 1 }}>{error}</span>
+              <span className="rs-grow">{error}</span>
               <button onClick={() => setError(null)} style={{ all: 'unset', cursor: 'pointer', opacity: 0.7 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
               </button>
@@ -485,7 +485,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
                 <span className="rs-mpop-title">Attach a file</span>
                 <span className="rs-mpop-sub">Add a document or image</span>
               </span>
-              <input type="file" style={{ display: 'none' }} onChange={async (e) => {
+              <input type="file" className="rs-hidden" onChange={async (e) => {
                 const file = e.target.files?.[0]; if (!file) return
                 setToolsOpen(false)
                 const docId = `doc_${Date.now()}`

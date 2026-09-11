@@ -215,7 +215,7 @@ def _instantiate_llm(key: str, model: Optional[str]) -> LLMProvider:
         from providers.llm.bedrock import BedrockLLM
         return BedrockLLM(model=model) if model else BedrockLLM()
     if key == "nvidia_nim":
-        from api.routes.models_settings import _get_enabled_providers
+        from api.routes.system.models_settings import _get_enabled_providers
         if not _get_enabled_providers().get("nvidia_nim", False):
             raise ValueError(
                 "NVIDIA NIM is disabled. Set NVIDIA_API_KEY in .env or enable it in Settings.")
@@ -283,7 +283,7 @@ def _build_llm_provider(
 
     from providers.llm.registry import LLMRegistry
     from providers.llm.model_intent_router import NoModelAvailable
-    from api.routes.models_settings import (
+    from api.routes.system.models_settings import (
         _get_enabled_providers,
         get_provider_global_enabled,
         get_provider_user_access,
@@ -363,7 +363,7 @@ def _build_llm_provider(
         # whose API key was simply missing to argue with an administrator who
         # had not turned anything off. _cloud_unavailable_reason already
         # separates the two for the catalog; ask it rather than guess.
-        from api.routes.models_settings import _cloud_unavailable_reason
+        from api.routes.system.models_settings import _cloud_unavailable_reason
         reason = _cloud_unavailable_reason(
             key, get_provider_global_enabled(admin_config))
         raise ValueError(f"Provider '{key}' is unavailable — {reason}")
@@ -943,8 +943,8 @@ class ConversationLoop:
         vid = self._tool_context_extras.get("vehicle_id")
         if vid:
             try:
-                from api.routes.vehicles import get_vehicles
-                from core.tools import _get_db_for_tools
+                from api.routes.domains.vehicles import get_vehicles
+                from core.tools.registry import _get_db_for_tools
                 db, close = _get_db_for_tools({})
                 vehicles = get_vehicles(db, self._user_id)
                 v = next((x for x in vehicles if str(x.id) == vid), None)
@@ -1217,7 +1217,8 @@ class ConversationLoop:
                 assert self._llm is not None
                 # Handle Tool Use first if enabled
                 if self._settings.tool_use_enabled:
-                    from core.tools import TOOL_SCHEMAS, execute_tool
+                    from core.tools.registry import execute_tool
+                    from core.tools.schemas import TOOL_SCHEMAS
                     from core.agent_loop import run_agent_loop
                     
                     disabled_tools: list[str] = []
@@ -1505,7 +1506,8 @@ class ConversationLoop:
 
             # Phase 3: Tool Use / Function Calling
             if self._settings.tool_use_enabled:
-                from core.tools import TOOL_SCHEMAS, execute_tool
+                from core.tools.registry import execute_tool
+                from core.tools.schemas import TOOL_SCHEMAS
                 from core.agent_loop import run_agent_loop
 
                 disabled_tools: list[str] = []

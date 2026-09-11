@@ -4,8 +4,8 @@ import remarkGfm from 'remark-gfm'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { autocompletion } from '@codemirror/autocomplete'
-import { useAuth } from '../context/AuthContext.jsx'
-import VaultGraph from '../components/VaultGraph.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
+import VaultGraph from '@components/VaultGraph.jsx'
 
 export default function ChronosPage({ setAction }) {
   const { token } = useAuth()
@@ -240,7 +240,7 @@ export default function ChronosPage({ setAction }) {
                <span className="material-symbols-rounded">search</span>
                <input autoFocus type="text" style={{ all: 'unset', flex: 1 }} placeholder="JUMP TO NOTE..." onChange={handleSearch} />
             </div>
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="rs-mt-3 rs-flex rs-flex-col rs-gap-1">
               {searchResults.map(r => (
                 <button key={r.virtual_path} className="rs-pill" style={{ justifyContent: 'flex-start' }} onClick={() => { loadNote(r.virtual_path); setShowQuickSwitcher(false) }}>
                   {r.title}
@@ -252,8 +252,8 @@ export default function ChronosPage({ setAction }) {
       )}
 
       {/* Left Rail: File Tree */}
-      <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
-        <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+      <div className="rs-card rs-flex rs-flex-col rs-p-3">
+        <div className="rs-flex rs-gap-1 rs-mb-4">
           <button className={`rs-pill ${activeRoot === 'personal' ? 'is-active' : ''}`} style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={() => setActiveRoot('personal')}>PERSONAL</button>
           <button className={`rs-pill ${activeRoot === 'household' ? 'is-active' : ''}`} style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={() => setActiveRoot('household')}>HOUSEHOLD</button>
           <button className="rs-pill" onClick={createNote} title="New Note">
@@ -269,7 +269,7 @@ export default function ChronosPage({ setAction }) {
       <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', padding: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--md-outline-variant)' }}>
           {/* View mode toggle */}
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div className="rs-flex rs-gap-1">
             <button
               className={`rs-pill ${viewMode === 'notes' ? 'is-active' : ''}`}
               onClick={() => setViewMode('notes')}
@@ -293,7 +293,7 @@ export default function ChronosPage({ setAction }) {
           </div>
 
           {viewMode === 'notes' && activeNote && (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="rs-flex rs-gap-2">
               <button className="rs-pill" onClick={summarizeNote} disabled={isSummarizing}>
                 {isSummarizing ? 'SCRIBING...' : 'AI SUM'}
               </button>
@@ -357,7 +357,7 @@ export default function ChronosPage({ setAction }) {
                         return (
                           <button
                             className="rs-pill"
-                            style={{ padding: '0 8px', height: '1.4rem', fontSize: '0.85rem' }}
+                            style={{ padding: '0 8px', height: '1.4rem', fontSize: 'var(--rs-fs-tiny)' }}
                             onClick={async () => {
                               const exists = await loadNote(targetPath)
                               if (!exists) {
@@ -391,12 +391,12 @@ export default function ChronosPage({ setAction }) {
       </div>
 
       {/* Right Rail: Backlinks */}
-      <div className="rs-card" style={{ padding: 12 }}>
-        <div className="rs-card-label" style={{ marginBottom: 12 }}>BACKLINKS</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="rs-card rs-p-3">
+        <div className="rs-card-label rs-mb-3">BACKLINKS</div>
+        <div className="rs-flex rs-flex-col rs-gap-2">
           {backlinks.map(b => (
-            <div key={b.virtual_path} className="rs-card is-tappable" style={{ padding: 12 }} onClick={() => loadNote(b.virtual_path)}>
-              <div className="rs-card-label" style={{ fontSize: '0.65rem' }}>{b.title}</div>
+            <div key={b.virtual_path} className="rs-card is-tappable rs-p-3" onClick={() => loadNote(b.virtual_path)}>
+              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{b.title}</div>
             </div>
           ))}
           {backlinks.length === 0 && <div className="rs-card-meta">No references.</div>}
@@ -409,7 +409,7 @@ export default function ChronosPage({ setAction }) {
 
 function TreeList({ items, onSelect, activePath }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div className="rs-flex rs-flex-col rs-gap-1">
       {items.map(item => <TreeItem key={item.path} item={item} onSelect={onSelect} activePath={activePath} />)}
     </div>
   )
@@ -422,7 +422,7 @@ function TreeItem({ item, onSelect, activePath }) {
   if (item.is_dir) {
     return (
       <div>
-        <button className="rs-drawer-item rs-drawer-item--compact" style={{ width: '100%' }} onClick={() => setExpanded(!expanded)}>
+        <button className="rs-drawer-item rs-drawer-item--compact rs-w-full" onClick={() => setExpanded(!expanded)}>
           <span className="material-symbols-rounded">{expanded ? 'expand_more' : 'chevron_right'}</span>
           <span style={{ flex: 1, textAlign: 'left' }}>{item.name}</span>
         </button>

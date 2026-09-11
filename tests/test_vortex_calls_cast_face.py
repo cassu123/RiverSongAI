@@ -51,9 +51,9 @@ def headers():
 
 @pytest.fixture(autouse=True)
 def _clean():
-    from core.vortex_calls import get_call_registry
-    from core.vortex_calls_ws import reset as reset_sockets
-    from core.vortex_security import pairing_limiter
+    from core.vortex.calls import get_call_registry
+    from core.vortex.calls_ws import reset as reset_sockets
+    from core.vortex.security import pairing_limiter
 
     async def _reset():
         await get_call_registry().reset()
@@ -91,7 +91,7 @@ def test_a_unit_and_a_phone_are_the_same_kind_of_address():
     """
     Kitchen-to-bedroom and phone-to-kitchen must be one code path, not two.
     """
-    from core.vortex_calls import participant_id, split_participant
+    from core.vortex.calls import participant_id, split_participant
 
     assert participant_id(unit_id="vx-1") == "unit:vx-1"
     assert participant_id(user_id="u-1") == "user:u-1"
@@ -103,7 +103,7 @@ def test_a_unit_and_a_phone_are_the_same_kind_of_address():
 
 
 def test_calling_yourself_is_refused():
-    from core.vortex_calls import CallRegistry
+    from core.vortex.calls import CallRegistry
 
     async def _run():
         registry = CallRegistry()
@@ -116,7 +116,7 @@ def test_calling_yourself_is_refused():
 
 
 def test_a_busy_participant_is_not_rung_again():
-    from core.vortex_calls import CallRegistry
+    from core.vortex.calls import CallRegistry
 
     async def _run():
         registry = CallRegistry()
@@ -141,7 +141,7 @@ def test_the_server_relays_signalling_without_reading_it():
     SDP and ICE are between the peers. This forwards the payload verbatim —
     it does not parse, rewrite or store the session description.
     """
-    from core.vortex_calls import CallRegistry
+    from core.vortex.calls import CallRegistry
 
     delivered = []
 
@@ -173,7 +173,7 @@ def test_the_server_relays_signalling_without_reading_it():
 
 
 def test_a_third_party_cannot_signal_into_a_call():
-    from core.vortex_calls import CallRegistry
+    from core.vortex.calls import CallRegistry
 
     async def _run():
         registry = CallRegistry()
@@ -189,7 +189,7 @@ def test_a_third_party_cannot_signal_into_a_call():
 
 
 def test_only_the_callee_can_answer():
-    from core.vortex_calls import CallRegistry
+    from core.vortex.calls import CallRegistry
 
     async def _run():
         registry = CallRegistry()
@@ -211,7 +211,7 @@ def test_both_ends_are_told_when_a_call_ends():
     The end that did not hang up has to release its camera — and on a unit
     that camera light is an interlock the user can see.
     """
-    from core.vortex_calls import CallRegistry
+    from core.vortex.calls import CallRegistry
 
     delivered = []
 
@@ -239,7 +239,7 @@ def test_signalling_for_a_disconnected_peer_is_buffered():
     A phone that accepted a push and is still opening its socket must get the
     offer that was already waiting, not a call that silently failed.
     """
-    from core.vortex_calls import CallRegistry
+    from core.vortex.calls import CallRegistry
 
     async def _run():
         registry = CallRegistry()
@@ -258,7 +258,7 @@ def test_signalling_for_a_disconnected_peer_is_buffered():
 
 
 def test_a_peer_going_away_ends_its_call():
-    from core.vortex_calls import CallRegistry
+    from core.vortex.calls import CallRegistry
 
     async def _run():
         registry = CallRegistry()
@@ -283,7 +283,7 @@ def test_video_downgrades_to_audio_without_consent(headers):
     refusal and not a request it would refuse. Downgrading respects the
     consent boundary; asking anyway would be routing around it.
     """
-    from core.vortex_calls import negotiate_mode, participant_id
+    from core.vortex.calls import negotiate_mode, participant_id
 
     silent_id, _ = _pair(headers, _room("study"))                       # no camera
     seeing_id, _ = _pair(headers, _room("den"), video_calls=True)
@@ -305,7 +305,7 @@ def test_video_downgrades_to_audio_without_consent(headers):
 
 
 def test_audio_intercom_needs_no_camera_at_all(headers):
-    from core.vortex_calls import negotiate_mode
+    from core.vortex.calls import negotiate_mode
 
     async def _run():
         return await negotiate_mode("audio", "unit:a", "unit:b")
@@ -351,7 +351,7 @@ def test_a_ringing_call_takes_over_the_callee_screen(headers):
     `critical`: an intercom is time-limited and somebody is waiting. A card
     that sits politely below the clock is a call nobody answers.
     """
-    from core.vortex_surfaces import get_surface_publisher
+    from core.vortex.surfaces import get_surface_publisher
 
     room = _room("porch")
     unit_id, _ = _pair(headers, room)
@@ -368,8 +368,8 @@ def test_a_ringing_call_takes_over_the_callee_screen(headers):
 
 def test_answering_from_the_card_connects_the_call(headers):
     """However someone picks up, one code path decides whether they may."""
-    from core.vortex_actions import run_surface_action
-    from core.vortex_calls import get_call_registry
+    from core.vortex.actions import run_surface_action
+    from core.vortex.calls import get_call_registry
 
     room = _room("landing")
     unit_id, _ = _pair(headers, room)
@@ -384,8 +384,8 @@ def test_answering_from_the_card_connects_the_call(headers):
 
 
 def test_declining_from_the_card_ends_the_call(headers):
-    from core.vortex_actions import run_surface_action
-    from core.vortex_calls import get_call_registry
+    from core.vortex.actions import run_surface_action
+    from core.vortex.calls import get_call_registry
 
     room = _room("utility")
     unit_id, _ = _pair(headers, room)
@@ -406,7 +406,7 @@ def test_ice_servers_default_to_lan_only(monkeypatch):
     every household's IP to a third party to solve a problem two devices on
     the same switch do not have.
     """
-    import core.vortex_calls as calls
+    import core.vortex.calls as calls
     from config.settings import get_settings
 
     assert calls.ice_servers() == []
@@ -432,7 +432,7 @@ def test_cast_target_resolution(monkeypatch):
     Exact ids beat names, names beat partials, and an ambiguous partial
     prefers a real screen over a hub rather than picking the first match.
     """
-    import core.vortex_cast as cast_module
+    import core.vortex.cast as cast_module
 
     targets = [
         {"kind": "media_player", "id": "media_player.living_room_tv",
@@ -468,7 +468,7 @@ def test_casting_calls_home_assistant_not_a_cast_library(monkeypatch):
     Casting is a `media_player.play_media` call, not a second implementation
     of the Cast protocol on this box.
     """
-    import core.vortex_cast as cast_module
+    import core.vortex.cast as cast_module
 
     calls = []
 
@@ -502,7 +502,7 @@ def test_casting_calls_home_assistant_not_a_cast_library(monkeypatch):
 
 
 def test_casting_nothing_is_refused():
-    import core.vortex_cast as cast_module
+    import core.vortex.cast as cast_module
 
     result = asyncio.run(cast_module.cast(
         user_id=OWNER,
@@ -516,7 +516,7 @@ def test_casting_to_a_unit_queues_a_poll_command(headers):
     Casting is slow and offline-tolerant, which is what the existing
     /commands poll is for — a unit briefly offline still gets it.
     """
-    import core.vortex_cast as cast_module
+    import core.vortex.cast as cast_module
 
     room = _room("loft")
     unit_id, device = _pair(headers, room)

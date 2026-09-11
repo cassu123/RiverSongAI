@@ -267,7 +267,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
             className="rs-pill"
             style={{
               padding: '2px 8px',
-              fontSize: '0.95rem',
+              fontSize: 'var(--rs-fs-small)',
               fontWeight: 700,
               gap: 4,
               border: `1px solid ${storeMeta ? storeMeta.color : 'rgba(255,255,255,0.18)'}`,
@@ -300,7 +300,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
             >
               <button
                 className="rs-mpop-row"
-                style={{ padding: '6px 8px', fontSize: '0.95rem' }}
+                style={{ padding: '6px 8px', fontSize: 'var(--rs-fs-small)' }}
                 onClick={() => handleQuickStoreChange(item.id, null)}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>remove_circle_outline</span>
@@ -312,7 +312,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                   <button
                     key={st}
                     className="rs-mpop-row"
-                    style={{ padding: '6px 8px', fontSize: '0.95rem' }}
+                    style={{ padding: '6px 8px', fontSize: 'var(--rs-fs-small)' }}
                     onClick={() => handleQuickStoreChange(item.id, st)}
                   >
                     <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', color: meta.color }}>
@@ -328,7 +328,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
         <span
           className="rs-card-label"
-          style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', color: SOURCE_COLORS[item.source] || 'inherit', opacity: 0.85 }}
+          style={{ fontSize: 'var(--rs-fs-tiny)', whiteSpace: 'nowrap', color: SOURCE_COLORS[item.source] || 'inherit', opacity: 0.85 }}
         >
           {SOURCE_LABELS[item.source] || item.source?.toUpperCase()}
           {item.added_by_name && !item.is_mine ? ` · ${item.added_by_name}` : ''}
@@ -356,7 +356,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         <button
           className="rs-pill"
           style={{
-            fontSize: '0.95rem',
+            fontSize: 'var(--rs-fs-small)',
             padding: '6px 12px',
             background: activeStoreFilter === 'all' ? 'var(--primary)' : 'var(--md-surface-container-low)',
             color: activeStoreFilter === 'all' ? '#000' : 'inherit',
@@ -375,7 +375,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
               key={st}
               className="rs-pill"
               style={{
-                fontSize: '0.95rem',
+                fontSize: 'var(--rs-fs-small)',
                 padding: '6px 12px',
                 gap: 5,
                 background: isActive ? (meta ? meta.color : 'var(--primary)') : 'var(--md-surface-container-low)',
@@ -394,7 +394,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
       </div>
 
       {/* Add Item Form with Store Selector */}
-      <form onSubmit={add} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <form onSubmit={add} className="rs-flex rs-gap-2 rs-flex-wrap">
         <input
           className="rs-pill"
           style={{ flex: '2 1 180px', minWidth: 140, background: 'var(--md-surface-container-low)', border: 'none' }}
@@ -458,21 +458,21 @@ export default function ShoppingListTab({ api, refreshKey }) {
       )}
 
       {loading ? (
-        <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center' }}>LOADING LIST…</div>
+        <div className="rs-card-meta rs-p-6 rs-text-center">LOADING LIST…</div>
       ) : filteredItems.length === 0 ? (
-        <div className="rs-card-meta" style={{ padding: 32, textAlign: 'center' }}>
+        <div className="rs-card-meta rs-p-6 rs-text-center">
           {activeStoreFilter !== 'all'
             ? `Nothing on your ${activeStoreFilter} list. Add items above or tag existing items with this store.`
             : 'Nothing on the list. Anything you add here, say out loud, or that runs low in the stockroom shows up for everyone in the household.'}
         </div>
       ) : (
         <>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="rs-flex rs-flex-col rs-gap-2">
             {unchecked.map(row)}
           </div>
 
           {checked.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            <div className="rs-flex rs-flex-col rs-gap-2 rs-mt-2">
               <div className="rs-card-head">
                 <span className="rs-card-label">IN THE CART ({checked.length})</span>
                 <button
@@ -491,7 +491,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
       )}
 
       {/* Cart Actions Bar */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+      <div className="rs-flex rs-gap-2 rs-flex-wrap rs-mt-2">
         <button
           className="rs-btn-primary"
           style={{ flex: 1, justifyContent: 'center', minWidth: 200 }}
@@ -510,7 +510,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
       {/* Store Cart Export Results */}
       {exportResult && (
         <div className="rs-card" style={{ borderColor: exportResult.cart_url ? '#4ade80' : 'var(--md-outline-variant)' }}>
-          <div className="rs-card-inner" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="rs-card-inner rs-flex rs-flex-col rs-gap-3">
             <div className="rs-card-head">
               <span className="rs-card-label" style={{ fontWeight: 800, color: 'var(--primary)' }}>
                 {exportResult.store.toUpperCase()} CART EXPORT
@@ -537,9 +537,9 @@ export default function ShoppingListTab({ api, refreshKey }) {
             )}
 
             {exportResult.search_links?.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="rs-flex rs-flex-col rs-gap-2">
                 <div className="rs-card-label">STORE ITEMS & SEARCH LINKS ({exportResult.search_links.length})</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div className="rs-flex rs-gap-2 rs-flex-wrap">
                   {exportResult.search_links.map((link, i) => (
                     <a
                       key={i}
@@ -560,9 +560,9 @@ export default function ShoppingListTab({ api, refreshKey }) {
             )}
 
             {exportResult.unmapped?.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="rs-flex rs-flex-col rs-gap-2">
                 <div className="rs-card-label">NOT LINKED TO SKU YET ({exportResult.unmapped.length})</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div className="rs-flex rs-gap-2 rs-flex-wrap">
                   {exportResult.unmapped.map((n, i) => (
                     <button
                       key={i}
@@ -587,7 +587,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
       {/* Multi-Store Links & SKU Mapping Modal/Card */}
       {showStoreLinks && (
         <div className="rs-card">
-          <div className="rs-card-inner" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="rs-card-inner rs-flex rs-flex-col rs-gap-4">
             <div className="rs-card-head">
               <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>STORE PRODUCT LINKS & MAPPINGS</span>
               <button className="rs-pill" onClick={() => setShowStoreLinks(false)}>
@@ -609,7 +609,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                     key={st}
                     className="rs-pill"
                     style={{
-                      fontSize: '0.95rem',
+                      fontSize: 'var(--rs-fs-small)',
                       padding: '4px 10px',
                       background: isSelected ? meta.color : 'var(--md-surface-container-low)',
                       color: isSelected ? '#fff' : 'inherit',
@@ -624,7 +624,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
               })}
             </div>
 
-            <form onSubmit={saveMapping} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <form onSubmit={saveMapping} className="rs-flex rs-gap-2 rs-flex-wrap">
               <input
                 className="rs-pill"
                 style={{ flex: '1 1 160px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
@@ -647,7 +647,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
             </form>
             {mapError && <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{mapError}</div>}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="rs-flex rs-flex-col rs-gap-2">
               {mappings.length === 0 ? (
                 <div className="rs-card-meta">No mappings configured for {activeLinkStore}.</div>
               ) : mappings.map(m => {
@@ -658,7 +658,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                       {meta?.icon || 'store'}
                     </span>
                     <span style={{ flex: 1, fontWeight: 600 }}>{m.ingredient_name}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.6, fontSize: '0.95rem' }}>{m.store_item_id}</span>
+                    <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-small)' }}>{m.store_item_id}</span>
                     <button
                       className="rs-pill"
                       aria-label={`Unlink ${m.ingredient_name}`}

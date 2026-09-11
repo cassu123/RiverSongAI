@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { useBreakpoint } from '../hooks/useBreakpoint'
+import { useAuth } from '@context/AuthContext'
+import { useBreakpoint } from '@hooks/useBreakpoint'
 
 /**
  * MemoryPage — Phase 3 Rewrite
@@ -20,7 +20,7 @@ export default function MemoryPage({ setAction }) {
     alignItems: isPhone ? 'stretch' : 'center',
   }
   const addInput = (grow) => ({
-    flex: isPhone ? '0 0 auto' : grow, padding: 8, fontSize: '0.8rem',
+    flex: isPhone ? '0 0 auto' : grow, padding: 8, fontSize: 'var(--rs-fs-tiny)',
     minWidth: 0, boxSizing: 'border-box',
   })
   const [memories, setMemories] = useState([])
@@ -139,11 +139,11 @@ export default function MemoryPage({ setAction }) {
 
   useEffect(() => {
     setAction(
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div className="rs-flex rs-gap-3 rs-items-center">
         <div className="rs-card" style={{ flex: 1, padding: '8px 16px', background: 'var(--md-surface-container-low)' }}>
           <input 
             type="text" 
-            style={{ all: 'unset', width: '100%', fontSize: '0.9rem' }} 
+            style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)' }} 
             placeholder="FILTER ARCHIVES..." 
             value={filter} 
             onChange={e => setFilter(e.target.value)} 
@@ -165,7 +165,7 @@ export default function MemoryPage({ setAction }) {
     const kind = m.source_kind || 'conversation'
     const ref = m.source_ref ? ` (${m.source_ref})` : ''
     const date = new Date(m.created_at || m.last_updated).toLocaleDateString()
-    return <span style={{ opacity: 0.6, fontSize: '0.7rem' }}>Learned from {kind}{ref}, {date}</span>
+    return <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>Learned from {kind}{ref}, {date}</span>
   }
 
   return (
@@ -230,47 +230,47 @@ export default function MemoryPage({ setAction }) {
                 </span>
                 
                 {m._type === 'FACT' && (
-                  <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 6px', background: m.source === 'explicit' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
+                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 6px', background: m.source === 'explicit' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
                     {m.source.toUpperCase()}
                   </span>
                 )}
                 {m._type === 'PREFERENCE' && (
-                  <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 6px', opacity: 0.8 }}>
+                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 6px', opacity: 0.8 }}>
                     CONFIDENCE: {m.confidence.toUpperCase()}
                   </span>
                 )}
                 
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                   {m._type === 'SUGGESTION' && (
-                    <button className="rs-pill" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: 'var(--rs-status-success)' }}>
+                    <button className="rs-pill" onClick={() => handleApproveSuggestion(m.id)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', background: 'var(--rs-status-success)' }}>
                       APPROVE
                     </button>
                   )}
                   {editingId !== m.id && m._type !== 'SUGGESTION' && (
-                    <button className="rs-pill" onClick={() => startEdit(m)} style={{ padding: '4px 8px', fontSize: '0.7rem' }}>EDIT</button>
+                    <button className="rs-pill" onClick={() => startEdit(m)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }}>EDIT</button>
                   )}
-                  <button className="rs-pill" onClick={() => handleDelete(m.id, m._type)} style={{ padding: '4px 8px', fontSize: '0.7rem', color: 'var(--rs-status-error)' }}>
+                  <button className="rs-pill" onClick={() => handleDelete(m.id, m._type)} style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-error)' }}>
                     {m._type === 'SUGGESTION' ? 'DISMISS' : 'DELETE'}
                   </button>
                 </div>
               </div>
               
               {editingId === m.id ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="rs-flex rs-flex-col rs-gap-2">
                   {m._type === 'FACT' && (
                     <>
-                      <input className="rs-card" value={editForm.key} onChange={e => setEditForm({...editForm, key: e.target.value})} style={{ padding: 8 }} />
-                      <input className="rs-card" value={editForm.value} onChange={e => setEditForm({...editForm, value: e.target.value})} style={{ padding: 8 }} />
+                      <input className="rs-card rs-p-2" value={editForm.key} onChange={e => setEditForm({...editForm, key: e.target.value})} />
+                      <input className="rs-card rs-p-2" value={editForm.value} onChange={e => setEditForm({...editForm, value: e.target.value})} />
                     </>
                   )}
                   {m._type === 'PREFERENCE' && (
                     <>
-                      <input className="rs-card" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} style={{ padding: 8 }} />
-                      <input className="rs-card" value={editForm.value} onChange={e => setEditForm({...editForm, value: e.target.value})} style={{ padding: 8 }} />
+                      <input className="rs-card rs-p-2" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} />
+                      <input className="rs-card rs-p-2" value={editForm.value} onChange={e => setEditForm({...editForm, value: e.target.value})} />
                     </>
                   )}
                   {m._type === 'SUMMARY' && (
-                    <select className="rs-card" value={editForm.ttl_setting} onChange={e => setEditForm({...editForm, ttl_setting: e.target.value})} style={{ padding: 8 }}>
+                    <select className="rs-card rs-p-2" value={editForm.ttl_setting} onChange={e => setEditForm({...editForm, ttl_setting: e.target.value})}>
                       <option value="short">Short</option>
                       <option value="standard">Standard</option>
                       <option value="extended">Extended</option>
@@ -278,13 +278,13 @@ export default function MemoryPage({ setAction }) {
                       <option value="forever">Forever</option>
                     </select>
                   )}
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="rs-flex rs-gap-2">
                     <button className="rs-pill" onClick={() => handleUpdate(m.id, m._type)} style={{ background: 'var(--text)', color: 'var(--bg)' }}>SAVE</button>
                     <button className="rs-pill" onClick={() => setEditingId(null)}>CANCEL</button>
                   </div>
                 </div>
               ) : (
-                <div className="rs-card-value" style={{ fontSize: '1rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                   {m.text}
                 </div>
               )}
@@ -292,7 +292,7 @@ export default function MemoryPage({ setAction }) {
               <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 {renderProvenance(m)}
                 {m._type === 'SUMMARY' && m.expires_at && (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--rs-status-warning)' }}>
+                  <span style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-warning)' }}>
                     Expires: {new Date(m.expires_at).toLocaleDateString()}
                   </span>
                 )}

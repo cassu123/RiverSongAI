@@ -1,5 +1,5 @@
 import React from 'react'
-import RsMark from '../components/RsMark.jsx'
+import RsMark from '@components/RsMark.jsx'
 import EnvIcon from './EnvIcon.jsx'
 import { NAV_GROUPS, ALWAYS_VISIBLE } from '../utils/constants.js'
 
@@ -66,9 +66,9 @@ export default function Drawer({
         aria-hidden={!open}
       >
         <div className="rs-drawer-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="rs-flex rs-items-center rs-gap-3">
             <RsMark mark="mono" size={26} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
+            <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>
               Spaces & Services
             </span>
           </div>
@@ -102,7 +102,7 @@ export default function Drawer({
 
         {/* Account & Quick Controls Footer */}
         <div className="rs-drawer-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 14, marginTop: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div className="rs-flex rs-items-center rs-justify-between rs-gap-3">
             <button
               className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
               onClick={() => navigate('profile')}
@@ -132,7 +132,7 @@ export default function Drawer({
                 onClick={() => { onClose(); onLogout() }}
                 title="Sign out"
                 aria-label="Sign out"
-                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}
+                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--rs-status-critical)' }}
               >
                 <EnvIcon name="logout" className="rs-icon" />
               </button>
@@ -141,7 +141,7 @@ export default function Drawer({
 
           {userIsAdmin && (
             <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
-              <span style={{ fontSize: '0.8rem', color: 'rgba(220, 230, 245, 0.7)', fontWeight: 500 }}>Admin Mode</span>
+              <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', fontWeight: 500 }}>Admin Mode</span>
               <button
                 className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}
                 onClick={() => onAdminToggle(!adminMode)}

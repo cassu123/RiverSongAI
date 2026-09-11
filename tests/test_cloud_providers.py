@@ -20,7 +20,7 @@ import importlib.util
 
 import pytest
 
-from api.routes.models_settings import (
+from api.routes.system.models_settings import (
     _USER_GATED_PROVIDERS,
     _get_enabled_providers,
     get_provider_user_access,

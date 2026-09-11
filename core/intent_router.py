@@ -546,10 +546,10 @@ async def _request_unit_confirmation(
     Mints a pending confirmation holding everything needed to run the action
     later, then pushes a `confirm` surface to the unit that heard the request.
     Nothing is executed here — the action runs only if
-    `core.vortex_actions.resolve_confirmation` is later handed a valid factor
+    `core.vortex.actions.resolve_confirmation` is later handed a valid factor
     against this challenge id.
     """
-    from core.vortex_security import confirmations
+    from core.vortex.security import confirmations
 
     origin = current_origin()
     label = action.replace("_", " ")
@@ -569,7 +569,7 @@ async def _request_unit_confirmation(
     )
 
     try:
-        from core.vortex_surfaces import get_surface_publisher
+        from core.vortex.surfaces import get_surface_publisher
 
         await get_surface_publisher().publish(
             {
@@ -700,7 +700,7 @@ async def _handle_kova_chore(transcript: str, user_id: str) -> str:
         return "I'm sorry, home automation controls are not enabled for your account."
 
     try:
-        from api.routes.kova import dispatch_chore
+        from api.routes.fleet.kova import dispatch_chore
 
         parsed = _parse_kova_chore(transcript)
         chore_type = parsed["chore_type"]
@@ -790,7 +790,7 @@ async def _handle_cast(transcript: str, user_id: str) -> str:
 
     stop = _STOP_CAST_PATTERN.search(lowered)
     if stop:
-        from core.vortex_cast import resolve_target, stop as stop_cast
+        from core.vortex.cast import resolve_target, stop as stop_cast
 
         where = (stop.group("where") or "").strip()
         if not where:
@@ -805,7 +805,7 @@ async def _handle_cast(transcript: str, user_id: str) -> str:
     if not match:
         return ""
 
-    from core.vortex_cast import cast_from_voice
+    from core.vortex.cast import cast_from_voice
 
     _, spoken = await cast_from_voice(
         user_id=user_id,
@@ -834,10 +834,10 @@ async def _handle_intercom(transcript: str, user_id: str) -> str:
     where = match.group("where").strip()
     mode = "video" if match.group("video") else "audio"
 
-    from core.vortex_calls import (
+    from core.vortex.calls import (
         get_call_registry, ice_servers, negotiate_mode, participant_id,
     )
-    from core.vortex_units import list_profiles, normalise_room
+    from core.vortex.units import list_profiles, normalise_room
 
     caller = participant_id(unit_id=origin.unit_id)
     wanted = normalise_room(where)
@@ -860,7 +860,7 @@ async def _handle_intercom(transcript: str, user_id: str) -> str:
         return error
 
     try:
-        from api.routes.vortex import _ring_surface
+        from api.routes.fleet.vortex import _ring_surface
         await _ring_surface(callee, caller, call.id, resolved_mode)
     except Exception as exc:
         logger.debug("Could not raise the ringing card: %s", exc)
@@ -952,7 +952,7 @@ async def _handle_cooking(transcript: str, user_id: str) -> str:
 
     command, argument = parsed
     try:
-        from api.routes.culinary_sessions import voice_command
+        from api.routes.domains.culinary_sessions import voice_command
 
         spoken = await voice_command(user_id, command, argument)
     except Exception as exc:
@@ -984,7 +984,7 @@ async def _handle_youtube_music(transcript: str, user_id: str) -> str:
             query = transcript
 
         if current_origin().is_unit:
-            from core.vortex_media import handle_play_request
+            from core.vortex.media import handle_play_request
 
             spoken = await handle_play_request(
                 transcript=transcript, user_id=user_id, query=query)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
-import FlagGatedPage from '../components/FlagGatedPage.jsx'
+import FlagGatedPage from '@components/FlagGatedPage.jsx'
 
 /**
  * RemoteOllamaPage — Q3#14. Admin CRUD for remote Ollama rigs.
@@ -92,19 +92,19 @@ export default function RemoteOllamaPage({ setAction }) {
       </div>
 
       {draft && (
-        <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16 }}>
-          <div className="rs-card-label" style={{ marginBottom: 10 }}>{editId ? 'EDIT RIG' : 'NEW RIG'}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="rs-card is-wide rs-p-4 rs-mb-4">
+          <div className="rs-card-label rs-mb-3">{editId ? 'EDIT RIG' : 'NEW RIG'}</div>
+          <div className="rs-flex rs-flex-col rs-gap-3">
             <input type="text" value={draft.label}    onChange={e => setDraft(d => ({ ...d, label: e.target.value }))}    placeholder="Label — e.g. workstation"   style={inputStyle} />
             <input type="text" value={draft.base_url} onChange={e => setDraft(d => ({ ...d, base_url: e.target.value }))} placeholder="Base URL — e.g. http://localhost:11500" style={inputStyle} />
             <textarea          value={draft.notes}    onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}    placeholder="Notes (optional)" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
             {editId && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--rs-fs-micro)' }}>
                 <input type="checkbox" checked={!!draft.is_active} onChange={e => setDraft(d => ({ ...d, is_active: e.target.checked }))} /> Active
               </label>
             )}
-            {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem' }}>{error.toUpperCase()}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
+            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
+            <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save}>{editId ? 'UPDATE' : 'CREATE'}</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
             </div>
@@ -119,24 +119,24 @@ export default function RemoteOllamaPage({ setAction }) {
             <div className="rs-card-head">
               <span className="rs-card-label">{r.label?.toUpperCase()}</span>
               <span className="rs-pill" style={{
-                fontSize: '0.6rem',
+                fontSize: 'var(--rs-fs-nano)',
                 background: r.last_health === 'ok' ? 'var(--md-secondary)' : r.last_health === 'down' ? 'var(--md-error)' : 'rgba(255,255,255,0.1)',
                 color: 'var(--bg-base)',
               }}>{r.last_health?.toUpperCase() || 'UNKNOWN'}</span>
             </div>
-            <div style={{ fontSize: '0.78rem', opacity: 0.7, marginTop: 4 }}>{r.base_url}</div>
-            {r.notes && <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: 6 }}>{r.notes}</div>}
+            <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 4 }}>{r.base_url}</div>
+            {r.notes && <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginTop: 6 }}>{r.notes}</div>}
             {(r.last_models || []).length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+              <div className="rs-flex rs-flex-wrap rs-gap-1 rs-mt-2">
                 {r.last_models.slice(0, 6).map((m, i) => (
-                  <span key={i} className="rs-pill" style={{ fontSize: '0.55rem', padding: '1px 6px' }}>{m}</span>
+                  <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>{m}</span>
                 ))}
                 {r.last_models.length > 6 && (
-                  <span className="rs-pill" style={{ fontSize: '0.55rem', padding: '1px 6px', opacity: 0.5 }}>+{r.last_models.length - 6}</span>
+                  <span className="rs-pill" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '1px 6px' }}>+{r.last_models.length - 6}</span>
                 )}
               </div>
             )}
-            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <div className="rs-mt-3 rs-flex rs-gap-2">
               <button className="rs-pill" onClick={() => probe(r.id)}>HEALTH-CHECK</button>
               <button className="rs-pill" onClick={() => editOne(r)}>EDIT</button>
               <button className="rs-pill" onClick={() => remove(r.id)} style={{ opacity: 0.6 }}>DELETE</button>
@@ -156,7 +156,7 @@ const inputStyle = {
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
-  fontSize: '0.85rem',
+  fontSize: 'var(--rs-fs-tiny)',
   outline: 'none',
   fontFamily: 'inherit',
 }

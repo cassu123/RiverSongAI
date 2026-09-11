@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import { CommerceMembers, CommerceCustomers, CommerceSuppliers, CommerceSales } from '../components/CommerceComponents.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
+import { CommerceMembers, CommerceCustomers, CommerceSuppliers, CommerceSales } from '@components/CommerceComponents.jsx'
 
 // ---------------------------------------------------------------------------
 // Constants & Helpers
@@ -30,9 +30,9 @@ async function apiFetch(path, token, opts = {}) {
 }
 
 function StockBadge({ qty, threshold }) {
-  if (qty === 0) return <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171', borderColor: '#f87171' }}>OUT</span>;
-  if (qty <= threshold) return <span className="rs-pill" style={{ background: 'rgba(250,204,21,0.1)', color: '#facc15', borderColor: '#facc15' }}>LOW</span>;
-  return <span className="rs-pill" style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80', borderColor: '#4ade80' }}>IN STOCK</span>;
+  if (qty === 0) return <span className="rs-pill" style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }}>OUT</span>;
+  if (qty <= threshold) return <span className="rs-pill" style={{ background: 'rgba(250,204,21,0.1)', color: 'var(--rs-status-warning)', borderColor: 'var(--rs-status-warning)' }}>LOW</span>;
+  return <span className="rs-pill" style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--rs-status-nominal)', borderColor: 'var(--rs-status-nominal)' }}>IN STOCK</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ function ListingBuilder({ product }) {
   return (
     <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--md-outline-variant)' }}>
       <div className="rs-card-label" style={{ marginBottom: 12, color: 'var(--primary)' }}>LIST ON PLATFORM</div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div className="rs-flex rs-gap-2 rs-mb-3">
         <select 
           className="rs-pill" 
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', color: 'var(--fg)', padding: '0 12px' }}
@@ -76,7 +76,7 @@ function ListingBuilder({ product }) {
         padding: 12, 
         background: 'rgba(0,0,0,0.2)', 
         borderRadius: 8, 
-        fontSize: '0.8rem', 
+        fontSize: 'var(--rs-fs-tiny)', 
         maxHeight: 150, 
         overflowY: 'auto',
         border: '1px solid var(--md-outline-variant)'
@@ -206,8 +206,8 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
 
   return (
     <div className="rs-card is-wide animate-fade-in" style={{ marginBottom: 32, border: '1px solid var(--primary)' }}>
-      {error && <div style={{ color: '#f87171', marginBottom: 16, fontSize: '0.85rem' }}>{error}</div>}
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+      {error && <div style={{ color: 'var(--rs-status-critical)', marginBottom: 16, fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
+      <div className="rs-flex rs-gap-5 rs-flex-wrap">
         <div style={{ width: 160 }}>
           <div 
             style={{ 
@@ -224,14 +224,14 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
               : <span className="rs-card-label">+ IMAGE</span>
             }
           </div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+          <input ref={fileRef} type="file" accept="image/*" className="rs-hidden" onChange={handleImageChange} />
+          <div className="rs-flex rs-flex-col rs-gap-2 rs-mt-3">
             <label className="rs-pill" style={{ cursor: analyzing ? 'default' : 'pointer', justifyContent: 'center' }}>
               <span className="material-symbols-rounded">visibility</span>
               {analyzing ? '...' : 'ANALYZE'}
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAnalyzePhoto} disabled={analyzing} />
+              <input type="file" accept="image/*" className="rs-hidden" onChange={handleAnalyzePhoto} disabled={analyzing} />
             </label>
-            <button className="rs-pill" onClick={handleGenerateImage} disabled={generating} style={{ justifyContent: 'center' }}>
+            <button className="rs-pill rs-justify-center" onClick={handleGenerateImage} disabled={generating}>
               <span className="material-symbols-rounded">auto_awesome</span>
               {generating ? '...' : 'GENERATE'}
             </button>
@@ -239,38 +239,38 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
         </div>
 
         <div style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1 }}>
+          <div className="rs-flex rs-gap-3 rs-flex-wrap">
+            <div className="rs-grow">
               <label className="rs-card-label">PRODUCT NAME *</label>
               <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="rs-grow">
               <label className="rs-card-label">SKU *</label>
               <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1 }}>
+          <div className="rs-flex rs-gap-3 rs-flex-wrap">
+            <div className="rs-grow">
               <label className="rs-card-label">CATEGORY</label>
               <select style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} value={form.category} onChange={set('category')}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="rs-grow">
               <label className="rs-card-label">STOCK QTY</label>
               <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="rs-grow">
               <label className="rs-card-label">THRESHOLD</label>
               <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} type="number" min="0" value={form.threshold} onChange={set('threshold')} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1 }}>
+          <div className="rs-flex rs-gap-3 rs-flex-wrap">
+            <div className="rs-grow">
               <label className="rs-card-label">SALE PRICE ($)</label>
               <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="rs-grow">
               <label className="rs-card-label">COST PRICE ($)</label>
               <input style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }} type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
             </div>
@@ -311,7 +311,7 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
       <div style={{ position: 'relative', height: 180, background: 'rgba(0,0,0,0.2)' }}>
         {product.image_data
           ? <img src={product.image_data} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3, fontSize: '2rem' }}>
+          : <div style={{ color: 'var(--text-muted)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
               {product.category?.slice(0,3).toUpperCase() || 'IMG'}
             </div>
         }
@@ -319,23 +319,23 @@ function ProductCard({ product, onEdit, onDelete, onGenerateImage }) {
           <StockBadge qty={product.stock_qty} threshold={product.threshold} />
         </div>
       </div>
-      <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div className="rs-card-label" style={{ fontSize: '0.65rem', marginBottom: 4 }}>{product.sku}</div>
-        <div className="rs-card-value" style={{ fontSize: '1.1rem', marginBottom: 8 }}>{product.name}</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <span className="rs-card-meta" style={{ margin: 0 }}>{product.category}</span>
+      <div className="rs-p-4 rs-grow rs-flex rs-flex-col">
+        <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>{product.sku}</div>
+        <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', marginBottom: 8 }}>{product.name}</div>
+        <div className="rs-flex rs-justify-between rs-items-center rs-mb-4">
+          <span className="rs-card-meta rs-m-0">{product.category}</span>
           {product.unit_price != null && <span style={{ color: 'var(--primary)', fontWeight: 600 }}>${Number(product.unit_price).toFixed(2)}</span>}
         </div>
         
         <div style={{ marginTop: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => onEdit(product)}>EDIT</button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={handleGen} disabled={generating}>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={() => onEdit(product)}>EDIT</button>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={handleGen} disabled={generating}>
             {generating ? '...' : 'GEN'}
           </button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => setShowListing(!showListing)}>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)' }} onClick={() => setShowListing(!showListing)}>
             {showListing ? 'HIDE' : 'LIST'}
           </button>
-          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: '0.7rem', color: '#f87171', borderColor: '#f87171' }} onClick={() => onDelete(product.id)}>DEL</button>
+          <button className="rs-pill" style={{ padding: '4px 8px', fontSize: 'var(--rs-fs-nano)', color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }} onClick={() => onDelete(product.id)}>DEL</button>
         </div>
 
         {showListing && <ListingBuilder product={product} />}
@@ -404,7 +404,7 @@ export default function CommercePage({ setAction }) {
               width: '100%', background: 'rgba(255,255,255,0.08)', 
               border: '1px solid var(--md-outline-variant)', 
               borderRadius: 30, padding: '10px 12px 10px 40px', color: 'var(--fg)',
-              fontSize: '0.92rem'
+              fontSize: 'var(--rs-fs-small)'
             }} 
             placeholder="Search products..." 
             value={search} 
@@ -482,12 +482,12 @@ export default function CommercePage({ setAction }) {
   });
 
   if (wsLoading) return <div className="rs-foyer"><div className="rs-card-meta">Initializing...</div></div>;
-  if (wsError) return <div className="rs-foyer"><div className="rs-card" style={{ color: '#f87171' }}>{wsError}</div></div>;
+  if (wsError) return <div className="rs-foyer"><div className="rs-card" style={{ color: 'var(--rs-status-critical)' }}>{wsError}</div></div>;
 
   return (
     <div className="rs-foyer animate-fade-in">
       <header className="rs-foyer-head">
-        <div className="rs-status-strip" style={{ marginBottom: 16 }}>
+        <div className="rs-status-strip rs-mb-4">
           <span className="rs-status-dot" />
           <span>TOOLS / COMMERCE</span>
         </div>
@@ -532,7 +532,7 @@ export default function CommercePage({ setAction }) {
           )}
 
           {loading ? (
-            <div className="rs-card is-wide" style={{ textAlign: 'center' }}>
+            <div className="rs-card is-wide rs-text-center">
               <span className="rs-card-meta">Syncing inventory data...</span>
             </div>
           ) : (
@@ -581,9 +581,9 @@ function CreateWorkspaceForm({ token, onCreate }) {
   return (
     <div className="rs-card animate-fade-in" style={{ maxWidth: 500 }}>
       <span className="rs-card-label" style={{ color: 'var(--primary)' }}>CREATE YOUR FIRST WORKSPACE</span>
-      <p className="rs-card-meta" style={{ marginBottom: 20 }}>Workspaces organize your products, stock, and listings.</p>
-      {error && <div style={{ color: '#f87171', marginBottom: 12, fontSize: '0.8rem' }}>{error}</div>}
-      <div style={{ display: 'flex', gap: 10 }}>
+      <p className="rs-card-meta rs-mb-5">Workspaces organize your products, stock, and listings.</p>
+      {error && <div style={{ color: 'var(--rs-status-critical)', marginBottom: 12, fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
+      <div className="rs-flex rs-gap-3">
         <input 
           style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--md-outline-variant)', borderRadius: 8, padding: 10, color: 'var(--fg)' }}
           placeholder="e.g. My Boutique" 

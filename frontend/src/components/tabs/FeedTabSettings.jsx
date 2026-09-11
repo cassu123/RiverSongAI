@@ -62,7 +62,7 @@ export function WeatherSettings({ prefs, savePrefs }) {
     <InlineSettingsSection title="WEATHER SETTINGS" icon="tune" subtitle={subtitle}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
         <div>
-          <div className="rs-card-meta" style={{ marginBottom: 8 }}>Latitude</div>
+          <div className="rs-card-meta rs-mb-2">Latitude</div>
           <input
             type="number" step="any" className="rs-input"
             value={lat}
@@ -72,7 +72,7 @@ export function WeatherSettings({ prefs, savePrefs }) {
           />
         </div>
         <div>
-          <div className="rs-card-meta" style={{ marginBottom: 8 }}>Longitude</div>
+          <div className="rs-card-meta rs-mb-2">Longitude</div>
           <input
             type="number" step="any" className="rs-input"
             value={lon}
@@ -84,8 +84,8 @@ export function WeatherSettings({ prefs, savePrefs }) {
       </div>
 
       <button
-        className="rs-pill"
-        style={{ marginBottom: 16 }}
+        className="rs-pill rs-mb-4"
+       
         onClick={() => {
           if (!navigator.geolocation) return
           navigator.geolocation.getCurrentPosition(pos => {
@@ -100,9 +100,9 @@ export function WeatherSettings({ prefs, savePrefs }) {
         USE MY LOCATION
       </button>
 
-      <div style={{ marginBottom: 16 }}>
-        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: '0.6rem' }}>TEMPERATURE UNIT</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div className="rs-mb-4">
+        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>TEMPERATURE UNIT</div>
+        <div className="rs-flex rs-gap-2">
           {['celsius', 'fahrenheit'].map(u => (
             <button
               key={u}
@@ -115,9 +115,9 @@ export function WeatherSettings({ prefs, savePrefs }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: '0.6rem' }}>AQI SOURCE</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div className="rs-mb-4">
+        <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>AQI SOURCE</div>
+        <div className="rs-flex rs-gap-2">
           {['purpleair', 'openmeteo'].map(src => {
             const isActive = p.aqi_source === src || (p.aqi_source === undefined && src === 'purpleair')
             return (
@@ -138,7 +138,7 @@ export function WeatherSettings({ prefs, savePrefs }) {
         onChange={v => savePrefs({ weather_alerts_enabled: v })}
         label="Severe Weather Alerts"
       />
-      <p className="rs-card-meta" style={{ marginTop: 8 }}>
+      <p className="rs-card-meta rs-mt-2">
         Show NWS alerts here when active warnings are in effect.
       </p>
     </InlineSettingsSection>
@@ -159,9 +159,9 @@ export function StocksSettings({ prefs, savePrefs }) {
   }
   return (
     <InlineSettingsSection title="WATCHLIST" icon="tune" subtitle={`${tickers.length} symbol${tickers.length === 1 ? '' : 's'}`}>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div className="rs-flex rs-gap-2 rs-flex-wrap rs-mb-3">
         {tickers.map(t => (
-          <div key={t} className="rs-pill is-active" style={{ fontSize: '0.65rem', cursor: 'default', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div key={t} className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-nano)', cursor: 'default', display: 'flex', alignItems: 'center', gap: 6 }}>
             {t}
             <button
               onClick={() => savePrefs({ stock_tickers: tickers.filter(x => x !== t) })}
@@ -172,22 +172,22 @@ export function StocksSettings({ prefs, savePrefs }) {
           </div>
         ))}
         {tickers.length === 0 && (
-          <span className="rs-card-meta" style={{ fontSize: '0.72rem' }}>No tickers saved yet.</span>
+          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No tickers saved yet.</span>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="rs-flex rs-gap-2">
         <input
           type="text" className="rs-input" placeholder="Add ticker (e.g. AAPL)"
           value={addSym}
           onChange={e => setAddSym(e.target.value.toUpperCase())}
           onKeyDown={e => { if (e.key === 'Enter') add() }}
-          style={{ flex: 1, fontSize: '0.85rem' }}
+          style={{ flex: 1, fontSize: 'var(--rs-fs-tiny)' }}
         />
         <button className="rs-pill" disabled={!addSym.trim() || tickers.includes(addSym.trim()) || tickers.length >= 15} onClick={add}>
           ADD
         </button>
       </div>
-      <p className="rs-card-meta" style={{ marginTop: 8 }}>
+      <p className="rs-card-meta rs-mt-2">
         Up to 15 symbols. Prices refresh every 30 seconds.
       </p>
     </InlineSettingsSection>
@@ -202,7 +202,7 @@ export function SpaceSettings({ prefs, savePrefs }) {
   const p = prefs || {}
   return (
     <InlineSettingsSection title="SPACE SETTINGS" icon="tune">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="rs-flex rs-flex-col rs-gap-3">
         <Toggle checked={p.space_show_solar !== false}    onChange={v => savePrefs({ space_show_solar: v })}    label="Show Solar Weather" />
         <Toggle checked={p.space_show_aurora !== false}   onChange={v => savePrefs({ space_show_aurora: v })}   label="Show Aurora Forecast" />
         <Toggle checked={p.space_show_launches !== false} onChange={v => savePrefs({ space_show_launches: v })} label="Show Rocket Launches" />
@@ -215,7 +215,7 @@ export function EarthSettings({ prefs, savePrefs }) {
   const p = prefs || {}
   return (
     <InlineSettingsSection title="EARTH SETTINGS" icon="tune">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="rs-flex rs-flex-col rs-gap-3">
         <Toggle checked={p.earth_show_eonet !== false}   onChange={v => savePrefs({ earth_show_eonet: v })}   label="Show NASA EONET" />
         <Toggle checked={p.earth_show_neows !== false}   onChange={v => savePrefs({ earth_show_neows: v })}   label="Show NASA NeoWs" />
         <Toggle checked={p.earth_show_ocearch !== false} onChange={v => savePrefs({ earth_show_ocearch: v })} label="Show OCEARCH Sharks" />
@@ -233,20 +233,20 @@ export function HappeningsSettings({ prefs, savePrefs }) {
   }, [prefs?.happenings_event_radius_mi])
   return (
     <InlineSettingsSection title="HAPPENINGS SETTINGS" icon="tune">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="rs-flex rs-flex-col rs-gap-3">
         <Toggle checked={p.happenings_show_hn !== false}     onChange={v => savePrefs({ happenings_show_hn: v })}     label="Show HackerNews" />
         <Toggle checked={p.happenings_show_reddit !== false} onChange={v => savePrefs({ happenings_show_reddit: v })} label="Show Reddit" />
         <Toggle checked={p.happenings_show_events !== false} onChange={v => savePrefs({ happenings_show_events: v })} label="Show Local Events" />
         {p.happenings_show_events !== false && (
-          <div style={{ marginTop: 4 }}>
-            <div className="rs-card-meta" style={{ marginBottom: 8 }}>Event Search Radius: {radius} mi</div>
+          <div className="rs-mt-1">
+            <div className="rs-card-meta rs-mb-2">Event Search Radius: {radius} mi</div>
             <input
               type="range" min="5" max="100" step="5"
               value={radius}
               onChange={e => setRadius(parseInt(e.target.value))}
               onMouseUp={e => savePrefs({ happenings_event_radius_mi: parseInt(e.target.value) })}
               onTouchEnd={e => savePrefs({ happenings_event_radius_mi: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="rs-w-full"
             />
           </div>
         )}
@@ -269,8 +269,8 @@ export const OPTIONAL_TABS = [
 export function FeedTabsManager({ prefs, savePrefs }) {
   const p = prefs || {}
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="rs-card-label" style={{ fontSize: '0.58rem', opacity: 0.6 }}>SHOW THESE TABS</div>
+    <div className="rs-flex rs-flex-col rs-gap-4">
+      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>SHOW THESE TABS</div>
       {OPTIONAL_TABS.map(t => (
         <Toggle
           key={t.key}

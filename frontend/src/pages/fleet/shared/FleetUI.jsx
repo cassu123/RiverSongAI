@@ -14,7 +14,7 @@ export function UnitStatusPill({ unit }) {
   const live = isOnline(unit)
   return (
     <span className="rs-pill" style={{
-      fontSize: '0.62rem', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 5,
+      fontSize: 'var(--rs-fs-nano)', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 5,
       background: live ? 'color-mix(in srgb, var(--rs-status-nominal, #36d399) 16%, transparent)'
                        : 'color-mix(in srgb, var(--md-error) 14%, transparent)',
       color: live ? 'var(--rs-status-nominal, #36d399)' : 'var(--md-error)',
@@ -31,10 +31,10 @@ export function UnitStatusPill({ unit }) {
 export function MetricStat({ label, value, unit, accent }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 86 }}>
-      <div className="rs-card-label" style={{ fontSize: '0.58rem' }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: '1.25rem', fontVariantNumeric: 'tabular-nums',
+      <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</div>
+      <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-h3)', fontVariantNumeric: 'tabular-nums',
         color: accent || 'var(--text-primary, inherit)' }}>
-        {value}{unit && <span style={{ fontSize: '0.72rem', opacity: 0.55, fontWeight: 500 }}> {unit}</span>}
+        {value}{unit && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', fontWeight: 500 }}> {unit}</span>}
       </div>
     </div>
   )
@@ -45,11 +45,11 @@ export function BatteryBar({ pct }) {
   const v = Math.max(0, Math.min(100, Number(pct) || 0))
   const color = v < 20 ? 'var(--md-error)' : v < 45 ? 'var(--rs-status-warning, #f4b740)' : 'var(--rs-status-nominal, #36d399)'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="rs-flex rs-items-center rs-gap-2">
       <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--md-surface-container-high, #2a2a2a)', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${v}%`, background: color, transition: 'width .4s ease' }} />
       </div>
-      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, fontSize: '0.8rem', color }}>{v}%</span>
+      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, fontSize: 'var(--rs-fs-tiny)', color }}>{v}%</span>
     </div>
   )
 }
@@ -58,7 +58,7 @@ export function BatteryBar({ pct }) {
 export function Sparkline({ data, field, height = 44, color = 'var(--primary, #6ea8fe)' }) {
   const pts = (data || []).map(d => Number(d?.[field])).filter(v => Number.isFinite(v))
   if (pts.length < 2) {
-    return <div className="rs-card-meta" style={{ fontSize: '0.7rem', opacity: 0.5 }}>waiting for telemetry…</div>
+    return <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>waiting for telemetry…</div>
   }
   const w = 240, h = height
   const min = Math.min(...pts), max = Math.max(...pts)
@@ -71,7 +71,7 @@ export function Sparkline({ data, field, height = 44, color = 'var(--primary, #6
       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height }}>
         <path d={path} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" />
       </svg>
-      <span style={{ position: 'absolute', top: 0, right: 0, fontSize: '0.7rem', fontWeight: 700,
+      <span style={{ position: 'absolute', top: 0, right: 0, fontSize: 'var(--rs-fs-nano)', fontWeight: 700,
         color, fontVariantNumeric: 'tabular-nums' }}>{last}</span>
     </div>
   )
@@ -107,12 +107,12 @@ export function MiniMap({ items, height = 220, selectedId }) {
               background: p.online ? 'var(--rs-status-nominal,#36d399)' : 'var(--md-error)',
               boxShadow: p.online ? '0 0 10px var(--rs-status-nominal,#36d399)' : 'none',
               border: '2px solid rgba(0,0,0,0.4)' }} />
-            <span style={{ fontSize: '0.55rem', color: 'var(--text-secondary,#aaa)', whiteSpace: 'nowrap' }}>{p.label}</span>
+            <span style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--text-secondary,#aaa)', whiteSpace: 'nowrap' }}>{p.label}</span>
           </div>
         )
       })}
       {pts.length === 0 && (
-        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-secondary,#888)', fontSize: '0.8rem' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-secondary,#888)', fontSize: 'var(--rs-fs-tiny)' }}>
           No positioned units
         </div>
       )}
@@ -124,7 +124,7 @@ export function MiniMap({ items, height = 220, selectedId }) {
 // spec: [{ command, label, icon?, params?, danger? }]
 export function CommandConsole({ spec, onSend, disabled }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div className="rs-flex rs-flex-wrap rs-gap-2">
       {spec.map(c => (
         <button
           key={c.command}
@@ -132,7 +132,7 @@ export function CommandConsole({ spec, onSend, disabled }) {
           className={c.danger ? 'rs-btn-ghost' : 'rs-btn-primary'}
           onClick={() => onSend(c.command, c.params || {})}
           style={{
-            fontSize: '0.78rem', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6,
             opacity: disabled ? 0.45 : 1,
             ...(c.danger ? { color: 'var(--md-error)', borderColor: 'var(--md-error)' } : {}),
           }}
@@ -151,7 +151,7 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
     return <div className="rs-card-meta" style={{ opacity: 0.6 }}>No active alerts.</div>
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="rs-flex rs-flex-col rs-gap-2">
       {alerts.map(a => {
         const crit = (a.level || '').toLowerCase() === 'critical' || (a.level || '').toLowerCase() === 'emergency'
         return (
@@ -163,11 +163,11 @@ export function AlertsList({ program, unitId, alerts, onChange }) {
             <span className="material-symbols-rounded" style={{ color: crit ? 'var(--md-error)' : 'var(--rs-status-warning,#f4b740)' }}>
               {crit ? 'error' : 'warning'}
             </span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{a.message}</div>
-              <div className="rs-card-meta" style={{ fontSize: '0.62rem' }}>{a.level} · {new Date(a.timestamp).toLocaleString()}</div>
+            <div className="rs-grow">
+              <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 600 }}>{a.message}</div>
+              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>{a.level} · {new Date(a.timestamp).toLocaleString()}</div>
             </div>
-            <button className="rs-btn-ghost" style={{ fontSize: '0.7rem', padding: '4px 10px' }}
+            <button className="rs-btn-ghost" style={{ fontSize: 'var(--rs-fs-nano)', padding: '4px 10px' }}
               onClick={async () => { await ackAlert(program, unitId, a.id); onChange && onChange() }}>
               ACK
             </button>
@@ -183,7 +183,7 @@ export function SimulateButton({ program, onDone }) {
   const [busy, setBusy] = useState(false)
   return (
     <button className="rs-btn-primary" disabled={busy}
-      style={{ fontSize: '0.78rem', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+      style={{ fontSize: 'var(--rs-fs-micro)', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
       onClick={async () => {
         setBusy(true)
         try { await simulateUnit(program); onDone && onDone() } finally { setBusy(false) }
@@ -214,7 +214,7 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
       <div onClick={e => e.stopPropagation()} className="rs-card" style={{ width: 'min(460px, 92vw)', padding: 22 }}>
-        <div className="rs-card-label" style={{ marginBottom: 8 }}>CLAIM A {program.toUpperCase()} UNIT</div>
+        <div className="rs-card-label rs-mb-2">CLAIM A {program.toUpperCase()} UNIT</div>
         {!result ? (
           <>
             <p className="rs-card-meta">Name the unit, then flash the returned token into the device firmware.</p>
@@ -231,14 +231,14 @@ export function ClaimUnitModal({ program, onClose, onDone }) {
             <p className="rs-card-meta">Unit <strong>{result.unit_id}</strong> claimed. Copy this token into the device — it is shown only once.</p>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
               <code style={{ flex: 1, padding: '10px 12px', borderRadius: 8, background: 'var(--md-surface-container-lowest,#0e0e0e)',
-                border: '1px solid var(--md-outline-variant,#333)', fontSize: '0.72rem', wordBreak: 'break-all' }}>
+                border: '1px solid var(--md-outline-variant,#333)', fontSize: 'var(--rs-fs-micro)', wordBreak: 'break-all' }}>
                 {result.unit_token}
               </code>
               <button className="rs-btn-ghost" onClick={() => { navigator.clipboard?.writeText(result.unit_token); setCopied(true) }}>
                 {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <div className="rs-card-meta" style={{ fontSize: '0.66rem', marginBottom: 12 }}>
+            <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>
               Headless test: <code>python scripts/fleet_sim.py --program {program} --unit-id {result.unit_id} --token &lt;token&gt;</code>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

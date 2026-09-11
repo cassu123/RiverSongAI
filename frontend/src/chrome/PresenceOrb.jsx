@@ -8,7 +8,7 @@
 // Subscribes to the global bus itself (rs-presence / rs-toast) — see
 // PresenceBulb — so it needs no props beyond its size context.
 
-import PresenceBulb from '../components/PresenceBulb.jsx'
+import PresenceBulb from '@components/PresenceBulb.jsx'
 
 export default function PresenceOrb({ mode, onClick, interactive = false }) {
   const large = mode === 'foyer'

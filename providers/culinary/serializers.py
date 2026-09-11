@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 
 from api.services.recipe_parser import _safe_json
-from culinary.models import (
+from domains.culinary.models import (
     BannedIngredient,
     DinnerProposal,
     Household,

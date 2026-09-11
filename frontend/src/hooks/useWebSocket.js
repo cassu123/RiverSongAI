@@ -17,7 +17,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Network } from '@capacitor/network'
-import { API_BASE } from '../lib/api'
+import { API_BASE } from '@lib/api'
 
 const RECONNECT_BASE_MS        = 1000
 const RECONNECT_MAX_MS         = 30000

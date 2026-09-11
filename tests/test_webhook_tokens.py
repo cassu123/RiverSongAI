@@ -204,7 +204,7 @@ class TestVerify:
 
 class TestRouteSurface:
     def test_router_importable(self):
-        from api.routes import webhook_tokens as wt
+        from api.routes.auth import webhook_tokens as wt
         assert wt.router.prefix == "/api/webhook-tokens"
         paths = {r.path for r in wt.router.routes}
         assert "/api/webhook-tokens"                   in paths

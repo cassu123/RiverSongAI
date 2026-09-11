@@ -43,7 +43,7 @@ const PROVIDER_LABEL = {
  */
 function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF' }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div className="rs-flex rs-items-center rs-gap-2">
       <button
         role="switch"
         aria-checked={on}
@@ -60,7 +60,7 @@ function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF'
       </button>
       {/* nowrap: "ADMIN" and "VISIBLE" were breaking mid-word on phones,
           rendering as ADMI / N beside the knob. */}
-      <span className="toggle-value" style={{ minWidth: 30, fontSize: '0.62rem', whiteSpace: 'nowrap' }}>
+      <span className="toggle-value" style={{ minWidth: 30, fontSize: 'var(--rs-fs-nano)', whiteSpace: 'nowrap' }}>
         {on ? labelOn : labelOff}
       </span>
     </div>
@@ -129,7 +129,7 @@ export default function ProviderSwitchesSection({ token }) {
 
   return (
     <Section title="PROVIDER ACCESS">
-      <p className="rs-card-meta" style={{ marginBottom: 4 }}>
+      <p className="rs-card-meta rs-mb-1">
         <strong>Allowed</strong> is the hard gate — when off, nothing routes to that
         provider, including River&rsquo;s automatic model choice and including admins.
         <strong> Users</strong> controls whether non-admin accounts can select it.
@@ -147,7 +147,7 @@ export default function ProviderSwitchesSection({ token }) {
             display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 8, marginBottom: 10,
             background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
             border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
-            fontSize: '0.74rem',
+            fontSize: 'var(--rs-fs-micro)',
           }}
         >
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
@@ -167,9 +167,9 @@ export default function ProviderSwitchesSection({ token }) {
           marginBottom: 6,
         }}
       >
-        <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>PROVIDER</span>
-        <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>ALLOWED</span>
-        <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>USERS</span>
+        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>PROVIDER</span>
+        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ALLOWED</span>
+        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>USERS</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -202,8 +202,8 @@ export default function ProviderSwitchesSection({ token }) {
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.84rem' }}>{meta.name}</div>
-                <div className="rs-card-meta" style={{ fontSize: '0.65rem' }}>
+                <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>{meta.name}</div>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
                   {blockedReason ? (
                     <span
                       style={{

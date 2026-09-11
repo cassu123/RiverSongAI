@@ -32,13 +32,13 @@ const inputStyle = {
   background: 'rgba(0,0,0,0.25)',
   border: '1px solid var(--md-outline-variant)',
   borderRadius: 8,
-  fontSize: '0.85rem',
+  fontSize: 'var(--rs-fs-tiny)',
 }
 
 function Field({ label, children }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <span className="rs-card-label" style={{ fontSize: '0.6rem' }}>{label}</span>
+      <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{label}</span>
       {children}
     </label>
   )
@@ -169,10 +169,10 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="rs-card-inner" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="rs-card-inner rs-flex rs-flex-col rs-gap-4">
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="rs-card-value" style={{ fontSize: '1.15rem', fontWeight: 800 }}>
+          <div className="rs-flex rs-items-center rs-justify-between">
+            <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 800 }}>
               Add a recipe
             </div>
             <button className="rs-pill" onClick={onClose} aria-label="Close">
@@ -181,7 +181,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
           </div>
 
           {/* Mode picker */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div className="rs-flex rs-gap-2 rs-flex-wrap">
             {MODES.map((m) => (
               <button
                 key={m.id}
@@ -189,7 +189,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
                 onClick={() => { setMode(m.id); setError('') }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-                  fontSize: '0.7rem',
+                  fontSize: 'var(--rs-fs-nano)',
                   background: mode === m.id
                     ? 'color-mix(in srgb, var(--primary) 22%, transparent)' : 'transparent',
                   color: mode === m.id ? 'var(--primary)' : 'inherit',
@@ -201,7 +201,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
               </button>
             ))}
           </div>
-          <div className="rs-card-meta" style={{ fontSize: '0.68rem', marginTop: -10 }}>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: -10 }}>
             {MODES.find((m) => m.id === mode)?.hint}
           </div>
 
@@ -211,7 +211,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
                 display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 8,
                 background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
-                fontSize: '0.75rem', lineHeight: 1.5,
+                fontSize: 'var(--rs-fs-micro)', lineHeight: 1.5,
               }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
@@ -220,7 +220,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
           )}
 
           {mode === 'manual' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="rs-flex rs-flex-col rs-gap-3">
               <Field label="TITLE">
                 <input
                   style={inputStyle} value={title} autoFocus
@@ -229,7 +229,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
                 />
               </Field>
 
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div className="rs-flex rs-gap-3 rs-flex-wrap">
                 <div style={{ flex: 1, minWidth: 130 }}>
                   <Field label="MEAL">
                     <select
@@ -298,7 +298,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
           )}
 
           {mode === 'link' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="rs-flex rs-flex-col rs-gap-3">
               <Field label="RECIPE URL">
                 <input
                   style={inputStyle} value={sourceUrl} autoFocus
@@ -312,7 +312,7 @@ export default function AddRecipeModal({ token, onClose, onSaved }) {
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
               </Field>
-              <p className="rs-card-meta" style={{ fontSize: '0.66rem', marginTop: -4 }}>
+              <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: -4 }}>
                 Some sites block automated requests. If one does, copy the text and use
                 PASTE instead — or MANUAL, which needs nothing running.
               </p>

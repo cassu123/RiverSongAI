@@ -113,8 +113,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # I0.4 Shadow table migration
     try:
         import sqlite3
-        from inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
-        from api.routes.inventory import get_db as get_inventory_db
+        from domains.inventory.management import create_item, get_or_create_inv_user, get_homes_for_user, create_home, ItemCategory
+        from api.routes.domains.inventory import get_db as get_inventory_db
         from core.family import resolve_module_owner
         conn = sqlite3.connect(settings.db_path)
         cur = conn.cursor()
@@ -171,7 +171,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Load persistent AI feature flags and admin-saved config
     try:
-        from api.routes.features import AI_FEATURE_MAP
+        from api.routes.system.features import AI_FEATURE_MAP
         config = await store.get_admin_config()
         ai_config = config.get("ai_features", {})
         for flag_name, attr in AI_FEATURE_MAP.items():
@@ -220,7 +220,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("Failed to purge expired tokens: %s", e)
 
     # Register Sweeps
-    from core.sweeps import register_sweep, start_sweeps, stop_sweeps
+    from core.sweeps.registry import register_sweep, start_sweeps, stop_sweeps
     from core.routines_scheduler import _check_routines
     from core.distiller import run_distiller, sweep_messages
     from core.initiative import weather_sweep_func
@@ -246,19 +246,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # register_sweep calls func() with no arguments. Both of these take `app`,
     # so registering them bare raised TypeError on every run.
-    from core.garage import garage_sweep_func
+    from domains.vehicles.garage import garage_sweep_func
 
     async def _garage_sweep():
         await garage_sweep_func(app)
     register_sweep("garage", 86400, _garage_sweep)
 
-    from core.inventory_sweep import inventory_sweep_func
+    from domains.inventory.sweep import inventory_sweep_func
 
     async def _inventory_sweep():
         await inventory_sweep_func(app)
     register_sweep("inventory", 86400, _inventory_sweep)
     
-    from core.kitchen_sweep import kitchen_sweep_func
+    from domains.culinary.sweep import kitchen_sweep_func
     register_sweep("kitchen", 3600, kitchen_sweep_func)
 
     from providers.smart_home.sync import sync_ha_entities
@@ -269,7 +269,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # River Vortex camera snapshots are retained for 24 hours and then
     # deleted. These are cameras in bedrooms — retention is enforced by
     # actually removing the files, not by letting their links expire.
-    from core.vortex_vision import purge_expired_snapshots
+    from core.vortex.vision import purge_expired_snapshots
     register_sweep("vortex_snapshots", 3600, purge_expired_snapshots)
     
     # Run HA sync once on startup

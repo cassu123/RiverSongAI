@@ -141,9 +141,9 @@ export default function Zones() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="rs-flex rs-justify-between rs-items-center">
         <h2>Zones Manager</h2>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <input 
             type="text" 
             placeholder="New Zone Name" 
@@ -158,7 +158,7 @@ export default function Zones() {
         </div>
       </div>
 
-      <div className="rs-map" style={{ marginTop: 20 }}>
+      <div className="rs-map rs-mt-5">
         <MapContainer center={[0, 0]} zoom={2} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { apiFetch } from '../lib/api'
+import { apiFetch } from '@lib/api'
 import { Section } from './settings/shared.jsx'
 
 /**
@@ -65,13 +65,13 @@ export default function ProactivePage({ embedded = false }) {
   // Shared field JSX so the standalone page and the embedded Settings view
   // render identical controls.
   const quietHoursFields = (
-    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div className="rs-flex rs-gap-4 rs-items-center rs-flex-wrap">
       <div>
-        <label style={{ display: 'block', fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Start (Hour 0-23)</label>
+        <label style={{ color: 'var(--text-muted)', display: 'block', fontSize: 12, marginBottom: 4 }}>Start (Hour 0-23)</label>
         <input type="number" className="rs-input" min="0" max="23" value={prefs.quiet_start ?? ''} onChange={e => setPrefs({...prefs, quiet_start: e.target.value === '' ? null : parseInt(e.target.value)})} placeholder="e.g. 22" />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, opacity: 0.7, marginBottom: 4 }}>End (Hour 0-23)</label>
+        <label style={{ color: 'var(--text-muted)', display: 'block', fontSize: 12, marginBottom: 4 }}>End (Hour 0-23)</label>
         <input type="number" className="rs-input" min="0" max="23" value={prefs.quiet_end ?? ''} onChange={e => setPrefs({...prefs, quiet_end: e.target.value === '' ? null : parseInt(e.target.value)})} placeholder="e.g. 7" />
       </div>
     </div>
@@ -79,7 +79,7 @@ export default function ProactivePage({ embedded = false }) {
 
   const pushSeverityField = (
     <div>
-      <label style={{ display: 'block', fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Minimum Severity for Push</label>
+      <label style={{ color: 'var(--text-muted)', display: 'block', fontSize: 12, marginBottom: 4 }}>Minimum Severity for Push</label>
       <select className="rs-input" value={prefs.min_push_severity} onChange={e => setPrefs({...prefs, min_push_severity: e.target.value})}>
         <option value="info">Info (All)</option>
         <option value="warning">Warning</option>
@@ -89,7 +89,7 @@ export default function ProactivePage({ embedded = false }) {
   )
 
   const mutedCategoriesField = (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+    <div className="rs-flex rs-gap-2 rs-flex-wrap">
       {["weather_alert", "device_alert", "routine", "maint_due", "custom"].map(kind => (
         <button
           key={kind}
@@ -147,12 +147,12 @@ export default function ProactivePage({ embedded = false }) {
       <>
         <Section title="PROACTIVE — QUIET HOURS & PUSH">
           <div>
-            <div className="rs-card-label" style={{ marginBottom: 8 }}>QUIET HOURS</div>
+            <div className="rs-card-label rs-mb-2">QUIET HOURS</div>
             {quietHoursFields}
           </div>
           {pushSeverityField}
           <div>
-            <div className="rs-card-label" style={{ marginBottom: 8 }}>MUTED CATEGORIES (NON-CRITICAL)</div>
+            <div className="rs-card-label rs-mb-2">MUTED CATEGORIES (NON-CRITICAL)</div>
             {mutedCategoriesField}
           </div>
           {saveButton}
@@ -177,16 +177,16 @@ export default function ProactivePage({ embedded = false }) {
             <h2 className="rs-section-title">Quiet Hours</h2>
             <div className="rs-card">{quietHoursFields}</div>
 
-            <h2 className="rs-section-title" style={{ marginTop: 24 }}>Push Notifications</h2>
+            <h2 className="rs-section-title rs-mt-5">Push Notifications</h2>
             <div className="rs-card">{pushSeverityField}</div>
 
-            <h2 className="rs-section-title" style={{ marginTop: 24 }}>Muted Categories (Non-Critical)</h2>
+            <h2 className="rs-section-title rs-mt-5">Muted Categories (Non-Critical)</h2>
             <div className="rs-card">{mutedCategoriesField}</div>
 
             {saveButton}
           </section>
 
-          <section className="rs-section" style={{ marginTop: 32 }}>
+          <section className="rs-section rs-mt-6">
             <h2 className="rs-section-title">Delivery Log</h2>
             <div className="rs-card">{logTable}</div>
           </section>

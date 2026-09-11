@@ -77,10 +77,10 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
       marginTop: 14, paddingTop: 14,
       borderTop: '1px solid var(--rs-border, rgba(128,128,128,0.25))',
     }}>
-      <div className="rs-card-label" style={{ marginBottom: 6 }}>
+      <div className="rs-card-label rs-mb-2">
         WHAT IS PRINTED ON IT
       </div>
-      <div className="rs-card-meta" style={{ fontSize: '0.72rem', marginBottom: 12, lineHeight: 1.5 }}>
+      <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', marginBottom: 12, lineHeight: 1.5 }}>
         {confirmed
           ? 'Confirmed from the machine. Retick if anything is wrong.'
           : 'Guessed from the name. Two appliances can share a name and differ by one button — tick what you can actually see.'}
@@ -93,8 +93,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
           <Group rows={scheduled} on={on} toggle={toggle} />
           {other.length > 0 && (
             <>
-              <div className="rs-card-meta" style={{
-                fontSize: '0.68rem', opacity: 0.6, margin: '14px 0 8px',
+              <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', margin: '14px 0 8px',
               }}>
                 ON THE MACHINE, NOT PART OF A PLAN
               </div>
@@ -102,7 +101,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
             </>
           )}
 
-          <div className="rs-card-meta" style={{ marginTop: 14, fontSize: '0.72rem' }}>
+          <div className="rs-card-meta" style={{ marginTop: 14, fontSize: 'var(--rs-fs-micro)' }}>
             {stations.length
               ? <>This makes it a <strong style={{ color: 'var(--primary)' }}>
                   {stations.join(', ').replace(/_/g, ' ')}
@@ -116,7 +115,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+          <div className="rs-flex rs-gap-2 rs-mt-4 rs-flex-wrap">
             {/* No rows means the load failed, not that the machine has no
                 buttons. Saving that would post an empty panel and strip every
                 station off a working appliance — a failed read turning into a
@@ -136,7 +135,7 @@ export default function AppliancePanel({ api, equipmentId, onSaved, onClose }) {
 
 function Group({ rows, on, toggle }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div className="rs-flex rs-flex-wrap rs-gap-2">
       {rows.map(row => {
         const active = on.has(row.key)
         return (
@@ -148,7 +147,7 @@ function Group({ rows, on, toggle }) {
             style={{
               padding: '7px 13px',
               borderRadius: 999,
-              fontSize: '0.74rem',
+              fontSize: 'var(--rs-fs-micro)',
               fontWeight: 800,
               letterSpacing: '0.04em',
               cursor: 'pointer',

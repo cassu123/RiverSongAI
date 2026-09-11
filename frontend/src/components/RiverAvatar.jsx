@@ -31,7 +31,7 @@ const AVATAR_URL =
 
 // Conversation states, collapsed to the four the avatar actually performs.
 // Vocabulary is fixed by the Vortex wire protocol (see
-// prototypes/presence-orb.html and core/vortex_hub.py); PresenceBulb
+// wire protocol (see core/vortex/hub.py); PresenceBulb
 // keys off the same set.
 const STATE_MAP = {
   idle: 'idle',

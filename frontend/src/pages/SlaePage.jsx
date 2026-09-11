@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
-import { useInterval } from '../hooks/useInterval.js'
+import { useInterval } from '@hooks/useInterval.js'
 
 /**
  * SlaePage — admin control panel for the Synchronized Local Autonomous
@@ -20,7 +20,7 @@ const STATUS_STYLES = {
 function StatusPill({ status }) {
   const s = STATUS_STYLES[status] || STATUS_STYLES.not_configured
   return (
-    <span className="rs-pill" style={{ background: s.bg, color: s.fg, fontSize: '0.6rem' }}>
+    <span className="rs-pill" style={{ background: s.bg, color: s.fg, fontSize: 'var(--rs-fs-nano)' }}>
       {s.label}
     </span>
   )
@@ -28,13 +28,13 @@ function StatusPill({ status }) {
 
 function Section({ title, status, message, children }) {
   return (
-    <div className="rs-card is-wide" style={{ padding: 16, marginBottom: 16 }}>
-      <div className="rs-card-head" style={{ marginBottom: 8 }}>
+    <div className="rs-card is-wide rs-p-4 rs-mb-4">
+      <div className="rs-card-head rs-mb-2">
         <span className="rs-card-label">{title}</span>
         <StatusPill status={status} />
       </div>
       {message && (
-        <div style={{ fontSize: '0.78rem', opacity: 0.7, marginBottom: 8 }}>{message}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>{message}</div>
       )}
       {children}
     </div>
@@ -101,7 +101,7 @@ export default function SlaePage({ setAction }) {
         {(roles.roles || []).length === 0 ? (
           <div className="rs-card-meta">No roles registered yet.</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr auto', columnGap: 12, rowGap: 6, fontSize: '0.78rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr auto', columnGap: 12, rowGap: 6, fontSize: 'var(--rs-fs-micro)' }}>
             {roles.roles.map((r) => {
               const inv = r.last_invocation
               const dot = inv ? (inv.success ? 'var(--md-secondary)' : 'var(--md-error)') : 'rgba(255,255,255,0.18)'
@@ -110,8 +110,8 @@ export default function SlaePage({ setAction }) {
                   <span style={{ opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{r.name}</span>
                   <span style={{ opacity: 0.7 }}>
                     {r.provider}/{r.model}
-                    {r.json_mode && <span style={{ marginLeft: 6, fontSize: '0.6rem', opacity: 0.7 }}>JSON</span>}
-                    <span style={{ marginLeft: 8, fontSize: '0.65rem', opacity: 0.45 }}>T={r.temperature}</span>
+                    {r.json_mode && <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 'var(--rs-fs-nano)' }}>JSON</span>}
+                    <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: 'var(--rs-fs-nano)' }}>T={r.temperature}</span>
                   </span>
                   <span title={inv ? `${inv.ts} (${inv.elapsed_ms ?? '—'} ms)` : 'No invocations yet'} style={{
                     width: 8, height: 8, borderRadius: '50%', background: dot, alignSelf: 'center',
@@ -125,26 +125,26 @@ export default function SlaePage({ setAction }) {
 
       <Section title="LANGFUSE TRACING" status={langfuse.status} message={langfuse.message}>
         {langfuse.dashboard_url && (
-          <div style={{ fontSize: '0.78rem', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>
             <a href={langfuse.dashboard_url} target="_blank" rel="noreferrer" style={{ color: 'var(--md-secondary)' }}>
               OPEN DASHBOARD →
             </a>
           </div>
         )}
         {(langfuse.recent_traces || []).length > 0 && (
-          <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>
             {langfuse.recent_traces.length} recent traces.
           </div>
         )}
       </Section>
 
       <Section title="GRAPHITI KNOWLEDGE GRAPH" status={graphiti.status} message={graphiti.message}>
-        <div style={{ display: 'flex', gap: 16, fontSize: '0.78rem', opacity: 0.8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 16, fontSize: 'var(--rs-fs-micro)', opacity: 0.8, marginBottom: 8 }}>
           <div>NODES: <strong>{graphiti.node_count ?? 0}</strong></div>
           <div>EDGES: <strong>{graphiti.edge_count ?? 0}</strong></div>
         </div>
         {graphiti.neo4j_browser_url && (
-          <div style={{ fontSize: '0.78rem' }}>
+          <div style={{ fontSize: 'var(--rs-fs-micro)' }}>
             <a href={graphiti.neo4j_browser_url} target="_blank" rel="noreferrer" style={{ color: 'var(--md-secondary)' }}>
               OPEN NEO4J BROWSER →
             </a>
@@ -156,9 +156,9 @@ export default function SlaePage({ setAction }) {
         {(recent.events || []).length === 0 ? (
           <div className="rs-card-meta">No events yet.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="rs-flex rs-flex-col rs-gap-1">
             {recent.events.slice(0, 20).map((e, i) => (
-              <div key={i} style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+              <div key={i} style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.8 }}>
                 <span style={{ opacity: 0.6 }}>{e.ts}</span>{' '}
                 <span>{e.source}</span>{' — '}
                 <span style={{ opacity: 0.7 }}>{e.summary}</span>

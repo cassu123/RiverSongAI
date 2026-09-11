@@ -98,9 +98,9 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
 
   return (
     <>
-      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+      <p className="rs-card-meta rs-mb-4">
         <strong>{voiceSettings.provider_label}</strong> · Active:{' '}
-        <span className="rs-pill is-active" style={{ fontSize: '0.75rem' }}>{voiceSettings.active_voice}</span>
+        <span className="rs-pill is-active" style={{ fontSize: 'var(--rs-fs-micro)' }}>{voiceSettings.active_voice}</span>
       </p>
 
       {/* ELEVENLABS STATUS (Admin Only) — credentials live in .env */}
@@ -109,7 +109,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
           marginBottom: 24, padding: 16,
           background: 'var(--md-surface-container-high)',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
             <div className="rs-card-label" style={{ color: 'var(--md-primary)' }}>
               ELEVENLABS
             </div>
@@ -117,7 +117,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
               {elevenLabsSettings.api_key ? '● KEY LOADED' : '○ NO KEY'}
             </span>
           </div>
-          <p className="rs-card-meta" style={{ margin: 0 }}>
+          <p className="rs-card-meta rs-m-0">
             Set <code>ELEVENLABS_API_KEY</code>, <code>ELEVENLABS_VOICE_ID</code>, and{' '}
             <code>ELEVENLABS_MODEL_ID</code> in <code>.env</code> to enable cloud voices.
             {voiceSettings.provider === 'elevenlabs' && (
@@ -140,13 +140,13 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
       )}
 
       {/* ACCENT FILTER TABS */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div className="rs-flex rs-gap-2 rs-flex-wrap rs-mb-4">
         {['ALL', ...accents].map(accent => (
           <button
             key={accent}
             onClick={() => setAccentFilter(accent)}
             className={`rs-pill ${accentFilter === accent ? 'is-active' : ''}`}
-            style={{ fontSize: '0.7rem' }}
+            style={{ fontSize: 'var(--rs-fs-nano)' }}
           >
             {accent}
           </button>
@@ -159,15 +159,15 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
         const males   = av.filter(v => v.gender === 'male')
 
         return (
-          <div key={accent} style={{ marginBottom: 24 }}>
-            <div className="rs-card-label" style={{ marginBottom: 12 }}>{accent}</div>
+          <div key={accent} className="rs-mb-5">
+            <div className="rs-card-label rs-mb-3">{accent}</div>
 
             {[{ label: 'Female', list: females, color: 'var(--md-tertiary)' },
               { label: 'Male',   list: males,   color: 'var(--md-primary)'  }]
               .filter(g => g.list.length > 0)
               .map(({ label, list, color }) => (
-                <div key={label} style={{ marginBottom: 16 }}>
-                  <div className="rs-card-label" style={{ fontSize: '0.65rem', color, marginBottom: 8 }}>
+                <div key={label} className="rs-mb-4">
+                  <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', color, marginBottom: 8 }}>
                     {label}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
@@ -178,20 +178,20 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
                         onClick={() => v.installed && !v.active && handleSelect(v.voice_id)}
                         style={{ opacity: v.installed ? 1 : 0.5, borderColor: v.active ? 'var(--primary)' : undefined }}
                       >
-                        <div className="rs-card-value" style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>
+                        <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 600, marginBottom: 8 }}>
                           {v.display_name}
                         </div>
 
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
-                          <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
+                        <div className="rs-flex rs-flex-wrap rs-gap-1 rs-mb-2">
+                          <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>
                             {QUALITY_LABELS[v.quality] || v.quality}
                           </span>
-                          <span className="rs-pill" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
+                          <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>
                             {ENGINE_LABELS[v.engine] || v.engine}
                           </span>
                         </div>
 
-                        <div className="rs-card-meta" style={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
+                        <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', lineHeight: 1.4 }}>
                           {v.description}
                         </div>
 
@@ -200,7 +200,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
                             onClick={e => { e.stopPropagation(); handlePreview(v.voice_id) }}
                             disabled={previewing === v.voice_id}
                             className="rs-pill"
-                            style={{ marginTop: 12, fontSize: '0.7rem' }}
+                            style={{ marginTop: 12, fontSize: 'var(--rs-fs-nano)' }}
                           >
                             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>{previewing === v.voice_id ? 'volume_up' : 'play_arrow'}</span>
                             {previewing === v.voice_id ? 'PLAYING…' : 'PREVIEW'}

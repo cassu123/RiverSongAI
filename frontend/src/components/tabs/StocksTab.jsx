@@ -26,15 +26,15 @@ function LineChart({ data }) {
   const color = up ? 'oklch(71% 0.17 145)' : 'oklch(64% 0.17 22)'
   const last = closes[closes.length - 1]
   return (
-    <div style={{ marginBottom: 12 }}>
+    <div className="rs-mb-3">
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H }} preserveAspectRatio="none">
         <polyline points={pts} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
       </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span className="rs-card-meta" style={{ fontSize: '0.6rem', opacity: 0.5 }}>
+      <div className="rs-flex rs-justify-between">
+        <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
           {data[0]?.date} → {data[data.length - 1]?.date}
         </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', fontWeight: 700, color }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-micro)', fontWeight: 700, color }}>
           ${last?.toFixed(2)}
         </span>
       </div>
@@ -53,7 +53,7 @@ function relTime(iso) {
 
 function NewsList({ items }) {
   if (!items.length) return (
-    <div className="rs-card-meta" style={{ padding: '12px 0', fontSize: '0.75rem', opacity: 0.5 }}>No recent news.</div>
+    <div className="rs-card-meta" style={{ color: 'var(--text-muted)', padding: '12px 0', fontSize: 'var(--rs-fs-micro)' }}>No recent news.</div>
   )
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -69,8 +69,8 @@ function NewsList({ items }) {
             textDecoration: 'none', color: 'inherit',
           }}
         >
-          <div style={{ fontWeight: 700, fontSize: '0.8rem', lineHeight: 1.35, marginBottom: 3 }}>{n.headline}</div>
-          <div className="rs-card-meta" style={{ fontSize: '0.62rem' }}>
+          <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-tiny)', lineHeight: 1.35, marginBottom: 3 }}>{n.headline}</div>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
             {n.source} · {relTime(n.published_at)}
           </div>
         </a>
@@ -108,26 +108,26 @@ function QuoteRow({ quote, selected, onSelect, onRemove }) {
       }}
     >
       <div style={{ minWidth: 52 }}>
-        <div style={{ fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.08em', color: 'var(--primary)' }}>
+        <div style={{ fontWeight: 900, fontSize: 'var(--rs-fs-small)', letterSpacing: '0.08em', color: 'var(--primary)' }}>
           {quote.ticker}
         </div>
         {quote.name && (
-          <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 1 }}>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: 1 }}>
             {quote.name.length > 18 ? quote.name.slice(0, 18) + '…' : quote.name}
           </div>
         )}
       </div>
       <SparkBar change={quote.change} />
       <div style={{ flex: 1, textAlign: 'right' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '1rem' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 'var(--rs-fs-body)' }}>
           {quote.price != null ? `$${Number(quote.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
         </div>
       </div>
       <div style={{ minWidth: 80, textAlign: 'right' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, color: changeColor }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, color: changeColor }}>
           {up ? '+' : ''}{quote.change != null ? quote.change.toFixed(2) : '--'}
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: changeColor, opacity: 0.8 }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)', color: changeColor, opacity: 0.8 }}>
           {up ? '+' : ''}{quote.change_pct != null ? quote.change_pct.toFixed(2) : '--'}%
         </div>
       </div>
@@ -270,7 +270,7 @@ export default function StocksTab({ token, active }) {
 
   const watchlist = settings?.watchlist || []
   const colHeader = (label, align = 'left') => (
-    <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.45, textAlign: align }}>{label}</div>
+    <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: align }}>{label}</div>
   )
 
   return (
@@ -297,14 +297,14 @@ export default function StocksTab({ token, active }) {
       </InlineSettingsSection>
 
       {/* Search row */}
-      <div style={{ marginBottom: 20 }}>
+      <div className="rs-mb-5">
         <div style={{ position: 'relative' }}>
           <input
             type="text" className="rs-input"
             placeholder="Search symbol or company…"
             value={searchQ}
             onChange={e => { setSearchQ(e.target.value); setAddError('') }}
-            style={{ width: '100%', fontSize: '0.85rem', boxSizing: 'border-box' }}
+            style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)', boxSizing: 'border-box' }}
           />
           {searchQ && (
             <button className="rs-icon-btn" onClick={() => { setSearchQ(''); setResults([]) }}
@@ -319,21 +319,21 @@ export default function StocksTab({ token, active }) {
               border: '1px solid var(--md-outline-variant)',
               borderRadius: 8, marginTop: 4, zIndex: 50, overflow: 'hidden',
             }}>
-              {searching && <div className="rs-card-meta" style={{ padding: '10px 16px', fontSize: '0.75rem' }}>Searching…</div>}
+              {searching && <div className="rs-card-meta" style={{ padding: '10px 16px', fontSize: 'var(--rs-fs-micro)' }}>Searching…</div>}
               {searchResults.slice(0, 5).map(r => (
                 <button key={r.ticker} onClick={() => addTicker(r.ticker)} style={{
                   display: 'flex', width: '100%', gap: 12, padding: '10px 16px',
                   background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
                   alignItems: 'center', borderTop: '1px solid var(--md-outline-variant)',
                 }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--primary)', minWidth: 52 }}>{r.ticker}</span>
-                  <span className="rs-card-meta" style={{ flex: 1, fontSize: '0.75rem' }}>{r.name}</span>
-                  <span className="rs-card-meta" style={{ fontSize: '0.62rem', opacity: 0.5 }}>{r.region}</span>
+                  <span style={{ fontWeight: 800, fontSize: 'var(--rs-fs-tiny)', color: 'var(--primary)', minWidth: 52 }}>{r.ticker}</span>
+                  <span className="rs-card-meta" style={{ flex: 1, fontSize: 'var(--rs-fs-micro)' }}>{r.name}</span>
+                  <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{r.region}</span>
                 </button>
               ))}
             </div>
           )}
-          {addError && <div style={{ color: 'oklch(64% 0.17 22)', fontSize: '0.72rem', marginTop: 6, fontWeight: 600 }}>{addError}</div>}
+          {addError && <div style={{ color: 'oklch(64% 0.17 22)', fontSize: 'var(--rs-fs-micro)', marginTop: 6, fontWeight: 600 }}>{addError}</div>}
         </div>
       </div>
 
@@ -351,13 +351,13 @@ export default function StocksTab({ token, active }) {
       {loading ? <StocksSkeleton /> : error ? (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>trending_flat</span>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
+          <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchQuotes}>RETRY</button>
         </div>
       ) : quotes.length === 0 ? (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>candlestick_chart</span>
-          <div className="rs-card-label" style={{ marginBottom: 6 }}>EMPTY WATCHLIST</div>
+          <div className="rs-card-label rs-mb-2">EMPTY WATCHLIST</div>
           <div className="rs-card-meta">Search for a ticker symbol above to start tracking.</div>
         </div>
       ) : (
@@ -375,8 +375,8 @@ export default function StocksTab({ token, active }) {
 
       {/* Chart pane */}
       {settings?.show_charts && selectedTicker && (
-        <div style={{ marginTop: 20 }}>
-          <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.5, marginBottom: 10 }}>
+        <div className="rs-mt-5">
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
             {selectedTicker} · 30-DAY CHART
           </div>
           {chartLoading ? (
@@ -384,19 +384,19 @@ export default function StocksTab({ token, active }) {
           ) : chart?.length ? (
             <LineChart data={chart} />
           ) : (
-            <div className="rs-card-meta" style={{ fontSize: '0.72rem', opacity: 0.5 }}>Chart data unavailable (API limit may be reached).</div>
+            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Chart data unavailable (API limit may be reached).</div>
           )}
         </div>
       )}
 
       {/* News pane */}
       {settings?.show_news && selectedTicker && (
-        <div style={{ marginTop: 20 }}>
-          <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.5, marginBottom: 10 }}>
+        <div className="rs-mt-5">
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
             {selectedTicker} · RECENT NEWS
           </div>
           {newsLoading ? (
-            <div className="rs-card-meta" style={{ fontSize: '0.72rem', opacity: 0.5 }}>Loading…</div>
+            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Loading…</div>
           ) : (
             <NewsList items={news} />
           )}
@@ -408,7 +408,7 @@ export default function StocksTab({ token, active }) {
 
 function StocksSkeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="rs-flex rs-flex-col">
       {[0, 1, 2, 3].map(i => (
         <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--md-outline-variant)', alignItems: 'center' }}>
           <div style={{ minWidth: 52, display: 'flex', flexDirection: 'column', gap: 4 }}>

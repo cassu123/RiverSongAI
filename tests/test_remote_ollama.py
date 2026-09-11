@@ -145,7 +145,7 @@ class TestRouteSurface:
         assert getattr(get_settings(), "remote_ollama_enabled", True) is False
 
     def test_router_importable(self):
-        from api.routes import remote_ollama as r
+        from api.routes.system import remote_ollama as r
         assert r.router.prefix == "/api/remote-ollama"
         paths = {rt.path for rt in r.router.routes}
         assert "/api/remote-ollama/rigs"               in paths

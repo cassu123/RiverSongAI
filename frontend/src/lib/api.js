@@ -1,7 +1,7 @@
 /**
  * lib/api.js — the one way to call the backend.
  *
- *   import { apiFetch, toast } from '../lib/api'
+ *   import { apiFetch, toast } from '@lib/api'
  *
  *   const data = await apiFetch('/api/settings/llm')            // GET, parsed JSON
  *   await apiFetch('/api/auth/profile', { method: 'PATCH', body: { mood } })

@@ -6,7 +6,7 @@ export default function CapabilityFlagsSection({ data }) {
 
   return (
     <Section title="ENVIRONMENT CAPABILITY FLAGS">
-      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+      <p className="rs-card-meta rs-mb-4">
         These core capabilities are hard-toggled via <code>.env</code> on the server and require a system restart to take effect. <strong>They are read-only here.</strong>
       </p>
 
@@ -18,12 +18,12 @@ export default function CapabilityFlagsSection({ data }) {
             border: '1px solid var(--md-outline-variant)',
             borderRadius: 'var(--md-shape-md)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--md-on-surface)' }}>
+            <div className="rs-flex rs-items-center rs-justify-between rs-mb-2">
+              <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)', color: 'var(--md-on-surface)' }}>
                 {flag.key}
               </div>
               <div style={{
-                fontSize: '0.75rem',
+                fontSize: 'var(--rs-fs-micro)',
                 fontWeight: 700,
                 padding: '2px 8px',
                 borderRadius: '12px',
@@ -34,12 +34,12 @@ export default function CapabilityFlagsSection({ data }) {
               </div>
             </div>
             
-            <p style={{ fontSize: '0.8rem', color: 'var(--md-on-surface-variant)', marginBottom: 12, lineHeight: 1.4 }}>
+            <p style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)', marginBottom: 12, lineHeight: 1.4 }}>
               {flag.description}
             </p>
             
             <div style={{
-              fontSize: '0.75rem',
+              fontSize: 'var(--rs-fs-micro)',
               fontFamily: 'var(--font-mono, monospace)',
               background: 'var(--md-surface-container)',
               padding: '6px 10px',

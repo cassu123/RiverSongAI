@@ -46,7 +46,7 @@ def _code() -> str:
 @pytest.fixture(autouse=True)
 def _clean_limiters():
     """Pairing lockout is process-wide; keep tests from leaking into each other."""
-    from core.vortex_security import confirmations, pairing_limiter
+    from core.vortex.security import confirmations, pairing_limiter
 
     async def _reset():
         await pairing_limiter.reset()
@@ -96,7 +96,7 @@ def test_unit_tokens_are_hashed_at_rest(user_headers):
 
 
 def test_token_comparison_is_constant_time():
-    from core.vortex_security import (hash_unit_token, mint_unit_token,
+    from core.vortex.security import (hash_unit_token, mint_unit_token,
                                       verify_unit_token)
     token = mint_unit_token()
     stored = hash_unit_token(token)
@@ -293,7 +293,7 @@ def test_ws_authenticates_and_pushes_presence(user_headers):
 
 
 def test_presence_vocabulary_is_fixed():
-    from core.vortex_hub import PRESENCE_STATES, VortexHub
+    from core.vortex.hub import PRESENCE_STATES, VortexHub
 
     assert PRESENCE_STATES == {"idle", "listening", "thinking", "speaking",
                                "acting", "error"}
@@ -340,7 +340,7 @@ def _tone_wav(seconds=1.0, rate=22050, ramp=True):
 
 
 def test_amplitude_envelope_tracks_the_audio():
-    from core.vortex_hub import AMPLITUDE_HZ, amplitude_envelope
+    from core.vortex.hub import AMPLITUDE_HZ, amplitude_envelope
 
     envelope = amplitude_envelope(_tone_wav(seconds=2.0))
     assert abs(len(envelope) - 2 * AMPLITUDE_HZ) <= 2
@@ -350,7 +350,7 @@ def test_amplitude_envelope_tracks_the_audio():
 
 
 def test_amplitude_envelope_is_empty_for_unusable_audio():
-    from core.vortex_hub import amplitude_envelope
+    from core.vortex.hub import amplitude_envelope
 
     assert amplitude_envelope(b"") == []
     assert amplitude_envelope(b"not a wav file at all") == []
@@ -369,7 +369,7 @@ def test_amplitude_envelope_is_empty_for_unusable_audio():
 # ---------------------------------------------------------------------------
 
 def test_surface_validation_rejects_undrawable_cards():
-    from core.vortex_surfaces import SurfaceError, build_surface
+    from core.vortex.surfaces import SurfaceError, build_surface
 
     with pytest.raises(SurfaceError):
         build_surface({"kind": "note"})                    # no id
@@ -387,7 +387,7 @@ def test_surface_validation_rejects_undrawable_cards():
 
 
 def test_same_id_replaces_and_never_stacks():
-    from core.vortex_surfaces import SurfacePublisher
+    from core.vortex.surfaces import SurfacePublisher
 
     async def _run():
         publisher = SurfacePublisher()
@@ -413,7 +413,7 @@ def test_room_targeting_puts_the_card_in_one_room_only(user_headers):
     bedroom_id, _ = _pair(_code(), user_headers, room="bedroom")
 
     async def _run():
-        from core.vortex_surfaces import SurfacePublisher
+        from core.vortex.surfaces import SurfacePublisher
 
         publisher = SurfacePublisher()
         result = await publisher.publish(
@@ -428,8 +428,8 @@ def test_room_targeting_puts_the_card_in_one_room_only(user_headers):
 
 
 def test_screenless_units_never_get_a_silent_card():
-    from core.vortex_hub import VortexHub
-    from core.vortex_surfaces import SurfacePublisher, derive_speech, build_surface
+    from core.vortex.hub import VortexHub
+    from core.vortex.surfaces import SurfacePublisher, derive_speech, build_surface
 
     class _Socket:
         def __init__(self):
@@ -439,7 +439,7 @@ def test_screenless_units_never_get_a_silent_card():
             self.sent.append(frame)
 
     async def _run():
-        import core.vortex_hub as hub_module
+        import core.vortex.hub as hub_module
 
         hub = VortexHub()
         original, hub_module._hub = hub_module._hub, hub
@@ -537,7 +537,7 @@ def test_replica_since_returns_only_what_changed(user_headers):
 # ---------------------------------------------------------------------------
 
 def test_room_extraction_from_a_play_request():
-    from core.vortex_media import extract_room
+    from core.vortex.media import extract_room
 
     assert extract_room("play something in the living room") == "living room"
     assert extract_room("play jazz on the kitchen speaker") == "kitchen"
@@ -546,7 +546,7 @@ def test_room_extraction_from_a_play_request():
 
 def test_music_from_a_unit_targets_a_unit(monkeypatch):
     """A play intent relayed by a unit resolves a URL and pushes it there."""
-    import core.vortex_media as media
+    import core.vortex.media as media
     from core.intent_router import ORIGIN_VORTEX_UNIT, RequestOrigin, origin_scope
 
     pushed = {}
@@ -584,7 +584,7 @@ def test_music_from_a_unit_targets_a_unit(monkeypatch):
 
 def test_music_from_a_user_session_falls_through():
     """A browser request must keep playing locally, unchanged."""
-    import core.vortex_media as media
+    import core.vortex.media as media
 
     async def _run():
         return await media.handle_play_request(
@@ -598,7 +598,7 @@ def test_music_from_a_user_session_falls_through():
 # ---------------------------------------------------------------------------
 
 def test_camera_purpose_defaults_to_off():
-    from core.vortex_units import camera_purpose_enabled
+    from core.vortex.units import camera_purpose_enabled
 
     assert not camera_purpose_enabled(None, "face_recognition")
     assert not camera_purpose_enabled({"camera": {}}, "presence")
@@ -639,7 +639,7 @@ def test_missing_detector_is_not_an_empty_room(monkeypatch):
     no model, so on a 5.x install detection is genuinely unavailable. The
     answer then is `unavailable`, never a confident "no one is here".
     """
-    import core.vortex_vision as vision
+    import core.vortex.vision as vision
 
     monkeypatch.setattr(vision, "_resolve_detector", lambda: None)
 
@@ -660,7 +660,7 @@ def test_missing_detector_is_not_an_empty_room(monkeypatch):
 
 def test_identification_without_a_backend_says_so(monkeypatch):
     """A face seen but not placed is 'cannot identify', not 'not you'."""
-    import core.vortex_vision as vision
+    import core.vortex.vision as vision
 
     monkeypatch.setattr(vision, "_resolve_detector",
                         lambda: (lambda frame: 1, True))
@@ -684,7 +684,7 @@ def test_identification_without_a_backend_says_so(monkeypatch):
 
 
 def test_snapshot_links_are_signed_and_expiring():
-    from core.vortex_vision import read_snapshot, snapshot_url
+    from core.vortex.vision import read_snapshot, snapshot_url
 
     url = snapshot_url("unit-abc.jpg", 4_000_000_000)
     assert "sig=" in url and "exp=" in url

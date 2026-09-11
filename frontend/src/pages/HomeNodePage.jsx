@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
-import SafetyRules from '../components/SafetyRules.jsx'
+import { useAuth } from '@context/AuthContext'
+import SafetyRules from '@components/SafetyRules.jsx'
 
 const READONLY = new Set(['sensor', 'binary_sensor'])
 const LAUNCHERS = new Set(['scene', 'script'])
@@ -260,7 +260,7 @@ export default function HomeNodePage({ setAction }) {
       <div className="gh-glance-bar">
         <div className="gh-glance-left">
           <div className="gh-glance-orb-wrap">
-            <span className="material-symbols-rounded" style={{ color: '#00e5ff', fontSize: 22 }}>
+            <span className="material-symbols-rounded" style={{ color: 'var(--md-primary)', fontSize: 22 }}>
               {status?.reachable ? 'home' : 'cloud_off'}
             </span>
           </div>
@@ -315,7 +315,7 @@ export default function HomeNodePage({ setAction }) {
                 </span>
                 <span>{a.text}</span>
                 {(a.domain === 'lock' || a.domain === 'cover') && (
-                  <span style={{ fontSize: '0.72rem', opacity: 0.9, textDecoration: 'underline', marginLeft: 4 }}>
+                  <span style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.9, textDecoration: 'underline', marginLeft: 4 }}>
                     Secure
                   </span>
                 )}
@@ -335,7 +335,7 @@ export default function HomeNodePage({ setAction }) {
               onClick={() => callAction(s.entity_id, 'turn_on')}
               disabled={acting === s.entity_id}
             >
-              <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#00e5ff' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--md-primary)' }}>
                 auto_awesome
               </span>
               <span>{s.name}</span>
@@ -397,11 +397,11 @@ export default function HomeNodePage({ setAction }) {
       {!loading && !status?.configured && <NotConfigured />}
 
       {!loading && status?.configured && !status?.reachable && (
-        <div className="rs-card is-wide animate-fade-in" style={{ padding: 24, textAlign: 'center' }}>
+        <div className="rs-card is-wide animate-fade-in rs-p-5 rs-text-center">
           <span className="material-symbols-rounded" style={{ fontSize: 48, color: 'var(--warn)', marginBottom: 12 }}>
             cloud_off
           </span>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fff', marginBottom: 8 }}>
+          <h2 style={{ fontSize: 'var(--rs-fs-h3)', fontWeight: 600, color: 'var(--fg)', marginBottom: 8 }}>
             Home Assistant Unreachable
           </h2>
           <p className="rs-card-meta" style={{ maxWidth: 440, margin: '0 auto 20px auto' }}>
@@ -469,11 +469,11 @@ export default function HomeNodePage({ setAction }) {
           )}
 
           {operable.length === 0 && (
-            <div className="rs-card is-wide animate-fade-in" style={{ textAlign: 'center', padding: 32 }}>
+            <div className="rs-card is-wide animate-fade-in rs-text-center rs-p-6">
               <span className="material-symbols-rounded" style={{ fontSize: 44, color: 'var(--text-muted)', marginBottom: 12 }}>
                 devices
               </span>
-              <p className="rs-card-meta" style={{ fontSize: '1rem', color: '#fff', marginBottom: 16 }}>
+              <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--fg)', marginBottom: 16 }}>
                 No active devices found in Home Assistant.
               </p>
               <button className="gh-glance-action" style={{ margin: '0 auto' }} onClick={runSync} disabled={syncing}>
@@ -484,7 +484,7 @@ export default function HomeNodePage({ setAction }) {
           )}
 
           {/* Safety Rules Engine Integration */}
-          <div style={{ marginTop: 40 }}>
+          <div className="rs-mt-7">
             <SafetyRules />
           </div>
         </>
@@ -655,7 +655,7 @@ function ClimateTile({ device, busy, onAction }) {
           className="gh-chip"
           style={{
             padding: '4px 10px',
-            fontSize: '0.75rem',
+            fontSize: 'var(--rs-fs-micro)',
             color: isCooling ? '#96cbff' : isHeating ? '#fed7aa' : 'rgba(255,255,255,0.7)',
             borderColor: isCooling ? 'rgba(0, 229, 255, 0.4)' : isHeating ? 'rgba(251, 146, 60, 0.4)' : undefined
           }}
@@ -871,19 +871,19 @@ function SensorPill({ device }) {
 /** First-time setup instructions */
 function NotConfigured() {
   return (
-    <div className="rs-card is-wide animate-fade-in" style={{ padding: 28 }}>
-      <div className="rs-card-head" style={{ marginBottom: 12 }}>
+    <div className="rs-card is-wide animate-fade-in rs-p-6">
+      <div className="rs-card-head rs-mb-3">
         <span className="rs-card-label">SETUP HOME ASSISTANT</span>
       </div>
-      <p className="rs-card-meta" style={{ fontSize: '0.95rem', marginBottom: 20 }}>
+      <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', marginBottom: 20 }}>
         River Song connects directly to your local or remote Home Assistant instance. Add your URL and long-lived access token to <code>.env</code> to activate tactile smart home controls.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div className="rs-flex rs-flex-col rs-gap-4">
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>1</span>
           <span>Home Assistant → User Profile → Long-lived access tokens → Create token</span>
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>2</span>
           <span>Add to your backend <code>.env</code> file:</span>
         </div>
@@ -892,14 +892,14 @@ function NotConfigured() {
           background: 'rgba(0,0,0,0.35)',
           borderRadius: '16px',
           fontFamily: 'var(--font-mono)',
-          fontSize: '0.85rem',
-          color: '#00e5ff',
+          fontSize: 'var(--rs-fs-tiny)',
+          color: 'var(--md-primary)',
           border: '1px solid rgba(0, 229, 255, 0.2)'
         }}>
           <div>HOME_ASSISTANT_URL=http://homeassistant.local:8123</div>
           <div>HOME_ASSISTANT_TOKEN=your_token_here</div>
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-3 rs-items-center">
           <span className="gh-chip" style={{ width: 28, height: 28, padding: 0, justifyContent: 'center' }}>3</span>
           <span>Restart the service, then tap the Sync button above.</span>
         </div>

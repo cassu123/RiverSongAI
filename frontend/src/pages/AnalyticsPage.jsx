@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@context/AuthContext'
 
 // ─── Platform catalogue ──────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ function metricLabel(key) {
 
 function LineChart({ data, color, height = 80 }) {
   if (!data || data.length < 2) return (
-    <div style={{ fontSize: '0.7rem', opacity: 0.5, fontStyle: 'italic', height, display: 'flex', alignItems: 'center' }}>
+    <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontStyle: 'italic', height, display: 'flex', alignItems: 'center' }}>
       Not enough data
     </div>
   )
@@ -93,14 +93,14 @@ function LineChart({ data, color, height = 80 }) {
   const last  = data[data.length - 1].date.slice(5)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="rs-flex rs-flex-col rs-gap-2">
       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height, display: 'block', overflow: 'visible' }}>
         <path d={path} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {pts.map((p, i) => (
           <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="#fff" stroke={color} strokeWidth="2" />
         ))}
       </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', opacity: 0.8, letterSpacing: '0.05em', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-nano)', opacity: 0.8, letterSpacing: '0.05em', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
         <span>{first.toUpperCase()}</span>
         <span>{last.toUpperCase()}</span>
       </div>
@@ -137,7 +137,7 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
       }}
       onClick={() => onSelect(platform)}
     >
-      <div className="rs-card-head" style={{ marginBottom: 20 }}>
+      <div className="rs-card-head rs-mb-5">
         <span className="rs-card-label" style={{ color: 'var(--md-on-surface)', borderBottomColor: p.color }}>{p.label} / TELEMETRY</span>
         <div className="rs-status-dot" style={{ 
           background: connected ? 'var(--primary)' : 'var(--md-outline-variant)',
@@ -149,13 +149,13 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
       </div>
 
       {connected && latest ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="rs-flex rs-flex-col rs-gap-4">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
             <span className="rs-card-value" style={{ fontSize: '2.2rem', letterSpacing: '-0.05em' }}>{fmtMetric(primary, primaryVal)}</span>
-            <span className="rs-card-meta" style={{ fontSize: '0.7rem', fontWeight: 900, margin: 0, textTransform: 'uppercase' }}>{metricLabel(primary)}</span>
+            <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 900, margin: 0, textTransform: 'uppercase' }}>{metricLabel(primary)}</span>
             {delta != null && (
               <span style={{ 
-                fontSize: '0.75rem', 
+                fontSize: 'var(--rs-fs-micro)', 
                 marginLeft: 'auto',
                 fontWeight: 900,
                 color: delta >= 0 ? 'var(--rs-status-nominal, #4ade80)' : '#f87171' 
@@ -171,11 +171,11 @@ function PlatformTile({ platform, snapshots, connected, onSelect, selected, onCo
         </div>
       ) : (
         <div className="rs-card-meta" style={{ minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16 }}>
-          <div style={{ fontStyle: 'italic', fontSize: '0.9rem' }}>STATUS: PENDING_DATA_LINK</div>
+          <div style={{ fontStyle: 'italic', fontSize: 'var(--rs-fs-small)' }}>STATUS: PENDING_DATA_LINK</div>
           {platform === 'shopify' && (
             <button 
               className="rs-btn-primary" 
-              style={{ width: '100%', fontSize: '0.8rem' }}
+              style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)' }}
               onClick={(e) => { e.stopPropagation(); onConnect(); }}
             >
               INITIALIZE CONNECTION
@@ -201,10 +201,10 @@ function PlatformDetail({
     <div className="rs-card is-wide animate-fade-in" style={{ padding: 40, border: '1px solid var(--md-outline-variant)', marginTop: 40 }}>
       <div className="rs-card-head" style={{ marginBottom: 40, borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
         <div>
-          <span className="rs-card-label" style={{}}>{p.label} / DETAILED_ANALYSIS</span>
+          <span className="rs-card-label">{p.label} / DETAILED_ANALYSIS</span>
           <h2 style={{ fontSize: '2.5rem', fontWeight: 950, textTransform: 'uppercase', margin: '4px 0 0' }}>{p.label}</h2>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div className="rs-flex rs-gap-3">
           {SUPPORTED_FOR_INSIGHTS.includes(platform) && (
             <button 
               className="rs-pill" 
@@ -221,8 +221,8 @@ function PlatformDetail({
         </div>
       </div>
 
-      {loading && <div className="rs-card-meta" style={{ fontStyle: 'italic', fontSize: '1rem', marginBottom: 24 }}>River is analysing your data...</div>}
-      {error && <div style={{ color: '#f87171', fontSize: '0.9rem', marginBottom: 24, fontWeight: 700 }}>{error}</div>}
+      {loading && <div className="rs-card-meta" style={{ fontStyle: 'italic', fontSize: 'var(--rs-fs-body)', marginBottom: 24 }}>River is analysing your data...</div>}
+      {error && <div style={{ color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-small)', marginBottom: 24, fontWeight: 700 }}>{error}</div>}
 
       {insights && !loading && (
         <div style={{ 
@@ -233,12 +233,12 @@ function PlatformDetail({
           border: '1px solid var(--md-outline-variant)'
         }}>
           <div className="rs-card-label" style={{ marginBottom: 12, color: 'var(--md-on-surface)' }}>AI STRATEGIC INSIGHTS</div>
-          <div style={{ fontSize: '1rem', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontWeight: 500 }}>{insights}</div>
+          <div style={{ fontSize: 'var(--rs-fs-body)', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontWeight: 500 }}>{insights}</div>
         </div>
       )}
 
       {!snapshots.length ? (
-        <div className="rs-card-meta" style={{ fontSize: '1.1rem' }}>NO DATA RECORDED. PROCEED WITH INITIAL SNAPSHOT.</div>
+        <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-body)' }}>NO DATA RECORDED. PROCEED WITH INITIAL SNAPSHOT.</div>
       ) : (
         <>
           {/* Metric Charts Grid */}
@@ -263,7 +263,7 @@ function PlatformDetail({
           </div>
 
           <div className="rs-table-wrap" style={{ overflowX: 'auto', border: '1px solid var(--md-outline-variant)', borderRadius: 4 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--rs-fs-small)' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--md-outline-variant)', background: 'var(--md-surface-container-high)' }}>
                   <th style={{ padding: '16px', textAlign: 'left', fontWeight: 900 }}>DATE</th>
@@ -332,37 +332,37 @@ function AddDataModal({ platform, onClose, onSave }) {
     }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="rs-card animate-scale-in" style={{ width: '100%', maxWidth: 450, padding: 40 }}>
         <div className="rs-card-head" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
-          <span className="rs-card-label" style={{}}>MANUAL_DATA_ENTRY / {p.label}</span>
+          <span className="rs-card-label">MANUAL_DATA_ENTRY / {p.label}</span>
           <button style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)', cursor: 'pointer' }} onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 32 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="rs-flex rs-flex-col rs-gap-5 rs-mt-6">
+          <div className="rs-flex rs-flex-col rs-gap-2">
             <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>SNAPSHOT_DATE</label>
             <input
               type="date"
-              style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700, fontSize: '1rem' }}
+              style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700, fontSize: 'var(--rs-fs-body)' }}
               value={date}
               onChange={e => setDate(e.target.value)}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(p.metrics || []).map(m => (
-              <div key={m} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div key={m} className="rs-flex rs-flex-col rs-gap-2">
                 <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>{metricLabel(m).toUpperCase()}</label>
                 <input
                   type="number"
                   placeholder="0.00"
-                  style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700, fontSize: '1rem' }}
+                  style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700, fontSize: 'var(--rs-fs-body)' }}
                   value={vals[m]}
                   onChange={e => setVals({ ...vals, [m]: e.target.value })}
                 />
               </div>
             ))}
           </div>
-          {err && <div style={{ color: '#f87171', fontWeight: 700, fontSize: '0.8rem' }}>{err}</div>}
+          {err && <div style={{ color: 'var(--rs-status-critical)', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>{err}</div>}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 40 }}>
@@ -589,7 +589,7 @@ export default function AnalyticsPage() {
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', padding: '12px 24px',
           border: '1px solid var(--md-outline-variant)',
-          borderRadius: 10, fontFamily: 'var(--font-mono)', fontSize: '0.8rem',
+          borderRadius: 10, fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-tiny)',
           letterSpacing: '0.1em', zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
         }}>
           {shopifyToast}
@@ -599,20 +599,20 @@ export default function AnalyticsPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
         <header style={{ paddingTop: 48, paddingBottom: 32, borderBottom: '2px solid var(--md-outline-variant)', marginBottom: 40 }}>
           <div className="rs-status-strip" style={{ marginBottom: 16, border: 'none', padding: 0, background: 'none' }}>
-            <span className="rs-status-dot" style={{}} />
+            <span className="rs-status-dot" />
             <span style={{ color: 'var(--md-on-surface)', fontWeight: 900 }}>SYSTEM // ANALYTICS / COMMAND</span>
           </div>
           <h1 className="rs-page-title" style={{ fontSize: '4rem', marginBottom: 8 }}>Analytics</h1>
-          <div style={{ fontSize: '1.1rem', fontWeight: 500, opacity: 0.7, maxWidth: '60ch' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-body)', fontWeight: 500, maxWidth: '60ch' }}>
             Commercial performance, audience growth, and multi-channel telemetry.
           </div>
         </header>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+        <div className="rs-flex rs-flex-col rs-gap-6">
 
           {/* Controls Bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div className="rs-flex rs-gap-3">
               {RANGE_OPTIONS.map(o => (
                 <button
                   key={o.days}
@@ -624,7 +624,7 @@ export default function AnalyticsPage() {
                 </button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div className="rs-flex rs-gap-3">
               <button className="rs-pill" onClick={loadData} disabled={loading} style={{ border: 'none', fontWeight: 900 }}>
                 {loading ? 'SYNCING...' : 'REFRESH'}
               </button>
@@ -641,15 +641,15 @@ export default function AnalyticsPage() {
 
         {showSettings && (
           <div className="rs-card is-wide animate-fade-in" style={{ background: 'var(--md-surface-container-high)', border: '1px solid var(--md-outline-variant)', padding: 32 }}>
-            <div className="rs-card-label" style={{ marginBottom: 20, color: 'var(--md-on-surface)', fontSize: '0.8rem' }}>PLATFORM_VISIBILITY_CONFIG</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+            <div className="rs-card-label" style={{ marginBottom: 20, color: 'var(--md-on-surface)', fontSize: 'var(--rs-fs-tiny)' }}>PLATFORM_VISIBILITY_CONFIG</div>
+            <div className="rs-flex rs-flex-wrap rs-gap-3 rs-mb-5">
               {PLATFORMS.map(p => {
                 const on = visiblePlatforms.has(p.key)
                 return (
                   <label key={p.key} className={on ? 'rs-pill is-active' : 'rs-pill'} style={{ cursor: 'pointer', border: '1px solid var(--md-outline-variant)', padding: '8px 16px' }}>
                     <input
                       type="checkbox"
-                      style={{ display: 'none' }}
+                      className="rs-hidden"
                       checked={on}
                       onChange={() => {
                         const next = new Set(visiblePlatforms)
@@ -663,14 +663,14 @@ export default function AnalyticsPage() {
                 )
               })}
             </div>
-            <div style={{ display: 'flex', gap: 24 }}>
+            <div className="rs-flex rs-gap-5">
               <button className="rs-card-label" style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--md-on-surface)' }} onClick={() => handleVisibleChange(new Set(PLATFORMS.map(p => p.key)))}>SELECT_ALL</button>
               <button className="rs-card-label" style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--md-on-surface)' }} onClick={() => handleVisibleChange(new Set())}>CLEAR_ALL</button>
             </div>
           </div>
         )}
 
-        {err && <div className="rs-card is-wide" style={{ color: '#f87171', borderColor: '#f87171' }}>{err}</div>}
+        {err && <div className="rs-card is-wide" style={{ color: 'var(--rs-status-critical)', borderColor: 'var(--rs-status-critical)' }}>{err}</div>}
 
         {/* Summary Stats */}
         {snapshots.length > 0 && (
@@ -696,7 +696,7 @@ export default function AnalyticsPage() {
         {/* AI Business Report Card */}
         <div className="rs-card is-wide is-elev" style={{ border: '1px solid var(--md-outline-variant)', padding: 40 }}>
           <div className="rs-card-head" style={{ border: 'none' }}>
-            <span className="rs-card-label" style={{ fontSize: '0.8rem' }}>AI STRATEGIC DEBRIEF</span>
+            <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)' }}>AI STRATEGIC DEBRIEF</span>
             <button 
               className="rs-btn-primary" 
               onClick={handleGenerateReport} 
@@ -720,7 +720,7 @@ export default function AnalyticsPage() {
               {businessReport}
             </div>
           ) : (
-            <div className="rs-card-meta" style={{ fontSize: '1rem', marginTop: 16 }}>
+            <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-body)', marginTop: 16 }}>
               Request a natural-language summary of your recent sales, revenue, and product performance across all active platforms.
             </div>
           )}
@@ -752,43 +752,43 @@ export default function AnalyticsPage() {
           }} onClick={e => e.target === e.currentTarget && setShowShopifyModal(false)}>
             <div className="rs-card animate-scale-in" style={{ width: '100%', maxWidth: 450, padding: 40 }}>
               <div className="rs-card-head" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 16 }}>
-                <span className="rs-card-label" style={{}}>EXTERNAL_LINK / SHOPIFY</span>
+                <span className="rs-card-label">EXTERNAL_LINK / SHOPIFY</span>
                 <button style={{ background: 'none', border: 'none', color: 'var(--md-on-surface)', cursor: 'pointer' }} onClick={() => setShowShopifyModal(false)}>
                   <span className="material-symbols-rounded">close</span>
                 </button>
               </div>
 
               {shopifyStatus.connected ? (
-                <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-5">
+                  <div className="rs-flex rs-items-center rs-gap-3">
                     <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--rs-status-nominal, #4ade80)' }} />
-                    <span className="rs-card-meta" style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: 'var(--md-on-surface)' }}>
+                    <span className="rs-card-meta" style={{ margin: 0, fontSize: 'var(--rs-fs-body)', fontWeight: 900, color: 'var(--md-on-surface)' }}>
                       CONNECTED: {shopifyStatus.shop?.toUpperCase()}
                     </span>
                   </div>
-                  <div className="rs-card-meta" style={{ fontSize: '1rem' }}>Your store is currently linked. River is syncing orders and inventory telemetry in the background.</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginTop: 16 }}>
-                    <button className="rs-pill" style={{ color: '#f87171', fontWeight: 900, textDecoration: 'underline' }} onClick={() => { setShowShopifyModal(false); handleDisconnectShopify() }}>DISCONNECT</button>
-                    <div style={{ display: 'flex', gap: 12 }}>
+                  <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-body)' }}>Your store is currently linked. River is syncing orders and inventory telemetry in the background.</div>
+                  <div className="rs-flex rs-justify-between rs-gap-4 rs-mt-4">
+                    <button className="rs-pill" style={{ color: 'var(--rs-status-critical)', fontWeight: 900, textDecoration: 'underline' }} onClick={() => { setShowShopifyModal(false); handleDisconnectShopify() }}>DISCONNECT</button>
+                    <div className="rs-flex rs-gap-3">
                       <button className="rs-pill" onClick={() => setShowShopifyModal(false)}>CLOSE</button>
                       <button className="rs-btn-primary" onClick={() => setShopifyStatus(s => ({ ...s, connected: false }))}>RECONNECT</button>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div style={{ marginTop: 24 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="rs-mt-5">
+                  <div className="rs-flex rs-flex-col rs-gap-2">
                     <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>SHOP_DOMAIN</label>
                     <input
                       type="text"
-                      style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700, fontSize: '1rem' }}
+                      style={{ padding: '12px', border: '1px solid var(--md-outline-variant)', fontWeight: 700, fontSize: 'var(--rs-fs-body)' }}
                       placeholder="your-shop.myshopify.com"
                       value={shopifyDomain}
                       onChange={e => setShopifyDomain(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleConnectShopify()}
                     />
                   </div>
-                  <div className="rs-card-meta" style={{ marginTop: 16, fontSize: '0.9rem' }}>
+                  <div className="rs-card-meta" style={{ marginTop: 16, fontSize: 'var(--rs-fs-small)' }}>
                     Enter your Shopify store domain to initialize the OAuth handshake. This will enable real-time sales analytics and inventory syncing.
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 40 }}>

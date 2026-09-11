@@ -20,8 +20,8 @@ one is enforced in code rather than by convention.
 |---|---|---|
 | 1 | A unit never decides permission | `core/intent_router.evaluate_device_request` — every voice command, tapped card button and device-grid toggle goes through it |
 | 2 | Locks, garage doors and alarm disarm are **hard-denied** to units | `UNIT_DENIED_DOMAINS` + `_GARAGE_PATTERN`, refused at the router with a log line saying why |
-| 3 | Units never hold Home Assistant credentials | All device state and control flows through `api/routes/home.py`; camera snapshots are proxied, never handed over as HA URLs |
-| 4 | A unit never self-asserts identity | `core.vortex_units.resolve_owner` resolves the user from the pairing record; no route accepts a `user_id` from a device |
+| 3 | Units never hold Home Assistant credentials | All device state and control flows through `api/routes/domains/home.py`; camera snapshots are proxied, never handed over as HA URLs |
+| 4 | A unit never self-asserts identity | `core.vortex.units.resolve_owner` resolves the user from the pairing record; no route accepts a `user_id` from a device |
 | 5 | Second factors are entered on the touchscreen, never spoken | `POST /api/vortex/confirm` is HTTP-only and is never reachable from a transcript |
 | 6 | Camera consent is per purpose and lives on the unit | `camera_purpose_enabled` gates every request; an unconsented purpose answers **409**, distinct from a hardware fault, and is never retried around |
 | 7 | Anything pushed to a screenless unit must carry `speech` | `SurfacePublisher._for_unit` derives speech from the card text when a publisher forgets |
@@ -32,22 +32,22 @@ one is enforced in code rather than by convention.
 
 | Module | Responsibility |
 |---|---|
-| `core/vortex_security.py` | Token hashing and constant-time comparison, pairing lockout, pending confirmations, second-factor verification |
-| `core/vortex_units.py` | Unit profiles: owner, room, display, camera capability. Room → unit resolution |
-| `core/vortex_hub.py` | The live WebSocket registry and every server → unit push, including the amplitude envelope |
-| `core/vortex_surfaces.py` | Card validation, the per-unit card set, room-aware publishers and their withdrawals |
-| `core/vortex_replica.py` | The unit's local copy: devices, cameras, notifications, rooms, weather, wake word. Section-level versioning |
-| `core/vortex_actions.py` | Device control, card actions and confirmation redemption — all through the permission model |
-| `core/vortex_voice.py` | Utterance handling and TTS, plus the orb's presence vocabulary |
-| `core/vortex_vision.py` | Snapshot storage and retention, face identification |
-| `core/vortex_media.py` | Resolve-vs-play split, room targeting, transport routing |
-| `api/routes/vortex.py` | Everything device-facing |
+| `core/vortex/security.py` | Token hashing and constant-time comparison, pairing lockout, pending confirmations, second-factor verification |
+| `core/vortex/units.py` | Unit profiles: owner, room, display, camera capability. Room → unit resolution |
+| `core/vortex/hub.py` | The live WebSocket registry and every server → unit push, including the amplitude envelope |
+| `core/vortex/surfaces.py` | Card validation, the per-unit card set, room-aware publishers and their withdrawals |
+| `core/vortex/replica.py` | The unit's local copy: devices, cameras, notifications, rooms, weather, wake word. Section-level versioning |
+| `core/vortex/actions.py` | Device control, card actions and confirmation redemption — all through the permission model |
+| `core/vortex/voice.py` | Utterance handling and TTS, plus the orb's presence vocabulary |
+| `core/vortex/vision.py` | Snapshot storage and retention, face identification |
+| `core/vortex/media.py` | Resolve-vs-play split, room targeting, transport routing |
+| `api/routes/fleet/vortex.py` | Everything device-facing |
 
 ---
 
 ## Endpoints
 
-`api/routes/fleet.py` already owns `/register`, `/heartbeat`, `/telemetry`,
+`api/routes/fleet/fleet.py` already owns `/register`, `/heartbeat`, `/telemetry`,
 `/alerts` and the `/commands` poll under the same `/api/vortex` prefix. Those
 are unchanged; the poll is still the right channel for slow, offline-tolerant
 operations like `restart` and `run_scene`.
@@ -138,7 +138,7 @@ an authorisation. It returns 2xx only when the action was accepted — the unit
 leaves the card up on anything else, so a tap that did not land never looks
 like one that did.
 
-Ready-made publishers live in `core/vortex_surfaces.py`:
+Ready-made publishers live in `core/vortex/surfaces.py`:
 `publish_shopping_list`, `publish_reminder`, `publish_weather_alert`,
 `publish_doorbell`, `publish_motion_snapshot`, `publish_cooking_step`.
 
@@ -212,7 +212,7 @@ DELETE /api/culinary/sessions/{id}/timer/{tid}
 POST   /api/culinary/sessions/{id}/end
 ```
 
-`core/cooking_sessions.py` holds the logic; `api/routes/culinary_sessions.py`
+`core/cooking_sessions.py` holds the logic; `api/routes/domains/culinary_sessions.py`
 is the HTTP surface and `core/intent_router` routes the voice commands. All
 three share one code path, so "next" over the microphone and "Next" tapped on
 a wall panel are the same operation.
@@ -428,7 +428,7 @@ Two things from that work are kept, because they are worth having on their own:
   claimed it, so it never has to assert one. A column rather than a metadata
   key: the device `register` call replaces metadata wholesale, so an owner
   stored there would be wiped the first time a unit came back online.
-- **`unit_owner()`** in `api/routes/fleet.py` — the single place a
+- **`unit_owner()`** in `api/routes/fleet/fleet.py` — the single place a
   unit-authenticated request turns into a user. It returns `""` for an
   unclaimed unit rather than a fallback account, because acting as some
   default would be guessing whose memory and settings to use.

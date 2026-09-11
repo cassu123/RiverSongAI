@@ -99,7 +99,7 @@ export default function Schedules() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
         <h2>Schedules Manager</h2>
         <button className="rs-btn-primary" onClick={openCreate}>Create Schedule</button>
       </div>
@@ -109,12 +109,12 @@ export default function Schedules() {
           <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                <th style={{ padding: 10 }}>Enabled</th>
-                <th style={{ padding: 10 }}>Name</th>
-                <th style={{ padding: 10 }}>Program</th>
-                <th style={{ padding: 10 }}>Schedule</th>
-                <th style={{ padding: 10 }}>Next Run</th>
-                <th style={{ padding: 10 }}>Actions</th>
+                <th className="rs-p-3">Enabled</th>
+                <th className="rs-p-3">Name</th>
+                <th className="rs-p-3">Program</th>
+                <th className="rs-p-3">Schedule</th>
+                <th className="rs-p-3">Next Run</th>
+                <th className="rs-p-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -122,21 +122,21 @@ export default function Schedules() {
                 const p = programs.find(x => x.program_id === s.program_id)
                 return (
                   <tr key={s.schedule_id || s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: 10 }}>
+                    <td className="rs-p-3">
                       <input type="checkbox" checked={s.enabled} onChange={() => toggleEnabled(s)} />
                     </td>
-                    <td style={{ padding: 10 }}>{s.name}</td>
-                    <td style={{ padding: 10 }}>{p ? p.name : 'Unknown'}</td>
-                    <td style={{ padding: 10 }}>{renderCron(s.cron_utc)}<br/><small style={{color:'grey'}}>{s.timezone_display}</small></td>
-                    <td style={{ padding: 10 }}>{s.next_run ? new Date(s.next_run + 'Z').toLocaleString() : 'Pending'}</td>
-                    <td style={{ padding: 10 }}>
+                    <td className="rs-p-3">{s.name}</td>
+                    <td className="rs-p-3">{p ? p.name : 'Unknown'}</td>
+                    <td className="rs-p-3">{renderCron(s.cron_utc)}<br/><small style={{color: 'var(--text-muted)'}}>{s.timezone_display}</small></td>
+                    <td className="rs-p-3">{s.next_run ? new Date(s.next_run + 'Z').toLocaleString() : 'Pending'}</td>
+                    <td className="rs-p-3">
                       <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(s)}>Edit</button>
                       <button className="rs-btn-ghost" onClick={() => handleDelete(s.schedule_id || s.id)}>Delete</button>
                     </td>
                   </tr>
                 )
               })}
-              {schedules.length === 0 && <tr><td colSpan="6" style={{ padding: 10, textAlign: 'center' }}>No schedules found</td></tr>}
+              {schedules.length === 0 && <tr><td colSpan="6" className="rs-p-3 rs-text-center">No schedules found</td></tr>}
             </tbody>
           </table>
         </div>
@@ -150,11 +150,11 @@ export default function Schedules() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginTop: 16 }}>
               <div>
                 <label>Name</label><br/>
-                <input type="text" className="rs-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%' }} />
+                <input type="text" className="rs-input rs-w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
               <div>
                 <label>Program</label><br/>
-                <select className="rs-input" value={formData.program_id} onChange={e => setFormData({...formData, program_id: e.target.value})} style={{ width: '100%' }}>
+                <select className="rs-input rs-w-full" value={formData.program_id} onChange={e => setFormData({...formData, program_id: e.target.value})}>
                   <option value="">Select Program...</option>
                   {programs.map(p => <option key={p.program_id} value={p.program_id}>{p.name}</option>)}
                 </select>
@@ -162,18 +162,18 @@ export default function Schedules() {
 
               <div>
                 <label>Cron Expression (e.g., 0 7 * * * for 7 AM)</label><br/>
-                <input type="text" className="rs-input" value={formData.cron_utc} onChange={e => setFormData({...formData, cron_utc: e.target.value})} style={{ width: '100%' }} />
+                <input type="text" className="rs-input rs-w-full" value={formData.cron_utc} onChange={e => setFormData({...formData, cron_utc: e.target.value})} />
                 <div style={{ marginTop: 5, color: '#00d4b2', fontSize: '0.9em' }}>{renderCron(formData.cron_utc)}</div>
               </div>
 
               <div>
                 <label>Timezone</label><br/>
-                <input type="text" className="rs-input" value={formData.timezone_display} onChange={e => setFormData({...formData, timezone_display: e.target.value})} style={{ width: '100%' }} />
+                <input type="text" className="rs-input rs-w-full" value={formData.timezone_display} onChange={e => setFormData({...formData, timezone_display: e.target.value})} />
               </div>
 
               <div>
                 <label>Missed Run Policy</label><br/>
-                <select className="rs-input" value={formData.missed_run_policy} onChange={e => setFormData({...formData, missed_run_policy: e.target.value})} style={{ width: '100%' }}>
+                <select className="rs-input rs-w-full" value={formData.missed_run_policy} onChange={e => setFormData({...formData, missed_run_policy: e.target.value})}>
                   <option value="skip">Skip</option>
                   <option value="run_once_on_recovery">Run Once On Recovery</option>
                 </select>

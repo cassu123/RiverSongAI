@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@context/AuthContext'
 import Sheet from '../chrome/Sheet'
 
 export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
@@ -114,8 +114,8 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
         {/* Libby */}
         <div className="rs-card">
           <div className="rs-card-inner">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <span className="material-symbols-rounded" style={{color: '#00aaff', fontSize: '2rem'}}>local_library</span>
+            <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
+              <span className="material-symbols-rounded" style={{color: 'var(--md-primary)', fontSize: '2rem'}}>local_library</span>
               <div>
                 <div style={{fontWeight: 700}}>Libby / OverDrive</div>
                 <div className="rs-card-meta">Live loans and holds telemetry</div>
@@ -123,7 +123,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             </div>
             {connections.libby ? (
                <div>
-                 <div className="rs-status-strip" style={{marginBottom: 12}}>
+                 <div className="rs-status-strip rs-mb-3">
                     <span className="rs-status-dot" style={{ background: '#4ade80' }} />
                     <span>CONNECTED</span>
                  </div>
@@ -132,8 +132,8 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             ) : (
                <div>
                  {libbyStart ? (
-                   <div style={{display: 'flex', gap: 8, marginTop: 12}}>
-                     <input className="rs-input" style={{flex: 1}} placeholder="8-Digit Code" value={libbyCode} onChange={e => setLibbyCode(e.target.value)} />
+                   <div className="rs-flex rs-gap-2 rs-mt-3">
+                     <input className="rs-input rs-grow" placeholder="8-Digit Code" value={libbyCode} onChange={e => setLibbyCode(e.target.value)} />
                      <button className="rs-pill is-active" onClick={handleLibbyConnect}>PAIR</button>
                    </div>
                  ) : (
@@ -147,7 +147,7 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
         {/* Google Play */}
         <div className="rs-card">
           <div className="rs-card-inner">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
               <span className="material-symbols-rounded" style={{color: '#4285f4', fontSize: '2rem'}}>play_arrow</span>
               <div>
                 <div style={{fontWeight: 700}}>Google Play Books</div>
@@ -156,11 +156,11 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             </div>
             {connections.google_play ? (
                <div>
-                 <div className="rs-status-strip" style={{marginBottom: 12}}>
+                 <div className="rs-status-strip rs-mb-3">
                     <span className="rs-status-dot" style={{ background: '#4ade80' }} />
                     <span>CONNECTED</span>
                  </div>
-                 <div style={{display: 'flex', gap: 8}}>
+                 <div className="rs-flex rs-gap-2">
                    <button className="rs-pill btn-danger" onClick={handleGoogleDisconnect}>DISCONNECT</button>
                    <button className="rs-pill is-active" onClick={async () => {
                      await apiFetch('/sync/google_play', {method: 'POST'})
@@ -177,15 +177,15 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
         {/* CSV Import */}
         <div className="rs-card">
           <div className="rs-card-inner">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
               <span className="material-symbols-rounded" style={{color: 'var(--text-dim)', fontSize: '2rem'}}>upload_file</span>
               <div>
                 <div style={{fontWeight: 700}}>Legacy Archive Import</div>
                 <div className="rs-card-meta">Goodreads, Kobo, or Play Books CSV</div>
               </div>
             </div>
-            <div style={{display: 'flex', gap: 8}}>
-              <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} style={{fontSize: '0.8rem', flex: 1}} />
+            <div className="rs-flex rs-gap-2">
+              <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} style={{fontSize: 'var(--rs-fs-tiny)', flex: 1}} />
               <button className="rs-pill is-active" disabled={!csvFile} onClick={handleCsvImport}>IMPORT</button>
             </div>
           </div>

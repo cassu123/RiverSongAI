@@ -109,16 +109,16 @@ export default function ChatToolsSection({ data, token, onChanged }) {
 
   return (
     <Section title="CHAT & VOICE CAPABILITIES MATRIX">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="rs-flex rs-flex-col rs-gap-4">
         {/* Header Description & Metrics */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <p className="rs-card-meta" style={{ margin: 0 }}>
+        <div className="rs-flex rs-flex-wrap rs-items-center rs-justify-between rs-gap-3">
+          <p className="rs-card-meta rs-m-0">
             Configure which skills, integrations, and tools River can access during voice and chat sessions.
             {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="rs-flex rs-items-center rs-gap-2">
             <span style={{
-              fontSize: '0.75rem',
+              fontSize: 'var(--rs-fs-micro)',
               fontWeight: 700,
               padding: '3px 10px',
               borderRadius: 12,
@@ -130,7 +130,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
             </span>
             {disabledCount > 0 && (
               <span style={{
-                fontSize: '0.75rem',
+                fontSize: 'var(--rs-fs-micro)',
                 fontWeight: 700,
                 padding: '3px 10px',
                 borderRadius: 12,
@@ -145,7 +145,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {/* Search & Bulk Action Bar */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 4 }}>
+        <div className="rs-flex rs-flex-wrap rs-items-center rs-gap-3 rs-mt-1">
           <div style={{
             flex: 1,
             minWidth: 220,
@@ -166,7 +166,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
               style={{
                 all: 'unset',
                 width: '100%',
-                fontSize: '0.85rem',
+                fontSize: 'var(--rs-fs-tiny)',
                 color: 'var(--md-on-surface)'
               }}
             />
@@ -180,7 +180,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
           <button
             type="button"
             className="rs-pill"
-            style={{ fontSize: '0.78rem', padding: '6px 12px' }}
+            style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 12px' }}
             onClick={() => handleToggleAll(true)}
           >
             ENABLE ALL
@@ -188,7 +188,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
           <button
             type="button"
             className="rs-pill"
-            style={{ fontSize: '0.78rem', padding: '6px 12px' }}
+            style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 12px' }}
             onClick={() => handleToggleAll(false)}
           >
             DISABLE ALL
@@ -203,7 +203,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
               type="button"
               onClick={() => setSelectedCategory(cat)}
               className={`rs-pill ${selectedCategory === cat ? 'is-active' : ''}`}
-              style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+              style={{ fontSize: 'var(--rs-fs-micro)', padding: '4px 10px' }}
             >
               {cat}
             </button>
@@ -231,17 +231,17 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="rs-flex rs-items-center rs-justify-between rs-mb-2">
+                    <div className="rs-flex rs-items-center rs-gap-2">
                       <span className="material-symbols-rounded" style={{ fontSize: '1.25rem', color: isEnabled ? 'var(--primary)' : 'var(--md-outline)' }}>
                         {tool.icon || 'handyman'}
                       </span>
-                      <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--md-on-surface)' }}>
+                      <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)', color: 'var(--md-on-surface)' }}>
                         {tool.label}
                       </span>
                     </div>
                     <span style={{
-                      fontSize: '0.68rem',
+                      fontSize: 'var(--rs-fs-nano)',
                       fontFamily: 'var(--font-mono, monospace)',
                       padding: '2px 6px',
                       borderRadius: 4,
@@ -253,7 +253,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                   </div>
 
                   <p style={{
-                    fontSize: '0.78rem',
+                    fontSize: 'var(--rs-fs-micro)',
                     color: 'var(--md-on-surface-variant)',
                     margin: 0,
                     lineHeight: 1.35,
@@ -274,7 +274,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                   borderTop: '1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)'
                 }}>
                   <span style={{
-                    fontSize: '0.72rem',
+                    fontSize: 'var(--rs-fs-micro)',
                     fontFamily: 'var(--font-mono, monospace)',
                     color: 'var(--md-outline)',
                     userSelect: 'all'
@@ -293,7 +293,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {filteredTools.length === 0 && (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--md-outline)', fontSize: '0.85rem' }}>
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--md-outline)', fontSize: 'var(--rs-fs-tiny)' }}>
             No tools found matching "{search}".
           </div>
         )}

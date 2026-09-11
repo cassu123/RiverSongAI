@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import RiverStatusBox from '../components/RiverStatusBox.jsx'
-import HealthCard from '../components/HealthCard.jsx'
+import RiverStatusBox from '@components/RiverStatusBox.jsx'
+import HealthCard from '@components/HealthCard.jsx'
 // PulseWidget is not deleted, it is relocated: its NEWS and MARKETS rows belong
 // on the Feeds page beside NewsTab and StocksTab, which already serve the same
 // data. It is now the leading PULSE tab there (FeedTabsContainer.jsx).
-import DaemonHealthWidget from '../components/DaemonHealthWidget.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
+import DaemonHealthWidget from '@components/DaemonHealthWidget.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
 
 /**
  * DashboardPage — Phase 3 Refactor
@@ -60,7 +60,7 @@ function NimTelemetry({ token }) {
   return (
     <div>
       <div className="rs-card-label">NIM TRAFFIC</div>
-      <div className="rs-card-value">{rpm !== null ? rpm : '—'}<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>RPM</small></div>
+      <div className="rs-card-value">{rpm !== null ? rpm : '—'}<small style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginLeft: 4 }}>RPM</small></div>
       <div className="rs-card-meta">Global request rate</div>
     </div>
   )
@@ -212,12 +212,12 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                 </div>
                 <div>
                   <div className="rs-card-label">NEURAL LATENCY</div>
-                  <div className="rs-card-value">12<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>MS</small></div>
+                  <div className="rs-card-value">12<small style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginLeft: 4 }}>MS</small></div>
                   <div className="rs-card-meta">Link speed</div>
                 </div>
                 <div>
                   <div className="rs-card-label">SECTOR SYNC</div>
-                  <div className="rs-card-value">1.2<small style={{ fontSize: '0.6rem', opacity: 0.5, marginLeft: 4 }}>GB/S</small></div>
+                  <div className="rs-card-value">1.2<small style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginLeft: 4 }}>GB/S</small></div>
                   <div className="rs-card-meta">Data throughput</div>
                 </div>
                 <NimTelemetry token={token} />
@@ -227,7 +227,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             {expandedCard === 'telemetry' && (
               <div className="rs-card-inner animate-fade-in">
                 <div className="rs-card-label">INTEGRATED COGNITIVE SKILLS & TOOLS</div>
-                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                <div className="rs-archives-grid rs-mt-4">
                   <div className="rs-archive-item">
                     <div className="rs-card-label">GOOGLE TASKS</div>
                     <div className="rs-health-value">ACTIVE</div>
@@ -281,7 +281,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             {expandedCard === 'pulse' && (
               <div className="rs-card-inner animate-fade-in">
                 <div className="rs-card-label">DETAILED ENVIRONMENT TELEMETRY</div>
-                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                <div className="rs-archives-grid rs-mt-4">
                   <div className="rs-archive-item">
                     <div className="rs-card-label">ACTIVE ROOMS</div>
                     <div className="rs-health-value">
@@ -329,7 +329,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
           <div className="rs-card-inner">
             <div className="rs-card-head">
               <span className="rs-card-label">SYSTEM INTEGRITY</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="rs-flex rs-items-center rs-gap-2">
                 <span className="rs-status-dot" style={{ color: statusOk ? 'var(--rs-status-nominal)' : 'var(--rs-status-warning)' }} />
                 <span className="rs-card-label" style={{ color: statusOk ? 'var(--rs-status-nominal)' : 'var(--rs-status-warning)', opacity: 1 }}>
                   {statusOk ? 'NOMINAL' : 'DEGRADED'}
@@ -388,7 +388,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             {expandedCard === 'archives' && (
               <div className="rs-card-inner animate-fade-in">
                 <div className="rs-card-label">RECENT KNOWLEDGE REVELATIONS & MEMORY STACKS</div>
-                <div className="rs-archives-grid" style={{ marginTop: 16 }}>
+                <div className="rs-archives-grid rs-mt-4">
                   {stats?.memory?.recent_facts?.length > 0 ? (
                     stats.memory.recent_facts.map((fact, idx) => (
                       <div key={`fact-${idx}-${String(fact).slice(0, 32)}`} className="rs-archive-item">

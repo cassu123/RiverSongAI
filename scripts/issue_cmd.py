@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, os.path.abspath("."))
 
 from providers.memory.sqlite_store import SQLiteStore
-from api.routes.vector_fleet import _get_command_event
+from api.routes.fleet.vector_fleet import _get_command_event
 
 async def main():
     store = SQLiteStore()

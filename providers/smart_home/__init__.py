@@ -15,7 +15,7 @@
 #   1. Generate a long-lived access token in HA:
 #      Profile -> Security -> Long-lived access tokens -> Create token.
 #   2. Set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN in .env.
-#   3. Copy config_files/device_registry.example.json to
+#   3. Copy config/templates/device_registry.example.json to
 #      config_files/device_registry.json and fill in your entity IDs.
 #      Entity IDs are visible in HA: Settings -> Devices & Services -> Entities.
 #

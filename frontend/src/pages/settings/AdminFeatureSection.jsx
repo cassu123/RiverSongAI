@@ -41,7 +41,7 @@ export default function AdminFeatureSection({ featureVis, token, onChanged }) {
 
   return (
     <Section title="FEATURE VISIBILITY">
-      <p className="rs-card-meta" style={{ marginBottom: 16 }}>
+      <p className="rs-card-meta rs-mb-4">
         Hide features globally. Admin always sees everything.
         {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
       </p>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuthHeaders, API_BASE } from '../utils/useApi.js'
-import FlagGatedPage from '../components/FlagGatedPage.jsx'
-import { useBreakpoint } from '../hooks/useBreakpoint'
+import FlagGatedPage from '@components/FlagGatedPage.jsx'
+import { useBreakpoint } from '@hooks/useBreakpoint'
 
 /**
  * DocumentsPage — Q2#6.
@@ -168,7 +168,7 @@ export default function DocumentsPage({ setAction }) {
 
   useEffect(() => {
     setAction(
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div className="rs-flex rs-gap-2 rs-items-center">
         <button className="rs-pill" onClick={createDoc}>+ NEW</button>
         {saving && <span className="rs-card-label" style={{ opacity: 0.55 }}>SAVING…</span>}
       </div>
@@ -194,8 +194,8 @@ export default function DocumentsPage({ setAction }) {
     <div className="rs-foyer animate-fade-in" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'minmax(220px, 280px) 1fr', gap: 16, alignItems: 'stretch' }}>
       {/* Left rail — document list */}
       <div className="rs-card" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }}>
-        <div className="rs-card-label" style={{ marginBottom: 6 }}>DOCUMENTS · {docs.length}</div>
-        {docs.length === 0 && <div className="rs-card-meta" style={{ padding: 12 }}>Nothing yet. Tap + NEW.</div>}
+        <div className="rs-card-label rs-mb-2">DOCUMENTS · {docs.length}</div>
+        {docs.length === 0 && <div className="rs-card-meta rs-p-3">Nothing yet. Tap + NEW.</div>}
         {docs.map(d => (
           <button
             key={d.id}
@@ -203,24 +203,24 @@ export default function DocumentsPage({ setAction }) {
             onClick={() => openDoc(d.id)}
             style={{ textAlign: 'left', padding: '8px 10px' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
-              {d.pinned && <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>★</span>}
-              <span style={{ fontWeight: 700, fontSize: '0.78rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div className="rs-flex rs-items-center rs-gap-2 rs-w-full">
+              {d.pinned && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>★</span>}
+              <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {d.title || 'Untitled'}
               </span>
-              <span className="rs-card-label" style={{ fontSize: '0.55rem', opacity: 0.5 }}>{d.kind?.toUpperCase()}</span>
+              <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{d.kind?.toUpperCase()}</span>
             </div>
           </button>
         ))}
       </div>
 
       {/* Editor */}
-      <div className="rs-card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="rs-card rs-p-4 rs-flex rs-flex-col rs-gap-3">
         {!activeDoc ? (
-          <div className="rs-card-meta" style={{ padding: 24 }}>Select a document or create a new one.</div>
+          <div className="rs-card-meta rs-p-5">Select a document or create a new one.</div>
         ) : (
           <>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div className="rs-flex rs-gap-3 rs-items-center">
               <input
                 type="text"
                 value={activeDoc.title}
@@ -233,7 +233,7 @@ export default function DocumentsPage({ setAction }) {
                   borderRadius: 8,
                   padding: '10px 12px',
                   color: 'var(--md-on-surface)',
-                  fontSize: '0.95rem',
+                  fontSize: 'var(--rs-fs-small)',
                   fontWeight: 700,
                   outline: 'none',
                   fontFamily: 'inherit',
@@ -248,7 +248,7 @@ export default function DocumentsPage({ setAction }) {
                   borderRadius: 8,
                   padding: '9px 10px',
                   color: 'var(--md-on-surface)',
-                  fontSize: '0.7rem',
+                  fontSize: 'var(--rs-fs-nano)',
                   fontWeight: 700,
                   letterSpacing: '0.08em',
                   outline: 'none',
@@ -279,14 +279,14 @@ export default function DocumentsPage({ setAction }) {
                 fontFamily: activeDoc.kind === 'markdown' || activeDoc.kind === 'csv' || activeDoc.kind === 'html'
                   ? 'ui-monospace, SFMono-Regular, Menlo, monospace'
                   : 'inherit',
-                fontSize: '0.88rem',
+                fontSize: 'var(--rs-fs-small)',
                 lineHeight: 1.55,
                 outline: 'none',
                 resize: 'vertical',
               }}
             />
 
-            {error && <div style={{ color: 'var(--md-error)', fontSize: '0.75rem' }}>{error.toUpperCase()}</div>}
+            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
           </>
         )}
       </div>

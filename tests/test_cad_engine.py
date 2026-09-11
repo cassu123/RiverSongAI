@@ -18,7 +18,7 @@ from providers.cad.cad_engine import (
 )
 from core.auth import create_access_token
 from core.sandbox import SandboxRunner, get_sandbox_runner
-from core.tools import execute_tool
+from core.tools.registry import execute_tool
 
 # OpenSCAD is a system binary and trimesh an optional package; neither is
 # installed in CI. Tests that assert a real compiled mesh need both, and

@@ -37,10 +37,10 @@ export default function MemoryHubPage({ setAction, initialTab }) {
   return (
     <div className="rs-memory-hub animate-fade-in">
       <div
-        className="rs-memory-hub-tabs"
+        className="rs-memory-hub-tabs rs-flex rs-gap-2 rs-mb-5 rs-flex-wrap"
         role="tablist"
         aria-label="Memory sections"
-        style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}
+       
       >
         {TABS.map(t => (
           <button

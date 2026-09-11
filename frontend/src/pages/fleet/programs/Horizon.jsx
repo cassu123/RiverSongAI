@@ -13,8 +13,8 @@ const COMMANDS = [
 
 function Panel({ title, children, action }) {
   return (
-    <div className="rs-card" style={{ padding: 16, marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+    <div className="rs-card rs-p-4 rs-mb-4">
+      <div className="rs-flex rs-items-center rs-justify-between rs-mb-3">
         <div className="rs-card-label">{title}</div>{action}
       </div>
       {children}
@@ -28,14 +28,14 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, commands, refresh
   return (
     <div>
       <Panel title={`${unit.name || unit.unit_id} · ${(t.mode || 'idle').toUpperCase()}`}>
-        <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div className="rs-flex rs-gap-6 rs-flex-wrap rs-mb-4">
           <MetricStat label="ALTITUDE" value={t.altitude_m ?? 0} unit="m" accent="var(--primary)" />
           <MetricStat label="SPEED" value={t.speed_mps ?? 0} unit="m/s" />
           <MetricStat label="MODE" value={t.mode || 'idle'} />
         </div>
         <BatteryBar pct={t.battery_pct} />
-        <div style={{ marginTop: 14 }}>
-          <div className="rs-card-label" style={{ fontSize: '0.58rem', marginBottom: 4 }}>ALTITUDE (m)</div>
+        <div className="rs-mt-4">
+          <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>ALTITUDE (m)</div>
           <Sparkline data={telemetry} field="altitude_m" color="var(--primary)" />
         </div>
       </Panel>
@@ -52,9 +52,9 @@ function Dashboard({ unit, sendCmd, telemetry, latest, alerts, commands, refresh
 
       <Panel title="FLIGHT LOG">
         {commands?.length ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="rs-flex rs-flex-col rs-gap-1">
             {commands.slice(0, 8).map(c => (
-              <div key={c.command_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+              <div key={c.command_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--rs-fs-micro)' }}>
                 <span>{c.payload?.command}</span>
                 <span style={{ opacity: 0.55 }}>{c.status} · {new Date(c.issued_at).toLocaleTimeString()}</span>
               </div>

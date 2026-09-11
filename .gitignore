@@ -54,7 +54,8 @@ token.pickle
 
 # Device registry (user-specific entity IDs -- commit only the .example version)
 config_files/device_registry.json
-!config_files/device_registry.example.json
+config/device_registry.json
+!config/templates/device_registry.example.json
 
 
 # -----------------------------------------------------------------------------

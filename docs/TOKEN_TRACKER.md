@@ -70,7 +70,7 @@ inside `providers/llm/ollama.py`, `claude_api.py`, `openai_api.py`,
 `gemini.py`, `mistral_api.py`, `bedrock.py`, `nvidia_nim.py`.
 
 The HTTP surface for reading the data lives in
-`api/routes/usage.py`.
+`api/routes/system/usage.py`.
 
 ---
 

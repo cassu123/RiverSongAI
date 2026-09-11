@@ -204,6 +204,6 @@ class TestRouteSurface:
         assert getattr(get_settings(), "gmail_triage_enabled", True) is False
 
     def test_triage_route_registered(self):
-        from api.routes import google as g
+        from api.routes.feeds import google as g
         paths = {r.path for r in g.router.routes}
         assert "/api/google/gmail/triage" in paths

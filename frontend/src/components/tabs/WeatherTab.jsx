@@ -88,7 +88,7 @@ function LocationSearch({ onSelect, autoFocus = true }) {
         placeholder="Search city or place…"
         value={q}
         onChange={e => setQ(e.target.value)}
-        style={{ width: '100%', fontSize: '0.82rem', boxSizing: 'border-box' }}
+        style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)', boxSizing: 'border-box' }}
         autoFocus={autoFocus}
       />
       {(results.length > 0 || searching) && (
@@ -99,7 +99,7 @@ function LocationSearch({ onSelect, autoFocus = true }) {
           borderRadius: 8, marginTop: 4, overflow: 'hidden',
         }}>
           {searching && (
-            <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: '0.72rem' }}>Searching…</div>
+            <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: 'var(--rs-fs-micro)' }}>Searching…</div>
           )}
           {results.map((r, i) => (
             <button key={i} onClick={() => {
@@ -110,7 +110,7 @@ function LocationSearch({ onSelect, autoFocus = true }) {
               display: 'block', width: '100%', textAlign: 'left',
               padding: '9px 14px', background: 'none', border: 'none',
               borderTop: i > 0 ? '1px solid var(--md-outline-variant)' : 'none',
-              cursor: 'pointer', fontSize: '0.75rem',
+              cursor: 'pointer', fontSize: 'var(--rs-fs-micro)',
             }}>
               {r.display_name}
             </button>
@@ -233,7 +233,7 @@ export default function WeatherTab({ token, active }) {
         <SettingsRow label="LOCATION">
           <LocationSearch onSelect={handleLocationSelect} />
           {settings?.location_query && (
-            <div className="rs-card-meta" style={{ fontSize: '0.62rem', marginTop: 6, opacity: 0.6 }}>
+            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 6 }}>
               {settings.location_query.split(',').slice(0, 3).join(',')}
             </div>
           )}
@@ -265,8 +265,8 @@ export default function WeatherTab({ token, active }) {
       {noLocation && (
         <div style={{ padding: '40px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>location_off</span>
-          <div className="rs-card-label" style={{ marginBottom: 6 }}>NO LOCATION SET</div>
-          <div className="rs-card-meta" style={{ marginBottom: 20 }}>Search for your city to get started.</div>
+          <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
+          <div className="rs-card-meta rs-mb-5">Search for your city to get started.</div>
           <div style={{ maxWidth: 380, margin: '0 auto' }}>
             <LocationSearch onSelect={handleLocationSelect} />
           </div>
@@ -277,7 +277,7 @@ export default function WeatherTab({ token, active }) {
       {error && error !== 'location' && (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
           <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>cloud_off</span>
-          <div className="rs-card-meta" style={{ marginBottom: 12 }}>{error}</div>
+          <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchWeather}>RETRY</button>
         </div>
       )}
@@ -288,7 +288,7 @@ export default function WeatherTab({ token, active }) {
         <>
           {/* Severe alerts */}
           {alertsEnabled && alerts.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="rs-flex rs-flex-col rs-gap-2">
               {alerts.slice(0, 2).map(a => (
                 <div key={a.id} style={{
                   background: (ALERT_COLORS[a.severity] || '#88888822') + '22',
@@ -298,8 +298,8 @@ export default function WeatherTab({ token, active }) {
                 }}>
                   <span className="material-symbols-rounded" style={{ color: ALERT_COLORS[a.severity], flexShrink: 0, marginTop: 2 }}>warning</span>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.78rem', marginBottom: 2, color: ALERT_COLORS[a.severity] }}>{a.event}</div>
-                    <div className="rs-card-meta" style={{ fontSize: '0.75rem' }}>{a.headline}</div>
+                    <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', marginBottom: 2, color: ALERT_COLORS[a.severity] }}>{a.event}</div>
+                    <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>{a.headline}</div>
                   </div>
                 </div>
               ))}
@@ -333,7 +333,7 @@ function HeroCard({ current, today, location_name, unit }) {
   const lo = today?.temp_min != null ? Math.round(today.temp_min) : null
   return (
     <div className="rs-wx-panel is-hero">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+      <div className="rs-flex rs-items-center rs-gap-5 rs-flex-wrap">
         <span
           className="material-symbols-rounded"
           style={{
@@ -353,13 +353,13 @@ function HeroCard({ current, today, location_name, unit }) {
           }}>
             {temp != null ? temp : '--'}{unit || '°'}
           </div>
-          <div style={{ fontWeight: 700, fontSize: '1.1rem', marginTop: 6, color: 'var(--md-on-surface)' }}>
+          <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-body)', marginTop: 6, color: 'var(--md-on-surface)' }}>
             {current.condition || '—'}
           </div>
-          <div className="rs-card-meta" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', marginTop: 4 }}>
             {location_name || ''}
           </div>
-          <div style={{ display: 'flex', gap: 14, marginTop: 10, alignItems: 'center', fontSize: '0.78rem' }}>
+          <div style={{ display: 'flex', gap: 14, marginTop: 10, alignItems: 'center', fontSize: 'var(--rs-fs-micro)' }}>
             {feels != null && (
               <span className="rs-card-meta">Feels {feels}{unit || '°'}</span>
             )}
@@ -380,21 +380,21 @@ function HeroCard({ current, today, location_name, unit }) {
 function DetailCard({ label, value, sub, color, badge }) {
   return (
     <div className="rs-wx-panel is-detail">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div className="rs-card-label" style={{ fontSize: '0.52rem', opacity: 0.5, marginBottom: 4 }}>{label}</div>
+      <div className="rs-flex rs-justify-between rs-items-start">
+        <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>{label}</div>
         {badge && (
-          <div style={{ fontSize: '0.45rem', padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 4, opacity: 0.7, whiteSpace: 'nowrap' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 4, whiteSpace: 'nowrap' }}>
             {badge}
           </div>
         )}
       </div>
       <div style={{
-        fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '1.15rem', color: color || 'var(--md-on-surface)', whiteSpace: 'nowrap',
+        fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 'var(--rs-fs-body)', color: color || 'var(--md-on-surface)', whiteSpace: 'nowrap',
       }}>
         {value}
       </div>
       {sub && (
-        <div className="rs-card-meta" style={{ fontSize: '0.62rem', opacity: 0.55, marginTop: 2 }}>{sub}</div>
+        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 2 }}>{sub}</div>
       )}
     </div>
   )
@@ -465,7 +465,7 @@ function HourlyStrip({ hourly, unit }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.55, marginBottom: 12 }}>NEXT 24 HOURS</div>
+      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>NEXT 24 HOURS</div>
       <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 4 }}>
         <div style={{ width: W, position: 'relative' }}>
           {/* Curve overlay */}
@@ -490,11 +490,11 @@ function HourlyStrip({ hourly, unit }) {
           </svg>
 
           {/* Temp labels under curve */}
-          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+          <div className="rs-flex rs-items-start">
             {hourly.map((h, i) => (
               <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
                 <div style={{
-                  fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.78rem',
+                  fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-micro)',
                   color: 'var(--md-on-surface)',
                 }}>
                   {h.temperature != null ? Math.round(h.temperature) : '--'}°
@@ -504,7 +504,7 @@ function HourlyStrip({ hourly, unit }) {
           </div>
 
           {/* Icon row */}
-          <div style={{ display: 'flex', marginTop: 6 }}>
+          <div className="rs-flex rs-mt-2">
             {hourly.map((h, i) => (
               <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
                 <span
@@ -541,7 +541,7 @@ function HourlyStrip({ hourly, unit }) {
             {hourly.map((h, i) => (
               <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
                 <span style={{
-                  fontSize: '0.52rem', fontWeight: 600,
+                  fontSize: 'var(--rs-fs-nano)', fontWeight: 600,
                   color: h.precip_prob > 0 ? PRECIP_COLOR : 'transparent',
                 }}>
                   {h.precip_prob > 0 ? `${h.precip_prob}%` : '·'}
@@ -551,10 +551,10 @@ function HourlyStrip({ hourly, unit }) {
           </div>
 
           {/* Time labels */}
-          <div style={{ display: 'flex', marginTop: 4 }}>
+          <div className="rs-flex rs-mt-1">
             {hourly.map((h, i) => (
               <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
-                <span className="rs-card-label" style={{ fontSize: '0.5rem', opacity: i === 0 ? 0.9 : 0.45 }}>
+                <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: i === 0 ? 0.9 : 0.45 }}>
                   {i === 0 ? 'NOW' : fmtHour(h.time)}
                 </span>
               </div>
@@ -582,8 +582,8 @@ function DailyForecast({ daily, unit }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.55, marginBottom: 12 }}>7-DAY FORECAST</div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>7-DAY FORECAST</div>
+      <div className="rs-flex rs-flex-col">
         {daily.map((d, i) => {
           const minPct = d.temp_min != null ? ((d.temp_min - weekMin) / weekRange) * 100 : 0
           const maxPct = d.temp_max != null ? ((d.temp_max - weekMin) / weekRange) * 100 : 0
@@ -596,13 +596,13 @@ function DailyForecast({ daily, unit }) {
             }}>
               {/* Day labels are short and must never split — "TODAY" was
                   breaking to "TODA / Y" once the column tightened. */}
-              <span style={{ fontWeight: 800, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+              <span style={{ fontWeight: 800, fontSize: 'var(--rs-fs-micro)', whiteSpace: 'nowrap' }}>
                 {i === 0 ? 'TODAY' : fmtDay(d.date)}
               </span>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', color: 'var(--primary)', textAlign: 'center' }}>
                 {wmoIcon(d.weathercode)}
               </span>
-              <span className="rs-card-meta" style={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {d.condition || '—'}
               </span>
               {/* Range bar */}
@@ -616,7 +616,7 @@ function DailyForecast({ daily, unit }) {
                   borderRadius: 3,
                 }} />
               </div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 700, textAlign: 'right' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-micro)', fontWeight: 700, textAlign: 'right' }}>
                 <span style={{ opacity: 0.5 }}>{d.temp_min != null ? Math.round(d.temp_min) : '--'}°</span>
                 <span style={{ margin: '0 4px', opacity: 0.3 }}>·</span>
                 {d.temp_max != null ? Math.round(d.temp_max) : '--'}°
@@ -655,12 +655,12 @@ function SunCard({ sunrise, sunset }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ fontSize: '0.56rem', opacity: 0.55, marginBottom: 12 }}>SUN</div>
+      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>SUN</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap' }}>
         <div style={{ textAlign: 'center', minWidth: 60 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(78% 0.16 75)' }}>wb_twilight</span>
-          <div className="rs-card-label" style={{ fontSize: '0.55rem', opacity: 0.5, marginTop: 4 }}>SUNRISE</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.85rem' }}>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 4 }}>SUNRISE</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>
             {fmtClockTime(sunrise)}
           </div>
         </div>
@@ -675,8 +675,8 @@ function SunCard({ sunrise, sunset }) {
         </svg>
         <div style={{ textAlign: 'center', minWidth: 60 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(60% 0.18 30)' }}>bedtime</span>
-          <div className="rs-card-label" style={{ fontSize: '0.55rem', opacity: 0.5, marginTop: 4 }}>SUNSET</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.85rem' }}>
+          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 4 }}>SUNSET</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>
             {fmtClockTime(sunset)}
           </div>
         </div>
@@ -763,19 +763,19 @@ function WeatherSkeleton() {
     <div style={{ height: h, width: w, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
   )
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+    <div className="rs-flex rs-flex-col rs-gap-5">
+      <div className="rs-flex rs-gap-4 rs-items-center">
         <div style={{ width: 80, height: 80, borderRadius: 16, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="rs-flex rs-flex-col rs-gap-3">
           {bar('120px', 50)}{bar('160px', 12)}{bar('100px', 10)}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div className="rs-flex rs-gap-3">
         {[0, 1, 2, 3].map(i => (
           <div key={i} style={{ height: 60, flex: 1, borderRadius: 12, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div className="rs-flex rs-gap-2">
         {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
           <div key={i} style={{ width: 52, height: 110, borderRadius: 8, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
         ))}

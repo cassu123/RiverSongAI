@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@context/AuthContext'
 
 /**
  * RoutinesPage — Phase 3 Rewrite
@@ -90,7 +90,7 @@ export default function RoutinesPage({ setAction }) {
               </div>
               <div className="rs-card-value">
                 {r.name}
-                <span className={`rs-badge ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 8, fontSize: '0.6rem' }}>
+                <span className={`rs-badge ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 8, fontSize: 'var(--rs-fs-nano)' }}>
                   {r.severity || 'info'}
                 </span>
               </div>
@@ -98,7 +98,7 @@ export default function RoutinesPage({ setAction }) {
                 {r.trigger === 'cron' || r.time ? `SCHEDULED: ${r.time} on ${r.days?.length ? r.days.join(', ') : 'every day'}` : `EVENT: ${r.trigger}`}
               </div>
               {r.last_run && (
-                <div className="rs-card-meta" style={{ fontSize: '0.7rem' }}>
+                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
                   LAST EXECUTION: {new Date(r.last_run).toLocaleString()}
                 </div>
               )}
@@ -107,7 +107,7 @@ export default function RoutinesPage({ setAction }) {
                   {r.last_output}
                 </div>
               )}
-              <div style={{ marginTop: 16 }}>
+              <div className="rs-mt-4">
                 <button className="rs-pill" onClick={() => runRoutine(r.id)}>
                   <span className="material-symbols-rounded">play_arrow</span> EXECUTE
                 </button>
@@ -118,7 +118,7 @@ export default function RoutinesPage({ setAction }) {
       </div>
 
       <div className="rs-foyer-head" style={{ marginTop: '2rem' }}>
-        <h2 className="rs-greeting" style={{ fontSize: '1.2rem' }}>Execution History</h2>
+        <h2 className="rs-greeting" style={{ fontSize: 'var(--rs-fs-h3)' }}>Execution History</h2>
       </div>
       <RoutineHistory token={token} />
     </div>
@@ -148,7 +148,7 @@ function RoutineHistory({ token }) {
             <span className="rs-card-label">{l.delivered ? 'DELIVERED' : 'BLOCKED'}</span>
           </div>
           <div className="rs-card-value">{l.title}</div>
-          {l.reason && <div className="rs-card-meta" style={{ color: '#ff6b6b' }}>{l.reason}</div>}
+          {l.reason && <div className="rs-card-meta" style={{ color: 'var(--rs-status-critical)' }}>{l.reason}</div>}
         </div>
       ))}
     </div>

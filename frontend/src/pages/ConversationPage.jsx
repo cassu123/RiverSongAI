@@ -1,9 +1,9 @@
 import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-import { useConversation } from '../hooks/useConversation.js'
-import AudioVisualizer from '../components/AudioVisualizer.jsx'
-import RsMarkdown from '../components/RsMarkdown.jsx'
-import PresenceBulb from '../components/PresenceBulb.jsx'
+import { useAuth } from '@context/AuthContext.jsx'
+import { useConversation } from '@hooks/useConversation.js'
+import AudioVisualizer from '@components/AudioVisualizer.jsx'
+import RsMarkdown from '@components/RsMarkdown.jsx'
+import PresenceBulb from '@components/PresenceBulb.jsx'
 
 // The VRM character path is intact and unchanged — set VITE_RIVER_USE_AVATAR=true
 // (with a model at public/models/river.vrm) to render it.
@@ -15,7 +15,7 @@ import PresenceBulb from '../components/PresenceBulb.jsx'
 // costs none of that.
 const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR === 'true'
 
-const RiverAvatar = lazy(() => import('../components/RiverAvatar.jsx'))
+const RiverAvatar = lazy(() => import('@components/RiverAvatar.jsx'))
 
 export default function ConversationPage({ setAction }) {
   const { token, user } = useAuth()
@@ -82,7 +82,7 @@ export default function ConversationPage({ setAction }) {
       <div className="rs-chat-input-container">
         <div className="rs-chat-textarea" style={{ display: 'flex', alignItems: 'center', minHeight: 40 }}>
           <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 12 }} />
-          <span style={{ fontWeight: 600, letterSpacing: '0.1em', fontSize: '0.85rem' }}>
+          <span style={{ fontWeight: 600, letterSpacing: '0.1em', fontSize: 'var(--rs-fs-tiny)' }}>
             {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
           </span>
         </div>
@@ -118,17 +118,17 @@ export default function ConversationPage({ setAction }) {
 
   return (
     <div className="rs-speak-stage">
-      <div className="rs-speak-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="rs-speak-status rs-flex rs-flex-col rs-items-center">
+        <div className="rs-flex rs-items-center rs-gap-2">
           <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
-          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: '1.2rem', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
+          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: 'var(--rs-fs-h3)', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
             {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}
           </span>
         </div>
         {convState === 'idle' && (
           <div style={{
-            marginTop: 12, fontSize: '0.75rem', fontFamily: 'var(--font-mono)', 
-            color: 'var(--primary)', opacity: 0.7, textAlign: 'center', minHeight: 80,
+            marginTop: 12, fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)', 
+            color: 'var(--primary)', textAlign: 'center', minHeight: 80,
             pointerEvents: 'none'
           }}>
             {sysLogs.map((log, i) => (
@@ -159,7 +159,7 @@ export default function ConversationPage({ setAction }) {
 
       {error && (
         <div className="rs-speak-error">
-          <span style={{ color: '#f87171', fontSize: '0.8rem' }}>{error}</span>
+          <span style={{ color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-tiny)' }}>{error}</span>
         </div>
       )}
 
@@ -185,7 +185,7 @@ export default function ConversationPage({ setAction }) {
         }}>
         {messages.slice(-2).map((m, i) => (
           <div key={i} style={{ 
-            fontSize: '0.95rem', 
+            fontSize: 'var(--rs-fs-small)', 
             opacity: m.role === 'assistant' ? 1 : 0.7,
             color: m.role === 'assistant' ? 'var(--primary)' : 'inherit'
           }}>
@@ -193,12 +193,12 @@ export default function ConversationPage({ setAction }) {
           </div>
         ))}
         {streamingContent && (
-          <div style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>
+          <div style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--primary)' }}>
             <strong>RIVER:</strong> {streamingContent}
           </div>
         )}
         {messages.length === 0 && !streamingContent && convState === 'listening' && (
-          <div style={{ fontSize: '0.9rem', opacity: 0.5, textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
+          <div style={{ fontSize: 'var(--rs-fs-small)', textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
         )}
       </div>
     </div>
