@@ -354,13 +354,13 @@ export default function StocksTab({ token, active }) {
 
       {loading ? <StocksSkeleton /> : error ? (
         <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
-          <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>trending_flat</span>
+          <span className="material-symbols-rounded rs-mb-2 rs-empty-glyph" style={{ fontSize: '2rem' }}>trending_flat</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchQuotes}>RETRY</button>
         </div>
       ) : quotes.length === 0 ? (
         <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
-          <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>candlestick_chart</span>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>candlestick_chart</span>
           <div className="rs-card-label rs-mb-2">EMPTY WATCHLIST</div>
           <div className="rs-card-meta">Search for a ticker symbol above to start tracking.</div>
         </div>

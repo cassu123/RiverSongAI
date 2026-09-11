@@ -730,3 +730,26 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* --- Panel, field, empty-state glyph --------------------------------------
+   Three boxes that were being rebuilt inline wherever they were needed: an
+   inset panel (11 copies), a bordered input surface (8), and the oversized
+   faded icon that marks an empty list (12). Unlike .rs-card these carry no
+   glass or texture — they are plain containers, which is why they kept being
+   written by hand instead of reaching for the card. */
+.rs-panel {
+  background: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-md);
+}
+
+.rs-field {
+  background: var(--rs-veil-1);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-sm);
+}
+
+.rs-empty-glyph {
+  display: block;
+  opacity: 0.2;
+}

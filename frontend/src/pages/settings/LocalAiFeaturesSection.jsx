@@ -15,7 +15,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
           </p>
           
           <div className="rs-gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+            <div className="rs-p-4 rs-panel">
               <Toggle
                 id="feat-semantic"
                 label="Semantic Memory"
@@ -25,7 +25,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               <p className="rs-card-meta">Use vector search for memory recall</p>
             </div>
 
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+            <div className="rs-p-4 rs-panel">
               <Toggle
                 id="feat-vision"
                 label="Vision Analysis"
@@ -35,7 +35,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               <p className="rs-card-meta">AI photo analysis for inventory & recipes</p>
             </div>
 
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+            <div className="rs-p-4 rs-panel">
               <Toggle
                 id="feat-image"
                 label="Image Generation"
@@ -48,7 +48,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               </div>
             </div>
 
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+            <div className="rs-p-4 rs-panel">
               <Toggle
                 id="feat-rag"
                 label="RAG Documents"
@@ -58,7 +58,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               <p className="rs-card-meta">Answer questions from documents</p>
             </div>
 
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+            <div className="rs-p-4 rs-panel">
               <Toggle
                 id="feat-streaming"
                 label="LLM Streaming"
@@ -68,7 +68,7 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
               <p className="rs-card-meta">Stream AI responses token by token</p>
             </div>
 
-            <div className="rs-p-4" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+            <div className="rs-p-4 rs-panel">
               <Toggle
                 id="feat-chatterbox"
                 label="Chatterbox TTS"

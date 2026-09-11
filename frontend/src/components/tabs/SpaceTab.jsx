@@ -30,7 +30,7 @@ export default function SpaceTab({ token, active }) {
   
   if (error === 'location') return (
     <div className="rs-text-center" style={{ padding: 'var(--rs-space-7) 0' }}>
-      <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '3rem', opacity: 0.2, display: 'block' }}>location_off</span>
+      <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '3rem' }}>location_off</span>
       <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
       <div className="rs-card-meta rs-mb-5">Please set your location in Weather settings first.</div>
     </div>

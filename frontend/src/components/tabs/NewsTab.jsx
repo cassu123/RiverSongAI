@@ -157,8 +157,8 @@ export default function NewsTab({ token, active }) {
       ) : !articles.length ? (
         <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) 0' }}>
           <span
-            className="material-symbols-rounded rs-mb-3"
-            style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}
+            className="material-symbols-rounded rs-mb-3 rs-empty-glyph"
+            style={{ fontSize: '2.5rem' }}
           >
             newspaper
           </span>

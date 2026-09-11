@@ -454,7 +454,7 @@ function BoxScoreView({ event, boxscore, loading, onBack }) {
 
       {!loading && statNames.length === 0 && leaders.length === 0 && (
         <div className="rs-card rs-text-center" style={{ padding: 'var(--rs-space-6) var(--rs-space-4)' }}>
-          <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>sports</span>
+          <span className="material-symbols-rounded rs-mb-2 rs-empty-glyph" style={{ fontSize: '2rem' }}>sports</span>
           <div className="rs-card-meta">Detailed stats not yet published for this event.</div>
         </div>
       )}
@@ -824,7 +824,7 @@ function ScoresView({
 
       {myTeamsMode && myTeams.length === 0 && (
         <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
-          <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>group</span>
+          <span className="material-symbols-rounded rs-mb-2 rs-empty-glyph" style={{ fontSize: '2rem' }}>group</span>
           <div className="rs-card-label rs-mb-2">NO FAVORITE TEAMS</div>
           <div className="rs-card-meta">Add teams in Feed Preferences to use this view.</div>
         </div>
@@ -834,12 +834,12 @@ function ScoresView({
         loading ? <SportsSkeleton /> :
         error ? (
           <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
-            <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>sports</span>
+            <span className="material-symbols-rounded rs-mb-2 rs-empty-glyph" style={{ fontSize: '2rem' }}>sports</span>
             <div className="rs-card-meta">{error}</div>
           </div>
         ) : allGames.length === 0 ? (
           <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
-            <span className="material-symbols-rounded rs-mb-2" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>event_available</span>
+            <span className="material-symbols-rounded rs-mb-2 rs-empty-glyph" style={{ fontSize: '2rem' }}>event_available</span>
             <div className="rs-card-label rs-mb-2">NO GAMES TODAY</div>
             <div className="rs-card-meta">Check back on game day or switch leagues above.</div>
           </div>
@@ -938,7 +938,7 @@ function NewsView({
         </div>
        ) : !articles.length ? (
         <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) 0' }}>
-          <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>newspaper</span>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>newspaper</span>
           <div className="rs-card-meta">No articles right now. Try expanding the sources panel above.</div>
         </div>
        ) : (

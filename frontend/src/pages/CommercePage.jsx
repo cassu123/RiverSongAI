@@ -239,37 +239,37 @@ function ProductForm({ initial, onSave, onCancel, saveLabel, workspaceId, token 
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">PRODUCT NAME *</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
+              <input className="rs-w-full rs-p-3 rs-c-fg rs-field" value={form.name} onChange={set('name')} placeholder="e.g. Midnight Bloom" />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">SKU *</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
+              <input className="rs-w-full rs-p-3 rs-c-fg rs-field" value={form.sku} onChange={set('sku')} placeholder="e.g. HBH-MB-001" />
             </div>
           </div>
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">CATEGORY</label>
-              <select className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} value={form.category} onChange={set('category')}>
+              <select className="rs-w-full rs-p-3 rs-c-fg rs-field" value={form.category} onChange={set('category')}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">STOCK QTY</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
+              <input className="rs-w-full rs-p-3 rs-c-fg rs-field" type="number" min="0" value={form.stock_qty} onChange={set('stock_qty')} />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">THRESHOLD</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" value={form.threshold} onChange={set('threshold')} />
+              <input className="rs-w-full rs-p-3 rs-c-fg rs-field" type="number" min="0" value={form.threshold} onChange={set('threshold')} />
             </div>
           </div>
           <div className="rs-flex rs-gap-3 rs-flex-wrap">
             <div className="rs-grow">
               <label className="rs-card-label">SALE PRICE ($)</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
+              <input className="rs-w-full rs-p-3 rs-c-fg rs-field" type="number" min="0" step="0.01" value={form.unit_price} onChange={set('unit_price')} placeholder="0.00" />
             </div>
             <div className="rs-grow">
               <label className="rs-card-label">COST PRICE ($)</label>
-              <input className="rs-w-full rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }} type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
+              <input className="rs-w-full rs-p-3 rs-c-fg rs-field" type="number" min="0" step="0.01" value={form.cost_price} onChange={set('cost_price')} placeholder="0.00" />
             </div>
           </div>
           <div>
@@ -582,7 +582,7 @@ function CreateWorkspaceForm({ token, onCreate }) {
       {error && <div className="rs-mb-3 rs-type-tiny rs-c-critical">{error}</div>}
       <div className="rs-flex rs-gap-3">
         <input 
-          className="rs-grow rs-p-3 rs-c-fg" style={{ background: 'var(--rs-veil-1)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }}
+          className="rs-grow rs-p-3 rs-c-fg rs-field"
           placeholder="e.g. My Boutique" 
           value={name} 
           onChange={e => setName(e.target.value)} 

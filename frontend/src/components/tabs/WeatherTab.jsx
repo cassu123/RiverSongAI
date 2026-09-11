@@ -269,7 +269,7 @@ export default function WeatherTab({ token, active }) {
       {/* No-location state */}
       {noLocation && (
         <div className="rs-text-center" style={{ padding: 'var(--rs-space-7) 0' }}>
-          <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '3rem', opacity: 0.2, display: 'block' }}>location_off</span>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '3rem' }}>location_off</span>
           <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
           <div className="rs-card-meta rs-mb-5">Search for your city to get started.</div>
           <div style={{ maxWidth: 380, margin: '0 auto' }}>
@@ -281,7 +281,7 @@ export default function WeatherTab({ token, active }) {
       {/* Generic error */}
       {error && error !== 'location' && (
         <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
-          <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>cloud_off</span>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>cloud_off</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchWeather}>RETRY</button>
         </div>

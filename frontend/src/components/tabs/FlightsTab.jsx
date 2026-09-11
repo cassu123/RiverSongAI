@@ -396,7 +396,7 @@ export default function FlightsTab({ token, active }) {
       {error === 'location' && (
         <div style={{ padding: 'var(--rs-space-4) 0' }}>
           <div className="rs-text-center rs-mb-5">
-            <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>
+            <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>
               flight
             </span>
             <div className="rs-card-label rs-mb-2">NO RADAR ORIGIN SET</div>
@@ -411,7 +411,7 @@ export default function FlightsTab({ token, active }) {
       {/* Generic error */}
       {error && error !== 'location' && (
         <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
-          <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block' }}>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>
             flight_off
           </span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
@@ -488,7 +488,7 @@ export default function FlightsTab({ token, active }) {
               )}
               {!loading && sortedAircraft.length === 0 && (
                 <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) var(--rs-space-4)' }}>
-                  <span className="material-symbols-rounded rs-mb-3" style={{ fontSize: '2rem', opacity: 0.2, display: 'block' }}>
+                  <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2rem' }}>
                     flight_land
                   </span>
                   <div className="rs-card-label rs-mb-1 rs-type-nano">CLEAR SKIES</div>
