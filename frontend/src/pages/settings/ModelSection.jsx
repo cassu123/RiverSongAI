@@ -174,7 +174,7 @@ export default function ModelSection({
         {/* Local models */}
         <div className="rs-flex rs-flex-col rs-gap-3">
           {/* QUICK FILTER BAR */}
-          <div className="rs-flex rs-gap-2 rs-mb-3">
+          <div className="rs-flex rs-flex-wrap rs-gap-2 rs-mb-3">
             {['ALL', 'GPU', 'RAM', 'SPEAK'].map(f => (
               <button
                 key={f}

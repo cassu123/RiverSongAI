@@ -30,12 +30,31 @@
    Phones drop country + heading; callsign/alt/speed/status stay legible. */
 .rs-flights-row {
   display: grid;
-  grid-template-columns: 1.7fr 1.4fr 1.6fr 0.9fr 0.55fr 1fr;
+  /* minmax(0, ...), not a bare fr. An fr track's automatic minimum is
+     min-content, so a callsign or an airport name wider than its share
+     pushed the whole grid past the panel instead of shrinking: at 390px the
+     header measured 197px inside a 118px column and the last two headings
+     were simply gone. */
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.4fr) minmax(0, 1.6fr)
+                         minmax(0, 0.9fr) minmax(0, 0.55fr) minmax(0, 1fr);
   gap: 6px;
   align-items: center;
 }
+
+/* With the tracks free to shrink, a cell that no longer fits truncates
+   instead of overflowing. */
+.rs-flights-row > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 600px) {
-  .rs-flights-row { grid-template-columns: 1.6fr 1.2fr 0.9fr 0.9fr; }
+  .rs-flights-row {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr)
+                           minmax(0, 0.9fr) minmax(0, 0.9fr);
+  }
   .rs-flights-row .rs-flight-country,
   .rs-flights-row .rs-flight-hdg { display: none; }
 }

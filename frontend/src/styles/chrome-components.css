@@ -79,6 +79,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* A heading and its action button are one row until they do not fit. On a
+     390px screen the Analytics debrief header measured 219px in a 196px
+     card and the button was clipped off the edge. */
+  flex-wrap: wrap;
   gap: 12px;
   margin-block-end: 24px;
 }
