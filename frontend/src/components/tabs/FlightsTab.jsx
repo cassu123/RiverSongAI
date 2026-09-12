@@ -421,10 +421,10 @@ export default function FlightsTab({ token, active }) {
 
       {/* Map + list split */}
       {!error && (
-        <div className="rs-flex rs-gap-4" style={{ height: 380 }}>
+        <div className="rs-flights-split rs-flex rs-gap-4">
 
           {/* Map — 60% */}
-          <div className="rs-relative rs-min-w-0" style={{ flex: '3 1 0' }}>
+          <div className="rs-flights-map rs-relative rs-min-w-0">
             {loading && (
               <div className="rs-flex rs-items-center rs-justify-center" style={{
                 position: 'absolute',
@@ -449,8 +449,7 @@ export default function FlightsTab({ token, active }) {
           </div>
 
           {/* Aircraft list — 40% */}
-          <div className="rs-flex rs-flex-col rs-min-w-0 rs-clip" style={{
-            flex: '2 1 0',
+          <div className="rs-flights-list rs-flex rs-flex-col rs-min-w-0 rs-clip" style={{
             border: '1px solid var(--md-outline-variant)',
             borderRadius: 'var(--md-shape-sm)',
           }}>
