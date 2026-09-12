@@ -505,9 +505,9 @@ export default function ProfilePage({
             {(ENVIRONMENTS[universe] || []).map(e => (
               <button 
                 key={e.key} 
-                className={`rs-pill ${environment === e.key ? 'is-active' : ''}`}
+                className={`rs-pill rs-justify-between rs-type-small ${environment === e.key ? 'is-active' : ''}`}
                 onClick={() => onEnvironmentChange(e.key)}
-                style={{ justifyContent: 'space-between', padding: 'var(--rs-space-3) var(--rs-space-4)', fontSize: 'var(--rs-fs-small)' }}
+                style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}
               >
                 <span>{e.label}</span>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: e.primary }} />
@@ -524,9 +524,9 @@ export default function ProfilePage({
             {(MOODS[environment] || []).map(m => (
               <button 
                 key={m.key} 
-                className={`rs-pill ${mood === m.key ? 'is-active' : ''}`}
+                className={`rs-pill rs-justify-between rs-type-small ${mood === m.key ? 'is-active' : ''}`}
                 onClick={() => onMoodChange(m.key)}
-                style={{ justifyContent: 'space-between', padding: 'var(--rs-space-3) var(--rs-space-4)', fontSize: 'var(--rs-fs-small)' }}
+                style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}
               >
                 <span>{m.label}</span>
                 {mood === m.key && <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>check</span>}
@@ -546,10 +546,10 @@ export default function ProfilePage({
               <div className="rs-card-meta rs-type-small">Enable push notifications to receive system briefings, alerts, and smart home events directly on this device.</div>
             </div>
             <button 
-              className={`rs-btn-primary ${pushStatus === 'linked' ? 'is-active' : ''}`} 
+              className={`rs-btn-primary rs-type-small ${pushStatus === 'linked' ? 'is-active' : ''}`} 
               disabled={pushStatus === 'linked'}
               onClick={handlePushEnable}
-              style={{ padding: 'var(--rs-space-3) var(--rs-space-5)', fontSize: 'var(--rs-fs-small)' }}
+              style={{ padding: 'var(--rs-space-3) var(--rs-space-5)' }}
             >
               {pushStatus === 'linked' ? 'LINK ESTABLISHED' : 'AUTHORIZE LINK'}
             </button>

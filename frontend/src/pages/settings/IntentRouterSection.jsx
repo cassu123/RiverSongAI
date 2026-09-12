@@ -63,8 +63,8 @@ export default function IntentRouterSection({ intentRouterSettings, saveIntentRo
               ].map(({ n, label }) => (
                 <button
                   key={n}
-                  className={`rs-pill is-tappable${intentRouterSettings.min_hits === n ? ' is-active' : ''}`}
-                  style={{ fontSize: 'var(--rs-fs-micro)', minHeight: 44, minWidth: 44, padding: '0 var(--rs-space-4)', cursor: 'pointer' }}
+                  className={`rs-pill is-tappable rs-type-micro rs-pointer ${intentRouterSettings.min_hits === n ? ' is-active' : ''}`}
+                  style={{ minHeight: 44, minWidth: 44, padding: '0 var(--rs-space-4)' }}
                   onClick={() => saveIntentRouter({ min_hits: n })}
                   aria-pressed={intentRouterSettings.min_hits === n}
                 >

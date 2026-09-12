@@ -395,8 +395,8 @@ export default function CookPlanTab({
                         <button
                           key={eq.id}
                           type="button"
-                          className={`gh-kitchen-nav-btn ${activeEquipmentId === eq.id ? 'is-active' : ''}`}
-                          style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+                          className={`gh-kitchen-nav-btn rs-type-tiny ${activeEquipmentId === eq.id ? 'is-active' : ''}`}
+                          style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                           onClick={() => setSelectedEquipmentId(eq.id)}
                         >
                           <span>{eq.label || eq.make || 'Appliance'}</span>
@@ -756,8 +756,8 @@ export default function CookPlanTab({
                           <button
                             key={eq.id}
                             type="button"
-                            className={`gh-kitchen-nav-btn ${activeEquipmentId === eq.id ? 'is-active' : ''}`}
-                            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+                            className={`gh-kitchen-nav-btn rs-type-tiny ${activeEquipmentId === eq.id ? 'is-active' : ''}`}
+                            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                             onClick={() => setSelectedEquipmentId(eq.id)}
                           >
                             <span>{eq.label || eq.make || 'Appliance'}</span>
@@ -814,16 +814,16 @@ export default function CookPlanTab({
           <div className="rs-flex rs-justify-between rs-items-center rs-flex-wrap rs-gap-3">
             <div className="rs-flex rs-gap-2">
               <button
-                className={`gh-kitchen-nav-btn ${viewMode === 'focus' ? 'is-active' : ''}`}
-                style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+                className={`gh-kitchen-nav-btn rs-type-tiny ${viewMode === 'focus' ? 'is-active' : ''}`}
+                style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                 onClick={() => setViewMode('focus')}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: 18 }}>center_focus_strong</span>
                 <span>Focus Step Guide</span>
               </button>
               <button
-                className={`gh-kitchen-nav-btn ${viewMode === 'timeline' ? 'is-active' : ''}`}
-                style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+                className={`gh-kitchen-nav-btn rs-type-tiny ${viewMode === 'timeline' ? 'is-active' : ''}`}
+                style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                 onClick={() => setViewMode('timeline')}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: 18 }}>view_timeline</span>

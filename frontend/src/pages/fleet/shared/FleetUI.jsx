@@ -136,13 +136,9 @@ export function CommandConsole({ spec, onSend, disabled }) {
         <button
           key={c.command}
           disabled={disabled}
-          className={c.danger ? 'rs-btn-ghost' : 'rs-btn-primary'}
+          className={`${c.danger ? 'rs-btn-ghost' : 'rs-btn-primary'} rs-type-micro rs-items-center`}
           onClick={() => onSend(c.command, c.params || {})}
-          style={{
-            fontSize: 'var(--rs-fs-micro)', padding: 'var(--rs-space-2) var(--rs-space-4)', display: 'inline-flex', alignItems: 'center', gap: 'var(--rs-space-2)',
-            opacity: disabled ? 0.45 : 1,
-            ...(c.danger ? { color: 'var(--md-error)', borderColor: 'var(--md-error)' } : {}),
-          }}
+          style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', display: 'inline-flex', gap: 'var(--rs-space-2)', opacity: disabled ? 0.45 : 1, ...(c.danger ? { color: 'var(--md-error)', borderColor: 'var(--md-error)' } : {}) }}
         >
           {c.icon && <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>{c.icon}</span>}
           {c.label}

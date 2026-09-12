@@ -1709,8 +1709,8 @@ export default function MaintenancePulse({
                     return (
                       <div
                         key={cp.id}
-                        className={`cockpit-item-card ${isDone ? 'is-selected' : ''}`}
-                        style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', cursor: 'pointer', borderColor: isDone ? 'var(--primary)' : 'var(--rs-veil-2)' }}
+                        className={`cockpit-item-card rs-pointer ${isDone ? 'is-selected' : ''}`}
+                        style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', borderColor: isDone ? 'var(--primary)' : 'var(--rs-veil-2)' }}
                         onClick={() => {
                           setLogCheckedPoints(prev => ({
                             ...prev,

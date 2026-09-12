@@ -90,7 +90,7 @@ export default function RoutinesPage({ setAction }) {
               </div>
               <div className="rs-card-value">
                 {r.name}
-                <span className={`rs-badge ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 'var(--rs-space-2)', fontSize: 'var(--rs-fs-nano)' }}>
+                <span className={`rs-badge rs-type-nano ${r.severity === 'critical' ? 'is-danger' : r.severity === 'warning' ? 'is-warning' : 'is-info'}`} style={{ marginLeft: 'var(--rs-space-2)' }}>
                   {r.severity || 'info'}
                 </span>
               </div>

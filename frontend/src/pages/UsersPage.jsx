@@ -237,13 +237,13 @@ export default function UsersPage({ embedded = false }) {
                   MEMBER {u.is_suspended && <span className="rs-c-error rs-fw-700">(SUSPENDED)</span>}
                 </span>
                 {u.id === currentUser.id ? (
-                  <span className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`} style={{ fontSize: 'var(--rs-fs-tiny)', padding: 'var(--rs-space-2) var(--rs-space-4)' }}>
+                  <span className={`rs-pill rs-type-tiny ${u.role === 'admin' ? 'is-active' : ''}`} style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}>
                     {u.role.toUpperCase()} (YOU)
                   </span>
                 ) : (
                   <select 
-                    className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`}
-                    style={{ fontSize: 'var(--rs-fs-tiny)', padding: 'var(--rs-space-2) var(--rs-space-4)', outline: 'none', border: '1px solid var(--rs-hairline-strong)', cursor: 'pointer', textAlign: 'center', background: '#1b2432', color: '#fff' }}
+                    className={`rs-pill rs-type-tiny rs-pointer rs-text-center ${u.role === 'admin' ? 'is-active' : ''}`}
+                    style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', outline: 'none', border: '1px solid var(--rs-hairline-strong)', background: '#1b2432', color: '#fff' }}
                     value={u.role}
                     onChange={(e) => updateRole(u, e.target.value)}
                   >
@@ -272,9 +272,9 @@ export default function UsersPage({ embedded = false }) {
                     <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>Requires changing password on next sign-in</span>
                   </div>
                   <button 
-                    className={`rs-pill ${u.force_password_change ? 'is-active' : ''}`}
+                    className={`rs-pill rs-justify-center rs-type-small ${u.force_password_change ? 'is-active' : ''}`}
                     onClick={() => toggleForceChange(u)}
-                    style={{ minWidth: 70, justifyContent: 'center', padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-small)' }}
+                    style={{ minWidth: 70, padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                   >
                     {u.force_password_change ? 'ON' : 'OFF'}
                   </button>
@@ -286,9 +286,9 @@ export default function UsersPage({ embedded = false }) {
                     <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>Block sign-in and API access immediately</span>
                   </div>
                   <button 
-                    className={`rs-pill ${u.is_suspended ? 'is-active' : ''}`}
+                    className={`rs-pill rs-justify-center rs-type-small ${u.is_suspended ? 'is-active' : ''}`}
                     onClick={() => toggleSuspend(u)}
-                    style={{ minWidth: 70, justifyContent: 'center', padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-small)' }}
+                    style={{ minWidth: 70, padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                   >
                     {u.is_suspended ? 'ON' : 'OFF'}
                   </button>
@@ -304,9 +304,9 @@ export default function UsersPage({ embedded = false }) {
                     </span>
                   </div>
                   <button
-                    className={`rs-pill ${u.free_models_only ? 'is-active' : ''}`}
+                    className={`rs-pill rs-justify-center rs-type-small ${u.free_models_only ? 'is-active' : ''}`}
                     onClick={() => toggleFreeModelsOnly(u)}
-                    style={{ minWidth: 70, justifyContent: 'center', padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-small)' }}
+                    style={{ minWidth: 70, padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                   >
                     {u.free_models_only ? 'ON' : 'OFF'}
                   </button>

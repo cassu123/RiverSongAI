@@ -79,8 +79,8 @@ export default function ProgramShell({ program, title, subtitle, icon, accent, r
             {units.map(u => (
               <div key={u.unit_id}
                 onClick={() => setSelectedId(u.unit_id)}
-                className={`rs-card is-tappable ${selected?.unit_id === u.unit_id ? 'is-elev' : ''}`}
-                style={{ padding: 'var(--rs-space-3)', cursor: 'pointer', borderColor: selected?.unit_id === u.unit_id ? accent : undefined }}>
+                className={`rs-card is-tappable rs-pointer ${selected?.unit_id === u.unit_id ? 'is-elev' : ''}`}
+                style={{ padding: 'var(--rs-space-3)', borderColor: selected?.unit_id === u.unit_id ? accent : undefined }}>
                 <div className="rs-flex rs-items-center rs-justify-between rs-gap-2">
                   <span className="rs-type-tiny rs-clip rs-ellipsis rs-nowrap rs-fw-600">
                     {u.name || u.unit_id}

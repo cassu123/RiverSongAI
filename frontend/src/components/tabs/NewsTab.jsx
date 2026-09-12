@@ -116,14 +116,13 @@ export default function NewsTab({ token, active }) {
                   return (
                     <button
                       key={src.url}
-                      className={`rs-pill ${isOn ? 'is-active' : ''}`}
+                      className={`rs-pill rs-type-nano ${isOn ? 'is-active' : ''}`}
                       onClick={() => {
                         const next = isOn
                           ? selected.filter(s => s.url !== src.url)
                           : [...selected, src]
                         saveSources(next)
                       }}
-                      style={{ fontSize: 'var(--rs-fs-nano)' }}
                     >
                       {(src.name || src.url || '').toUpperCase()}
                     </button>

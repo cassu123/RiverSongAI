@@ -190,8 +190,8 @@ export default function ChatToolsSection({ data, token, onChanged }) {
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`rs-pill ${selectedCategory === cat ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-micro)', padding: 'var(--rs-space-1) var(--rs-space-3)' }}
+              className={`rs-pill rs-type-micro ${selectedCategory === cat ? 'is-active' : ''}`}
+              style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
             >
               {cat}
             </button>

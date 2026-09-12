@@ -206,7 +206,7 @@ export default function ReadingPage({ setAction }) {
               {ALL_SERVICES.map(s => {
                 const active = (selectedServiceKeys || []).includes(s.key)
                 return (
-                  <button key={s.key} className={`rs-card is-tappable ${active ? 'is-elev' : ''}`} style={{ padding: 'var(--rs-space-4)', textAlign: 'center' }} onClick={() => {
+                  <button key={s.key} className={`rs-card is-tappable rs-text-center ${active ? 'is-elev' : ''}`} style={{ padding: 'var(--rs-space-4)' }} onClick={() => {
                      const next = active ? selectedServiceKeys.filter(k => k !== s.key) : [...selectedServiceKeys, s.key]
                      setSelectedServiceKeys(next)
                      localStorage.setItem(`rs-reading-services:${userId}`, JSON.stringify(next))

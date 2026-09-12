@@ -461,9 +461,7 @@ export default function FlightsTab({ token, active }) {
               background: 'var(--md-surface-container)',
             }}>
               {['CALLSIGN', 'COUNTRY', 'ALT', 'KTS', 'HDG', 'STATUS'].map(h => (
-                <div key={h} className={'rs-card-label' + (h === 'COUNTRY' ? ' rs-flight-country' : h === 'HDG' ? ' rs-flight-hdg' : '')} style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)',
-                  textAlign: h === 'STATUS' ? 'right' : 'left',
-                }}>{h}</div>
+                <div key={h} className={`${'rs-card-label' + (h === 'COUNTRY' ? ' rs-flight-country' : h === 'HDG' ? ' rs-flight-hdg' : '')} rs-muted rs-type-nano`} style={{ textAlign: h === 'STATUS' ? 'right' : 'left' }}>{h}</div>
               ))}
             </div>
 

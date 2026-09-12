@@ -711,9 +711,8 @@ export default function SportsTab({ token, active }) {
         ].map(t => (
           <button
             key={t.key}
-            className={`rs-pill ${subTab === t.key ? 'is-active' : ''}`}
+            className={`rs-pill rs-type-nano ${subTab === t.key ? 'is-active' : ''}`}
             onClick={() => setSubTab(t.key)}
-            style={{ fontSize: 'var(--rs-fs-nano)' }}
           >
             <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 'var(--rs-space-1)' }}>{t.icon}</span>
             {t.label}
@@ -774,9 +773,8 @@ function ScoresView({
               return (
                 <button
                   key={id}
-                  className={`rs-pill ${activeLeague === id ? 'is-active' : ''}`}
+                  className={`rs-pill rs-type-nano ${activeLeague === id ? 'is-active' : ''}`}
                   onClick={() => setActiveLeague(id)}
-                  style={{ fontSize: 'var(--rs-fs-nano)' }}
                 >
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', marginRight: 'var(--rs-space-1)', verticalAlign: '-2px' }}>{meta.icon}</span>
                   {meta.label}
@@ -802,9 +800,8 @@ function ScoresView({
         <div className="rs-flex rs-items-center rs-gap-2 rs-no-shrink">
           {myTeams.length > 0 && (
             <button
-              className={`rs-pill ${myTeamsMode ? 'is-active' : ''}`}
+              className={`rs-pill rs-type-nano ${myTeamsMode ? 'is-active' : ''}`}
               onClick={() => setMyTeamsMode(m => !m)}
-              style={{ fontSize: 'var(--rs-fs-nano)' }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '0.85rem', marginRight: 'var(--rs-space-1)' }}>favorite</span>
               My Teams
@@ -898,14 +895,13 @@ function NewsView({
                   return (
                     <button
                       key={src.url}
-                      className={`rs-pill ${isOn ? 'is-active' : ''}`}
+                      className={`rs-pill rs-type-nano ${isOn ? 'is-active' : ''}`}
                       onClick={() => {
                         const next = isOn
                           ? selectedNewsSources.filter(s => s.url !== src.url)
                           : [...selectedNewsSources, src]
                         saveSportsSources(next)
                       }}
-                      style={{ fontSize: 'var(--rs-fs-nano)' }}
                     >
                       {src.name.toUpperCase()}
                     </button>

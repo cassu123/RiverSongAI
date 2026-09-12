@@ -144,8 +144,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
           <button
             key={accent}
             onClick={() => setAccentFilter(accent)}
-            className={`rs-pill ${accentFilter === accent ? 'is-active' : ''}`}
-            style={{ fontSize: 'var(--rs-fs-nano)' }}
+            className={`rs-pill rs-type-nano ${accentFilter === accent ? 'is-active' : ''}`}
           >
             {accent}
           </button>

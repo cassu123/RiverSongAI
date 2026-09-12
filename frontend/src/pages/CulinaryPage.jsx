@@ -622,16 +622,16 @@ export default function CulinaryPage({ setAction }) {
       <div className="rs-flex rs-justify-between rs-items-center rs-flex-wrap rs-gap-3">
         <div className="rs-flex rs-gap-2">
           <button
-            className={`gh-kitchen-nav-btn ${cookbookSubTab === 'recipes' ? 'is-active' : ''}`}
-            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${cookbookSubTab === 'recipes' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setCookbookSubTab('recipes')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>menu_book</span>
             <span>All Recipes ({recipes.length})</span>
           </button>
           <button
-            className={`gh-kitchen-nav-btn ${cookbookSubTab === 'banned' ? 'is-active' : ''}`}
-            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${cookbookSubTab === 'banned' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setCookbookSubTab('banned')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>block</span>
@@ -798,16 +798,16 @@ export default function CulinaryPage({ setAction }) {
         {/* Sub-toggle: Dinner Calendar vs Batch Prep */}
         <div className="rs-flex rs-gap-2">
           <button
-            className={`gh-kitchen-nav-btn ${planSubTab === 'dinner' ? 'is-active' : ''}`}
-            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${planSubTab === 'dinner' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setPlanSubTab('dinner')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>calendar_month</span>
             <span>7-Day Dinners</span>
           </button>
           <button
-            className={`gh-kitchen-nav-btn ${planSubTab === 'prep' ? 'is-active' : ''}`}
-            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${planSubTab === 'prep' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setPlanSubTab('prep')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>set_meal</span>
@@ -998,16 +998,16 @@ export default function CulinaryPage({ setAction }) {
                 {/* Staged vs Needs inline toggle */}
                 <div className="rs-flex rs-gap-2 rs-mt-5">
                   <button
-                    className={`gh-kitchen-nav-btn ${prepView === 'recipes' ? 'is-active' : ''}`}
-                    style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+                    className={`gh-kitchen-nav-btn rs-type-tiny ${prepView === 'recipes' ? 'is-active' : ''}`}
+                    style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                     onClick={() => setPrepView('recipes')}
                   >
                     <span className="material-symbols-rounded">list_alt</span>
                     <span>Staged Recipes</span>
                   </button>
                   <button
-                    className={`gh-kitchen-nav-btn ${prepView === 'list' ? 'is-active' : ''}`}
-                    style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+                    className={`gh-kitchen-nav-btn rs-type-tiny ${prepView === 'list' ? 'is-active' : ''}`}
+                    style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                     onClick={() => setPrepView('list')}
                   >
                     <span className="material-symbols-rounded">shopping_cart</span>
@@ -1046,16 +1046,16 @@ export default function CulinaryPage({ setAction }) {
       <div className="rs-flex rs-justify-between rs-items-center rs-flex-wrap rs-gap-3">
         <div className="rs-flex rs-gap-2">
           <button
-            className={`gh-kitchen-nav-btn ${pantrySubTab === 'list' ? 'is-active' : ''}`}
-            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${pantrySubTab === 'list' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setPantrySubTab('list')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>shopping_cart</span>
             <span>Grocery List</span>
           </button>
           <button
-            className={`gh-kitchen-nav-btn ${pantrySubTab === 'stockroom' ? 'is-active' : ''}`}
-            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${pantrySubTab === 'stockroom' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setPantrySubTab('stockroom')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>inventory_2</span>

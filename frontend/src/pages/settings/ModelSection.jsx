@@ -179,8 +179,7 @@ export default function ModelSection({
               <button
                 key={f}
                 onClick={() => setModelFilter(f)}
-                className={`rs-pill ${modelFilter === f ? 'is-active' : ''}`}
-                style={{ fontSize: 'var(--rs-fs-nano)' }}
+                className={`rs-pill rs-type-nano ${modelFilter === f ? 'is-active' : ''}`}
               >
                 {f}
               </button>

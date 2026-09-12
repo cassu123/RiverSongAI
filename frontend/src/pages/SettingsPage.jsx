@@ -762,9 +762,9 @@ export default function SettingsPage({
           {currentSubGroups.map(g => (
             <button
               key={g.id}
-              className={`rs-pill ${group === g.id ? 'is-active' : ''}`}
+              className={`rs-pill rs-no-shrink rs-type-small ${group === g.id ? 'is-active' : ''}`}
               aria-current={group === g.id ? 'page' : undefined}
-              style={{ flexShrink: 0, padding: 'var(--rs-space-2) var(--rs-space-5)', fontSize: 'var(--rs-fs-small)' }}
+              style={{ padding: 'var(--rs-space-2) var(--rs-space-5)' }}
               onClick={() => setGroup(g.id)}
               type="button"
             >

@@ -199,9 +199,9 @@ export default function DocumentsPage({ setAction }) {
         {docs.map(d => (
           <button
             key={d.id}
-            className={`rs-drawer-item ${activeId === d.id ? 'is-active' : ''}`}
+            className={`rs-drawer-item rs-text-left ${activeId === d.id ? 'is-active' : ''}`}
             onClick={() => openDoc(d.id)}
-            style={{ textAlign: 'left', padding: 'var(--rs-space-2) var(--rs-space-3)' }}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}
           >
             <div className="rs-flex rs-items-center rs-gap-2 rs-w-full">
               {d.pinned && <span className="rs-muted rs-type-nano">★</span>}

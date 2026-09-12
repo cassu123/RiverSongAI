@@ -621,9 +621,9 @@ export default function AnalyticsPage() {
               {RANGE_OPTIONS.map(o => (
                 <button
                   key={o.days}
-                  className={days === o.days ? 'rs-pill is-active' : 'rs-pill'}
+                  className={`${days === o.days ? 'rs-pill is-active' : 'rs-pill'} rs-fw-900`}
                   onClick={() => setDays(o.days)}
-                  style={{ border: 'none', padding: 'var(--rs-space-2) 0', marginRight: 'var(--rs-space-4)', fontWeight: 900, textDecoration: days === o.days ? 'underline' : 'none' }}
+                  style={{ border: 'none', padding: 'var(--rs-space-2) 0', marginRight: 'var(--rs-space-4)', textDecoration: days === o.days ? 'underline' : 'none' }}
                 >
                   {o.label}
                 </button>
@@ -634,9 +634,9 @@ export default function AnalyticsPage() {
                 {loading ? 'SYNCING...' : 'REFRESH'}
               </button>
               <button
-                className={showSettings ? 'rs-pill is-active' : 'rs-pill'}
+                className={`${showSettings ? 'rs-pill is-active' : 'rs-pill'} rs-fw-900`}
                 onClick={() => setShowSettings(s => !s)}
-                style={{ border: 'none', fontWeight: 900 }}
+                style={{ border: 'none' }}
               >
                 PLATFORMS
               </button>
@@ -651,7 +651,7 @@ export default function AnalyticsPage() {
               {PLATFORMS.map(p => {
                 const on = visiblePlatforms.has(p.key)
                 return (
-                  <label key={p.key} className={on ? 'rs-pill is-active' : 'rs-pill'} style={{ cursor: 'pointer', border: '1px solid var(--md-outline-variant)', padding: 'var(--rs-space-2) var(--rs-space-4)' }}>
+                  <label key={p.key} className={`${on ? 'rs-pill is-active' : 'rs-pill'} rs-pointer`} style={{ border: '1px solid var(--md-outline-variant)', padding: 'var(--rs-space-2) var(--rs-space-4)' }}>
                     <input
                       type="checkbox"
                       className="rs-hidden"

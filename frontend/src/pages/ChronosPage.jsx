@@ -254,8 +254,8 @@ export default function ChronosPage({ setAction }) {
       {/* Left Rail: File Tree */}
       <div className="rs-card rs-flex rs-flex-col rs-p-3">
         <div className="rs-flex rs-gap-1 rs-mb-4">
-          <button className={`rs-pill ${activeRoot === 'personal' ? 'is-active' : ''}`} style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={() => setActiveRoot('personal')}>PERSONAL</button>
-          <button className={`rs-pill ${activeRoot === 'household' ? 'is-active' : ''}`} style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={() => setActiveRoot('household')}>HOUSEHOLD</button>
+          <button className={`rs-pill rs-grow rs-nowrap ${activeRoot === 'personal' ? 'is-active' : ''}`} onClick={() => setActiveRoot('personal')}>PERSONAL</button>
+          <button className={`rs-pill rs-grow rs-nowrap ${activeRoot === 'household' ? 'is-active' : ''}`} onClick={() => setActiveRoot('household')}>HOUSEHOLD</button>
           <button className="rs-pill" onClick={createNote} title="New Note">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
           </button>
@@ -432,7 +432,7 @@ function TreeItem({ item, onSelect, activePath }) {
   }
 
   return (
-    <button className={`rs-drawer-item rs-drawer-item--compact ${isSelected ? 'is-active' : ''}`} style={{ width: '100%' }} onClick={() => onSelect(item.path)}>
+    <button className={`rs-drawer-item rs-drawer-item--compact rs-w-full ${isSelected ? 'is-active' : ''}`} onClick={() => onSelect(item.path)}>
       <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>description</span>
       <span className="rs-grow rs-text-left">{item.name.replace(/\.md$/, '')}</span>
     </button>

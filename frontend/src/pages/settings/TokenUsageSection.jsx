@@ -77,8 +77,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           {[7, 30, 90].map(d => (
             <button
               key={d}
-              className={`rs-pill ${days === d ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-nano)' }}
+              className={`rs-pill rs-type-nano ${days === d ? 'is-active' : ''}`}
               onClick={() => setDays(d)}
             >{d}D</button>
           ))}
@@ -97,8 +96,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           ].map(s => (
             <button
               key={s.id}
-              className={`rs-pill ${!account && scope === s.id ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-nano)' }}
+              className={`rs-pill rs-type-nano ${!account && scope === s.id ? 'is-active' : ''}`}
               onClick={() => { setAccount(''); setScope(s.id) }}
             >{s.label}</button>
           ))}
@@ -107,8 +105,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           {children.map(c => (
             <button
               key={c.id}
-              className={`rs-pill ${account === c.id ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-nano)' }}
+              className={`rs-pill rs-type-nano ${account === c.id ? 'is-active' : ''}`}
               onClick={() => setAccount(c.id)}
             >{(c.display_name || c.email || c.id).toUpperCase()}</button>
           ))}

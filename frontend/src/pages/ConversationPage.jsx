@@ -171,17 +171,8 @@ export default function ConversationPage({ setAction }) {
           it used to paint its glass panel unconditionally, leaving an empty
           grey pill hovering over the orb on an idle screen. */}
       <div
-        className={`rs-speak-transcript-float ${hasTranscript ? 'is-live' : ''}`}
-        style={{
-          position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)',
-          width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto',
-          background: 'color-mix(in srgb, var(--bg-base) 72%, transparent)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: 'var(--md-shape-lg)', padding: 'var(--rs-space-4) var(--rs-space-5)', color: 'var(--fg)',
-          border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          flexDirection: 'column', gap: 'var(--rs-space-2)', zIndex: 2
-        }}>
+        className={`rs-speak-transcript-float rs-flex rs-c-fg rs-flex-col ${hasTranscript ? 'is-live' : ''}`}
+        style={{ position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)', width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto', background: 'color-mix(in srgb, var(--bg-base) 72%, transparent)', backdropFilter: 'blur(12px)', borderRadius: 'var(--md-shape-lg)', padding: 'var(--rs-space-4) var(--rs-space-5)', border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', gap: 'var(--rs-space-2)', zIndex: 2 }}>
         {messages.slice(-2).map((m, i) => (
           <div key={i} className="rs-type-small" style={{
             opacity: m.role === 'assistant' ? 1 : 0.7,

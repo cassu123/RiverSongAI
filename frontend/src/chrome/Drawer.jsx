@@ -104,10 +104,10 @@ export default function Drawer({
         <div className="rs-drawer-footer rs-mt-3" style={{ borderTop: '1px solid var(--rs-hairline)', paddingTop: 'var(--rs-space-4)' }}>
           <div className="rs-flex rs-items-center rs-justify-between rs-gap-3">
             <button
-              className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
+              className={`rs-drawer-profile rs-grow ${currentPage === 'profile' ? 'is-active' : ''}`}
               onClick={() => navigate('profile')}
               aria-current={currentPage === 'profile' ? 'page' : undefined}
-              style={{ flex: 1, padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-lg)' }}
+              style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-lg)' }}
             >
               <span className="rs-drawer-avatar" aria-hidden="true">{initials}</span>
               <span className="rs-drawer-profile-body">

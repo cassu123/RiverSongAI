@@ -163,8 +163,7 @@ export default function SafetyRules() {
                   <span className="rs-pill rs-type-tiny">BUILT-IN</span>
                 )}
                 <div className="rs-grow" />
-                <button className={rule.enabled ? 'rs-pill is-active' : 'rs-pill'}
-                        style={{ fontSize: 'var(--rs-fs-tiny)' }}
+                <button className={`${rule.enabled ? 'rs-pill is-active' : 'rs-pill'} rs-type-tiny`}
                         onClick={() => toggle(rule)} disabled={busy === rule.id}>
                   {rule.enabled ? 'ON' : 'MUTED'}
                 </button>
