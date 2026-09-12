@@ -14,7 +14,14 @@
   background: color-mix(in srgb, var(--bg-base, #0e121c) 65%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.08));
+  /* --rs-hairline-strong, not --card-border-alpha raw. The raw token runs
+     0.12 / 0.18 / 0.25 across the three environment tiers, and at 0.25 over
+     the near-black tactical grounds every card perimeter drew a crisp white
+     rectangle — the framed-window look, arriving on the one element large
+     enough to make it the whole page's character. The hairline rung carries
+     the same ordering at 0.106 / 0.124 / 0.145, so tactical stays the
+     crispest without outlining. */
+  border: 1px solid var(--rs-hairline-strong);
   border-radius: var(--card-radius, 1.25rem);
   padding: clamp(18px, 4cqi, 28px);
   /* Enough lift to separate from the ground, not so much that the card looks
