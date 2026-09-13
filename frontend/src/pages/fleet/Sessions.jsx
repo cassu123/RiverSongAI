@@ -138,7 +138,7 @@ export default function Sessions() {
               <button className="rs-btn-ghost" onClick={() => setSelectedSession(null)}>Close</button>
             </div>
             
-            <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 gap-2.5" style={{ margin: 'var(--rs-space-5) 0', padding: 15, background: 'var(--rs-veil-1)', borderRadius: 'var(--md-shape-sm)' }}>
+            <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 rs-gap-3" style={{ margin: 'var(--rs-space-5) 0', padding: 15, background: 'var(--rs-veil-1)', borderRadius: 'var(--md-shape-sm)' }}>
               <div><strong>Status:</strong> {selectedSession.status}</div>
               <div><strong>Area Mowed:</strong> {selectedSession.area_mowed_sqm ?? '--'} m&sup2;</div>
               <div><strong>Battery Used:</strong> {selectedSession.battery_used_pct ?? '--'} %</div>

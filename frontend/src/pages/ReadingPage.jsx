@@ -202,7 +202,7 @@ export default function ReadingPage({ setAction }) {
                INTEGRATIONS
              </button>
            </div>
-           <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 gap-3">
+           <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-3">
               {ALL_SERVICES.map(s => {
                 const active = (selectedServiceKeys || []).includes(s.key)
                 return (

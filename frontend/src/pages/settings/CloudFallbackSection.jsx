@@ -36,7 +36,7 @@ export default function CloudFallbackSection({ llmSettings, saveFallback, enable
         />
 
         {llmSettings?.cloud_fallback_enabled && (
-          <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 gap-4 rs-mt-4">
+          <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-4 rs-mt-4">
             <div className="rs-card-meta">
               <span className="rs-card-label rs-mb-1 rs-type-nano">Provider</span>
               <select

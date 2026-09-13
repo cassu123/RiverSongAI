@@ -153,10 +153,10 @@ export default function UnitDetail() {
       </div>
 
       {tab === 'live' && (
-        <div className="rs-grid rs-grid-cols-1 rs-unit-detail-rail-grid gap-5">
+        <div className="rs-grid rs-grid-cols-1 rs-unit-detail-rail-grid rs-gap-5">
           <div className="rs-flex rs-flex-col rs-gap-5">
             {/* Telemetry Grid */}
-            <div className="rs-card rs-grid rs-grid-cols-2 rs-md-grid-cols-4 gap-4 text-center">
+            <div className="rs-card rs-grid rs-grid-cols-2 rs-md-grid-cols-4 rs-gap-4 rs-text-center">
               <div><small className="rs-muted">Battery</small><div>{latestT.battery_pct ?? '--'}% ({latestT.battery_v ?? '--'}V)</div></div>
               <div><small className="rs-muted">Fuel</small><div>{latestT.fuel_pct ?? '--'}%</div></div>
               <div><small className="rs-muted">RPM</small><div>{latestT.rpm ?? '--'}</div></div>
@@ -224,7 +224,7 @@ export default function UnitDetail() {
                 Enable Manual Mode
               </label>
               
-              <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 gap-2.5 rs-mt-5" style={{ opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
+              <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 rs-gap-3 rs-mt-5" style={{ opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
                 <div />
                 <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'forward', throttle: 0.3, duration_ms: 500 })}>&#8593;</button>
                 <div />

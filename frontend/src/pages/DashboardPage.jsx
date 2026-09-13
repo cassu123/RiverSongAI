@@ -301,7 +301,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                     <div className="rs-health-subvalue">Automatic trigger matching</div>
                   </div>
                 </div>
-                <div className="flex justify-end mt-6">
+                <div className="rs-flex rs-justify-end rs-mt-6">
                   <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('feeds'); }}>
                     <span>Open Feeds Panel</span>
                     <span className="material-symbols-rounded">arrow_forward</span>
@@ -342,7 +342,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             <div className="rs-card-meta">Fleet & Hardware status</div>
 
             {expandedCard === 'integrity' && (
-              <div className="flex justify-end mt-6 animate-fade-in">
+              <div className="rs-flex rs-justify-end rs-mt-6 animate-fade-in">
                 <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('fleet'); }}>
                   <span>Open Fleet Panel</span>
                   <span className="material-symbols-rounded">arrow_forward</span>
@@ -404,7 +404,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                     </div>
                   )}
                 </div>
-                <div className="flex justify-end mt-6">
+                <div className="rs-flex rs-justify-end rs-mt-6">
                   <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('memory'); }}>
                     <span>Open Memory Vault</span>
                     <span className="material-symbols-rounded">arrow_forward</span>

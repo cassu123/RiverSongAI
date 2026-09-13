@@ -21,7 +21,7 @@ export default function ChronosSection({ scribeEnabled, saveScribeEnabled, daemo
           </div>
 
           {/* Vault tree — 3-column, folder icons, monospace paths */}
-          <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 gap-1.5">
+          <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 rs-gap-2">
             {[
               { path: 'Personal/',       desc: 'Private to you',     icon: 'lock',         color: 'var(--primary)' },
               { path: 'Household/',      desc: 'Shared with family',  icon: 'home',         color: 'var(--md-sys-color-tertiary)' },

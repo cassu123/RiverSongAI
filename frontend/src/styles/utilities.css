@@ -136,5 +136,10 @@
   .rs-md-grid-cols-4.rs-md-grid-cols-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+  .rs-md-p-6.rs-md-p-6,
+  .rs-md-p-8.rs-md-p-8 {
+    padding: var(--rs-space-6);
+  }
 }
+
 

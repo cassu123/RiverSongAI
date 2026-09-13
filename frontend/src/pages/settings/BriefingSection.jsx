@@ -106,7 +106,7 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
           <div style={{ height: 24 }} />
           
           <div className="rs-card-label rs-mb-3">LOCATION (FOR WEATHER & FLIGHTS)</div>
-          <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 gap-4">
+          <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-4">
             <div>
               <div className="rs-card-meta rs-mb-2">Latitude</div>
               <input
