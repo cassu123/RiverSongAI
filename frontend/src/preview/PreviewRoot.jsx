@@ -1,24 +1,31 @@
 import React from 'react';
+import STLViewer from '../components/STLViewer';
+import MermaidDiagram from '../components/MermaidDiagram';
 
-/**
- * PreviewRoot — Scaffolding for the Chrome Layout Rework
- * This component acts as a standalone sandbox to prototype the futuristic, 
- * Kimi-clean spatial interface. Once the design iterations are finalized here, 
- * they will be migrated to the main App.jsx shell.
- */
 export default function PreviewRoot() {
+  const mermaidSample = `graph TD
+    A[Christmas] -->|Get money| B(Go shopping)
+    B --> C{Let me think}
+    C -->|One| D[Laptop]
+    C -->|Two| E[iPhone]
+    C -->|Three| F[Car]`;
+
   return (
     <div className="rs-root rs-preview-active">
-      <div className="rs-flex rs-flex-col rs-p-7 rs-items-center rs-justify-center" style={{ height: '100vh', width: '100vw' }}>
-        <h1 className="rs-c-accent rs-fw-900" style={{ fontSize: '3rem', letterSpacing: '0.1em' }}>
-          SPATIAL INTERFACE V2.0
-        </h1>
-        <div className="rs-mt-5 rs-text-center rs-muted rs-type-h3" style={{ maxWidth: 600, lineHeight: 1.6 }}>
-          This sandbox is isolated from the main application. 
-          Use this route to experiment with double-bezel cards, tactile pills, 
-          and per-environment (Universe/Environment/Mood) SVG backdrops.
+      <h1 className="rs-c-accent rs-fw-900 rs-type-h2 rs-mb-4">
+        Component Fixture Verification
+      </h1>
+      <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div>
+          <h2 className="rs-type-h3 rs-mb-2">STLViewer Component</h2>
+          <STLViewer url="/test_cube.stl" height={320} />
+        </div>
+        <div>
+          <h2 className="rs-type-h3 rs-mb-2">MermaidDiagram Component</h2>
+          <MermaidDiagram chart={mermaidSample} />
         </div>
       </div>
     </div>
   );
 }
+

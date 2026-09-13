@@ -20,6 +20,7 @@ export default function FleetPage({ setAction }) {
   return (
     <Routes>
       <Route path="/fleet" element={<FleetHub />} />
+      <Route path="/fleet/units" element={<Navigate to="/fleet/vector/units/VOY-RV-001" replace />} />
       {/* Vector keeps its rich multi-page console under /fleet/vector/* */}
       <Route path="/fleet/vector/*" element={<VectorFleetPage setAction={setAction} />} />
       <Route path="/fleet/vexa" element={<VexaFleet />} />

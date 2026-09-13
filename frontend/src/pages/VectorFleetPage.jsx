@@ -40,13 +40,13 @@ export default function VectorFleetPage({ setAction }) {
 
 
       <Routes>
-        <Route path="/fleet/vector" element={<Overview setAction={setAction} />} />
-        <Route path="/fleet/vector/units/:id" element={<UnitDetail setAction={setAction} />} />
-        <Route path="/fleet/vector/units/:id/setup" element={<SetupWizard />} />
-        <Route path="/fleet/vector/zones" element={<Zones />} />
-        <Route path="/fleet/vector/programs" element={<Programs />} />
-        <Route path="/fleet/vector/schedules" element={<Schedules />} />
-        <Route path="/fleet/vector/sessions" element={<Sessions />} />
+        <Route index element={<Overview setAction={setAction} />} />
+        <Route path="units/:id" element={<UnitDetail setAction={setAction} />} />
+        <Route path="units/:id/setup" element={<SetupWizard />} />
+        <Route path="zones" element={<Zones />} />
+        <Route path="programs" element={<Programs />} />
+        <Route path="schedules" element={<Schedules />} />
+        <Route path="sessions" element={<Sessions />} />
         <Route path="*" element={<Navigate to="/fleet/vector" replace />} />
       </Routes>
       </div>

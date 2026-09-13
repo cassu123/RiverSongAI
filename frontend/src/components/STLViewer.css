@@ -19,6 +19,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--rs-space-2);
   padding: 8px 14px;
   background: var(--md-surface-container-high);
   border-bottom: 1px solid var(--rs-hairline);
@@ -31,6 +33,7 @@
 .rs-stl-title-group {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--rs-space-2);
 }
 
@@ -54,6 +57,7 @@
 .rs-stl-dimensions {
   font-size: var(--rs-fs-nano);
   font-family: var(--font-mono);
+  white-space: nowrap;
   color: var(--text-muted);
   background: var(--md-surface-container);
   padding: 2px 8px;
@@ -64,6 +68,7 @@
 .rs-stl-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
