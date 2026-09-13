@@ -57,7 +57,7 @@ function SectionStatusWrapper({ status, children }) {
     return (
       <div style={{ opacity: 0.6, pointerEvents: 'none' }}>
         <Section title="ACCESS DENIED">
-          <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>You do not have permission to view this section.</div>
+          <div className="rs-card-meta rs-c-error">You do not have permission to view this section.</div>
         </Section>
       </div>
     )
@@ -66,7 +66,7 @@ function SectionStatusWrapper({ status, children }) {
   return (
     <div style={{ opacity: 0.6 }}>
       <Section title="FAILED TO LOAD">
-        <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>This section could not be loaded. Please check server logs.</div>
+        <div className="rs-card-meta rs-c-error">This section could not be loaded. Please check server logs.</div>
       </Section>
     </div>
   )
@@ -714,16 +714,16 @@ export default function SettingsPage({
       `}</style>
 
       <header className="rs-foyer-head rs-mb-5">
-        <div className="rs-card-label" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)' }}>
+        <div className="rs-card-label rs-mb-2 rs-flex rs-items-center rs-gap-2 rs-c-accent">
           <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
             {activeHubTab === 'admin' ? 'shield_person' : activeHubTab === 'users' ? 'group' : activeHubTab === 'profile' ? 'account_circle' : 'tune'}
           </span>
           {activeHubTab === 'admin' ? 'ADMINISTRATOR CONSOLE' : activeHubTab === 'users' ? 'HOUSEHOLD MANAGEMENT' : activeHubTab === 'profile' ? 'PERSONAL IDENTITY' : 'ASSISTANT & HARDWARE'}
         </div>
-        <h1 className="rs-greeting" style={{ fontSize: '2.2rem', fontWeight: 700, margin: '0 0 6px' }}>
+        <h1 className="rs-greeting rs-fw-700" style={{ fontSize: '2.2rem', margin: '0 0 var(--rs-space-2)' }}>
           {activeHubTab === 'admin' ? 'Admin & System Control' : activeHubTab === 'users' ? 'Family & Household' : activeHubTab === 'profile' ? 'Identity & Account' : 'Assistant & Voice Settings'}
         </h1>
-        <div className="rs-greeting-sub" style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--text-muted)' }}>
+        <div className="rs-greeting-sub rs-type-body rs-muted">
           {activeHubTab === 'admin'
             ? 'Global backend daemons, provider API routing, tool gating, and capability flags.'
             : activeHubTab === 'users'
@@ -753,18 +753,18 @@ export default function SettingsPage({
       {(activeHubTab === 'assistant' || activeHubTab === 'admin') && (
         <nav
           aria-label="Settings sub-categories"
-          style={{
-            display: 'flex', gap: 8, marginBottom: 20,
-            overflowX: 'auto', paddingBottom: 4,
+          className="rs-flex rs-gap-2 rs-mb-5" style={{
+            overflowX: 'auto',
+            paddingBottom: 'var(--rs-space-1)',
             scrollbarWidth: 'none',
           }}
         >
           {currentSubGroups.map(g => (
             <button
               key={g.id}
-              className={`rs-pill ${group === g.id ? 'is-active' : ''}`}
+              className={`rs-pill rs-no-shrink rs-type-small ${group === g.id ? 'is-active' : ''}`}
               aria-current={group === g.id ? 'page' : undefined}
-              style={{ flexShrink: 0, padding: '8px 18px', fontSize: 'var(--rs-fs-small)' }}
+              style={{ padding: 'var(--rs-space-2) var(--rs-space-5)' }}
               onClick={() => setGroup(g.id)}
               type="button"
             >
@@ -777,20 +777,19 @@ export default function SettingsPage({
 
       {/* Reload-pending banner for LLM routing flag changes */}
       {reloadPending && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-          padding: '10px 18px', marginBottom: 8,
+        <div className="rs-flex rs-items-center rs-justify-between rs-gap-3 rs-mb-2" style={{
+          padding: 'var(--rs-space-3) var(--rs-space-5)',
           background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)',
           border: '1px solid color-mix(in srgb, var(--rs-status-warning) 40%, transparent)',
           borderRadius: 'var(--md-shape-sm)',
         }}>
           <div className="rs-flex rs-items-center rs-gap-2">
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)' }}>warning</span>
-            <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+            <span className="material-symbols-rounded rs-c-warning" style={{ fontSize: '1rem' }}>warning</span>
+            <span className="rs-type-tiny rs-c-warning rs-fw-600">
               LLM routing change saved — reload required to take effect.
             </span>
           </div>
-          <button className="rs-btn-primary" style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 14px' }} onClick={() => window.location.reload()}>
+          <button className="rs-btn-primary rs-type-micro" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }} onClick={() => window.location.reload()}>
             RELOAD NOW
           </button>
         </div>
@@ -801,10 +800,12 @@ export default function SettingsPage({
         <div
           role="status"
           aria-live="polite"
-          style={{
-            position: 'fixed', bottom: 32, right: 32, zIndex: 1000,
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 18px',
+          className="rs-flex rs-items-center rs-gap-2 rs-type-tiny rs-fw-600" style={{
+            position: 'fixed',
+            bottom: 32,
+            right: 32,
+            zIndex: 1000,
+            padding: 'var(--rs-space-3) var(--rs-space-5)',
             borderRadius: 'var(--md-shape-lg)',
             background: saveStatus === 'error'
               ? 'var(--md-error-container)'
@@ -812,7 +813,7 @@ export default function SettingsPage({
             color: saveStatus === 'error'
               ? 'var(--md-on-error-container)'
               : 'var(--md-on-primary-container)',
-            fontSize: 'var(--rs-fs-tiny)', fontWeight: 600, letterSpacing: '0.06em',
+            letterSpacing: '0.06em',
             boxShadow: '0 8px 32px -8px rgba(0,0,0,0.5)',
             border: '1px solid',
             borderColor: saveStatus === 'error'
@@ -1176,16 +1177,16 @@ export default function SettingsPage({
         <p className="rs-card-meta">Enable ambient detection. River will actively listen for your designated phrase.</p>
         
         {wakeWordRestart && (
-          <div style={{ marginTop: 12, padding: '12px', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--rs-status-warning)', flexShrink: 0 }}>warning</span>
-            <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--rs-status-warning)', fontWeight: 600 }}>
+          <div className="rs-mt-3 rs-flex rs-items-center rs-gap-2" style={{ padding: 'var(--rs-space-3)', background: 'color-mix(in srgb, var(--rs-status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--rs-status-warning) 45%, transparent)', borderRadius: 'var(--md-shape-sm)' }}>
+            <span className="material-symbols-rounded rs-no-shrink rs-c-warning" style={{ fontSize: '1rem' }}>warning</span>
+            <span className="rs-type-tiny rs-c-warning rs-fw-600">
               System restart required to apply changes.
             </span>
           </div>
         )}
 
-        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--md-surface-container-low)', padding: '12px 16px', borderRadius: 'var(--md-shape-sm)' }}>
-          <div style={{ display: 'flex', gap: 16, fontSize: 'var(--rs-fs-micro)' }}>
+        <div className="rs-mt-4 rs-flex rs-justify-between rs-items-center" style={{ background: 'var(--md-surface-container-low)', padding: 'var(--rs-space-3) var(--rs-space-4)', borderRadius: 'var(--md-shape-sm)' }}>
+          <div className="rs-flex rs-gap-4 rs-type-micro">
             <span>Active Phrase: <strong>Hey River</strong></span>
           </div>
           <span className="rs-card-label" style={{ color: aiFeatures.WAKE_WORD_ENABLED ? 'var(--rs-status-nominal)' : 'var(--md-outline)' }}>
@@ -1242,7 +1243,7 @@ export default function SettingsPage({
           />
 
           <div className="rs-card-meta">
-            <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>Retention Period</span>
+            <span className="rs-card-label rs-mb-1 rs-type-nano">Retention Period</span>
             <select
               className="settings-select rs-w-full"
              

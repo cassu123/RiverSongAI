@@ -193,8 +193,9 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
   // ── Render ──────────────────────────────────────────────────────────────────
   if (!nodes.length) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 14, opacity: 0.3 }}>
+      <div className="rs-flex rs-flex-col rs-items-center rs-justify-center rs-gap-4 rs-h-full" style={{
+        opacity: 0.3,
+      }}>
         <span className="material-symbols-rounded" style={{ fontSize: 64 }}>hub</span>
         <span className="rs-card-meta">No indexed notes yet.<br />Create notes with [[wikilinks]] to build the graph.</span>
       </div>
@@ -206,8 +207,9 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
   return (
     <div
       ref={wrapRef}
-      style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden',
-               cursor: panRef.current ? 'grabbing' : 'grab' }}
+      className="rs-w-full rs-h-full rs-relative rs-clip" style={{
+        cursor: panRef.current ? 'grabbing' : 'grab',
+      }}
     >
       <svg
         width={wh.w} height={wh.h}
@@ -316,14 +318,18 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
         const n = nodes.find(x => x.id === hovered)
         if (!n) return null
         return (
-          <div style={{
-            position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
-            padding: '6px 14px', borderRadius: 8, pointerEvents: 'none', whiteSpace: 'nowrap',
+          <div className="rs-flex rs-gap-2 rs-items-center rs-nowrap rs-type-micro" style={{
+            position: 'absolute',
+            bottom: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: 'var(--rs-space-2) var(--rs-space-4)',
+            borderRadius: 'var(--md-shape-sm)',
+            pointerEvents: 'none',
             background: 'var(--md-surface-container-highest)',
             border: '1px solid var(--md-outline-variant)',
-            fontSize: 'var(--rs-fs-micro)', display: 'flex', gap: 8, alignItems: 'center',
           }}>
-            <span style={{ fontWeight: 600 }}>{n.title}</span>
+            <span className="rs-fw-600">{n.title}</span>
             {n.virtual_path
               ? <span style={{ opacity: 0.45 }}>{n.virtual_path}</span>
               : <span style={{ opacity: 0.45, color: 'var(--md-sys-color-error)' }}>unlinked target</span>
@@ -333,19 +339,19 @@ export default function VaultGraph({ nodes, edges, onNodeClick, activeNodePath }
       })()}
 
       {/* ── Legend + hint ── */}
-      <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
+      <div className="rs-flex rs-flex-col rs-gap-2" style={{ position: 'absolute', bottom: 16, left: 16, pointerEvents: 'none' }}>
         <div className="rs-flex rs-gap-3 rs-items-center">
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
-          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Personal</span>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--md-sys-color-tertiary)', display: 'inline-block', marginLeft: 8 }} />
-          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Household</span>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1px dashed var(--md-outline)', display: 'inline-block', marginLeft: 8 }} />
-          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>Unlinked target</span>
+          <span className="rs-card-meta rs-type-nano">Personal</span>
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--md-sys-color-tertiary)', display: 'inline-block', marginLeft: 'var(--rs-space-2)' }} />
+          <span className="rs-card-meta rs-type-nano">Household</span>
+          <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1px dashed var(--md-outline)', display: 'inline-block', marginLeft: 'var(--rs-space-2)' }} />
+          <span className="rs-card-meta rs-type-nano">Unlinked target</span>
         </div>
       </div>
 
       <div style={{ position: 'absolute', top: 10, right: 12, pointerEvents: 'none' }}>
-        <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+        <span className="rs-card-meta rs-muted rs-type-nano">
           scroll · zoom  ·  drag canvas · pan  ·  drag node · reposition  ·  click node · open
         </span>
       </div>

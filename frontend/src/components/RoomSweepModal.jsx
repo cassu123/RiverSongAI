@@ -113,12 +113,12 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
 
   return (
     <div className="rs-modal-overlay animate-fade-in rs-flex rs-items-center rs-justify-center">
-      <div className="rs-modal" style={{ width: 400, maxWidth: '90vw', padding: 24 }}>
-        <h2 style={{ marginTop: 0, marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+      <div className="rs-modal rs-p-5" style={{ width: 400, maxWidth: '90vw' }}>
+        <h2 className="rs-mb-2 rs-flex rs-justify-between" style={{ marginTop: 0 }}>
           Room Sweep
-          <button className="rs-pill" onClick={handleFinish} style={{ padding: '4px 12px', fontSize: 'var(--rs-fs-small)' }}>Done</button>
+          <button className="rs-pill rs-type-small" onClick={handleFinish} style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}>Done</button>
         </h2>
-        <p style={{ color: 'var(--text-muted)', margin: 0, marginBottom: 24, fontSize: 'var(--rs-fs-small)' }}>Captured this session: <strong>{count}</strong> items</p>
+        <p className="rs-muted rs-m-0 rs-mb-5 rs-type-small">Captured this session: <strong>{count}</strong> items</p>
         
         <div className="rs-form-group rs-mb-5">
           <label>Room / Location</label>
@@ -144,23 +144,23 @@ export default function RoomSweepModal({ homeId, onClose, onComplete }) {
         {!photoFile ? (
           <div className="rs-text-center rs-mt-6">
             <button 
-              className="rs-btn-primary" 
+              className="rs-btn-primary rs-w-full rs-gap-3 rs-type-h3" 
               onClick={() => {
                 if (!location) { alert("Set location first!"); return; }
                 fileInputRef.current?.click();
               }} 
-              style={{ width: '100%', height: 64, fontSize: 'var(--rs-fs-h3)', gap: 12 }}
+              style={{ height: 64 }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>photo_camera</span>
               SNAP NEXT ITEM
             </button>
           </div>
         ) : (
-          <div className="rs-card" style={{ padding: 16, background: 'var(--md-surface-container)' }}>
-             <img src={preview} alt="Preview" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 8, marginBottom: 16 }} />
+          <div className="rs-card rs-p-4" style={{ background: 'var(--md-surface-container)' }}>
+             <img src={preview} alt="Preview" className="rs-w-full rs-mb-4" style={{ height: 200, objectFit: 'cover', borderRadius: 'var(--md-shape-sm)' }} />
              
              {analyzing ? (
-               <div style={{ textAlign: 'center', opacity: 0.7, padding: '24px 0' }}>
+               <div className="rs-text-center" style={{ opacity: 0.7, padding: 'var(--rs-space-5) 0' }}>
                  <span className="material-symbols-rounded" style={{ animation: 'spin 2s linear infinite', fontSize: '2rem' }}>sync</span>
                  <p>Analyzing image...</p>
                </div>

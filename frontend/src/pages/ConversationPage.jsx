@@ -80,9 +80,9 @@ export default function ConversationPage({ setAction }) {
     if (!setAction) return
     setAction(
       <div className="rs-chat-input-container">
-        <div className="rs-chat-textarea" style={{ display: 'flex', alignItems: 'center', minHeight: 40 }}>
-          <span className="rs-status-dot" style={{ background: isActive ? '#4ade80' : '#6b7280', marginRight: 12 }} />
-          <span style={{ fontWeight: 600, letterSpacing: '0.1em', fontSize: 'var(--rs-fs-tiny)' }}>
+        <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
+          <span className="rs-status-dot" style={{ background: isActive ? 'var(--rs-status-nominal)' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
+          <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.1em' }}>
             {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
           </span>
         </div>
@@ -121,15 +121,14 @@ export default function ConversationPage({ setAction }) {
       <div className="rs-speak-status rs-flex rs-flex-col rs-items-center">
         <div className="rs-flex rs-items-center rs-gap-2">
           <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
-          <span style={{ fontWeight: 600, letterSpacing: '0.15em', fontSize: 'var(--rs-fs-h3)', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
+          <span className="rs-type-h3 rs-fw-600" style={{ letterSpacing: '0.15em', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
             {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}
           </span>
         </div>
         {convState === 'idle' && (
-          <div style={{
-            marginTop: 12, fontSize: 'var(--rs-fs-micro)', fontFamily: 'var(--font-mono)', 
-            color: 'var(--primary)', textAlign: 'center', minHeight: 80,
-            pointerEvents: 'none'
+          <div className="rs-mt-3 rs-text-center rs-type-micro rs-mono rs-c-accent" style={{
+            minHeight: 80,
+            pointerEvents: 'none',
           }}>
             {sysLogs.map((log, i) => (
               <div key={i} style={{ animation: 'slideUpFade 0.3s ease-out' }}>&gt; {log}</div>
@@ -159,7 +158,7 @@ export default function ConversationPage({ setAction }) {
 
       {error && (
         <div className="rs-speak-error">
-          <span style={{ color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-tiny)' }}>{error}</span>
+          <span className="rs-type-tiny rs-c-critical">{error}</span>
         </div>
       )}
 
@@ -172,33 +171,23 @@ export default function ConversationPage({ setAction }) {
           it used to paint its glass panel unconditionally, leaving an empty
           grey pill hovering over the orb on an idle screen. */}
       <div
-        className={`rs-speak-transcript-float ${hasTranscript ? 'is-live' : ''}`}
-        style={{
-          position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)',
-          width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto',
-          background: 'color-mix(in srgb, var(--bg-base) 72%, transparent)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: 16, padding: '16px 20px', color: 'var(--fg)',
-          border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          flexDirection: 'column', gap: 8, zIndex: 2
-        }}>
+        className={`rs-speak-transcript-float rs-flex rs-c-fg rs-flex-col ${hasTranscript ? 'is-live' : ''}`}
+        style={{ position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)', width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto', background: 'color-mix(in srgb, var(--bg-base) 72%, transparent)', backdropFilter: 'blur(12px)', borderRadius: 'var(--md-shape-lg)', padding: 'var(--rs-space-4) var(--rs-space-5)', border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', gap: 'var(--rs-space-2)', zIndex: 2 }}>
         {messages.slice(-2).map((m, i) => (
-          <div key={i} style={{ 
-            fontSize: 'var(--rs-fs-small)', 
+          <div key={i} className="rs-type-small" style={{
             opacity: m.role === 'assistant' ? 1 : 0.7,
-            color: m.role === 'assistant' ? 'var(--primary)' : 'inherit'
+            color: m.role === 'assistant' ? 'var(--primary)' : 'inherit',
           }}>
             <strong>{m.role === 'user' ? 'YOU' : 'RIVER'}:</strong> {m.text}
           </div>
         ))}
         {streamingContent && (
-          <div style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--primary)' }}>
+          <div className="rs-type-small rs-c-accent">
             <strong>RIVER:</strong> {streamingContent}
           </div>
         )}
         {messages.length === 0 && !streamingContent && convState === 'listening' && (
-          <div style={{ fontSize: 'var(--rs-fs-small)', textAlign: 'center', color: 'var(--primary)' }}>Intercepting audio stream...</div>
+          <div className="rs-text-center rs-type-small rs-c-accent">Intercepting audio stream...</div>
         )}
       </div>
     </div>

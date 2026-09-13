@@ -78,20 +78,16 @@ export default class ErrorBoundary extends React.Component {
           <div className="eb-msg">{msg}</div>
           {!chunkError && stack && (
             <pre
-              style={{
+              className="rs-mt-3 rs-p-3 rs-type-nano rs-text-left" style={{
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-all',
-                marginTop: 12,
-                padding: 10,
-                fontSize: 'var(--rs-fs-nano)',
                 lineHeight: 1.4,
                 background: 'rgba(0,0,0,0.4)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: 6,
+                border: '1px solid var(--rs-hairline-strong)',
+                borderRadius: 'var(--md-shape-xs)',
                 maxHeight: 240,
                 overflow: 'auto',
                 opacity: 0.85,
-                textAlign: 'left',
               }}
             >
               {stack.split('\n').slice(0, 10).join('\n')}

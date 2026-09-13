@@ -9,11 +9,11 @@ import React from 'react';
 export default function PreviewRoot() {
   return (
     <div className="rs-root rs-preview-active">
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', padding: 40, alignItems: 'center', justifyContent: 'center' }}>
-        <h1 style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '3rem', letterSpacing: '0.1em' }}>
+      <div className="rs-flex rs-flex-col rs-p-7 rs-items-center rs-justify-center" style={{ height: '100vh', width: '100vw' }}>
+        <h1 className="rs-c-accent rs-fw-900" style={{ fontSize: '3rem', letterSpacing: '0.1em' }}>
           SPATIAL INTERFACE V2.0
         </h1>
-        <div style={{ color: 'var(--text-muted)', marginTop: 24, fontSize: 'var(--rs-fs-h3)', maxWidth: 600, textAlign: 'center', lineHeight: 1.6 }}>
+        <div className="rs-mt-5 rs-text-center rs-muted rs-type-h3" style={{ maxWidth: 600, lineHeight: 1.6 }}>
           This sandbox is isolated from the main application. 
           Use this route to experiment with double-bezel cards, tactile pills, 
           and per-environment (Universe/Environment/Mood) SVG backdrops.

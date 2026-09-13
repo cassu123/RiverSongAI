@@ -82,35 +82,40 @@ function LocationSearch({ onSelect, autoFocus = true }) {
   }, [q])
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="rs-relative">
       <input
-        className="rs-input"
+        className="rs-input rs-w-full rs-type-tiny"
         placeholder="Search city or place…"
         value={q}
         onChange={e => setQ(e.target.value)}
-        style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)', boxSizing: 'border-box' }}
+        style={{ boxSizing: 'border-box' }}
         autoFocus={autoFocus}
       />
       {(results.length > 0 || searching) && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+        <div className="rs-mt-1 rs-clip" style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          zIndex: 200,
           background: 'var(--md-surface-container-high)',
           border: '1px solid var(--md-outline-variant)',
-          borderRadius: 8, marginTop: 4, overflow: 'hidden',
+          borderRadius: 'var(--md-shape-sm)',
         }}>
           {searching && (
-            <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: 'var(--rs-fs-micro)' }}>Searching…</div>
+            <div className="rs-card-meta rs-type-micro" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}>Searching…</div>
           )}
           {results.map((r, i) => (
             <button key={i} onClick={() => {
               onSelect({ lat: parseFloat(r.lat), lon: parseFloat(r.lon), location_query: r.display_name })
               setQ('')
               setResults([])
-            }} style={{
-              display: 'block', width: '100%', textAlign: 'left',
-              padding: '9px 14px', background: 'none', border: 'none',
+            }} className="rs-w-full rs-text-left rs-pointer rs-type-micro" style={{
+              display: 'block',
+              padding: '9px 14px',
+              background: 'none',
+              border: 'none',
               borderTop: i > 0 ? '1px solid var(--md-outline-variant)' : 'none',
-              cursor: 'pointer', fontSize: 'var(--rs-fs-micro)',
             }}>
               {r.display_name}
             </button>
@@ -233,7 +238,7 @@ export default function WeatherTab({ token, active }) {
         <SettingsRow label="LOCATION">
           <LocationSearch onSelect={handleLocationSelect} />
           {settings?.location_query && (
-            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 6 }}>
+            <div className="rs-card-meta rs-mt-2 rs-muted rs-type-nano">
               {settings.location_query.split(',').slice(0, 3).join(',')}
             </div>
           )}
@@ -263,8 +268,8 @@ export default function WeatherTab({ token, active }) {
 
       {/* No-location state */}
       {noLocation && (
-        <div style={{ padding: '40px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '3rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>location_off</span>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-7) 0' }}>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '3rem' }}>location_off</span>
           <div className="rs-card-label rs-mb-2">NO LOCATION SET</div>
           <div className="rs-card-meta rs-mb-5">Search for your city to get started.</div>
           <div style={{ maxWidth: 380, margin: '0 auto' }}>
@@ -275,8 +280,8 @@ export default function WeatherTab({ token, active }) {
 
       {/* Generic error */}
       {error && error !== 'location' && (
-        <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>cloud_off</span>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>cloud_off</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchWeather}>RETRY</button>
         </div>
@@ -290,16 +295,16 @@ export default function WeatherTab({ token, active }) {
           {alertsEnabled && alerts.length > 0 && (
             <div className="rs-flex rs-flex-col rs-gap-2">
               {alerts.slice(0, 2).map(a => (
-                <div key={a.id} style={{
+                <div key={a.id} className="rs-flex rs-gap-3 rs-items-start" style={{
                   background: (ALERT_COLORS[a.severity] || '#88888822') + '22',
                   border: `1px solid ${ALERT_COLORS[a.severity] || '#88888888'}55`,
-                  borderRadius: 8, padding: '12px 16px',
-                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                  borderRadius: 'var(--md-shape-sm)',
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
                 }}>
-                  <span className="material-symbols-rounded" style={{ color: ALERT_COLORS[a.severity], flexShrink: 0, marginTop: 2 }}>warning</span>
+                  <span className="material-symbols-rounded rs-no-shrink" style={{ color: ALERT_COLORS[a.severity], marginTop: 2 }}>warning</span>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', marginBottom: 2, color: ALERT_COLORS[a.severity] }}>{a.event}</div>
-                    <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>{a.headline}</div>
+                    <div className="rs-type-micro rs-fw-700" style={{ marginBottom: 2, color: ALERT_COLORS[a.severity] }}>{a.event}</div>
+                    <div className="rs-card-meta rs-type-micro">{a.headline}</div>
                   </div>
                 </div>
               ))}
@@ -335,31 +340,32 @@ function HeroCard({ current, today, location_name, unit }) {
     <div className="rs-wx-panel is-hero">
       <div className="rs-flex rs-items-center rs-gap-5 rs-flex-wrap">
         <span
-          className="material-symbols-rounded"
+          className="material-symbols-rounded rs-no-shrink rs-c-accent"
           style={{
             fontSize: 'clamp(3.25rem, 15vw, 6.5rem)',
-            color: 'var(--primary)',
             lineHeight: 0.9,
-            flexShrink: 0,
             filter: 'drop-shadow(0 4px 14px rgba(var(--primary-rgb,100,100,255),0.18))',
           }}
         >
           {wmoIcon(current.weathercode)}
         </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 'clamp(3rem, 15vw, 5.5rem)', fontWeight: 200, lineHeight: 1, letterSpacing: '-0.06em',
-            color: 'var(--md-on-surface)', whiteSpace: 'nowrap',
+        <div className="rs-grow rs-min-w-0">
+          <div className="rs-nowrap" style={{
+            fontSize: 'clamp(3rem, 15vw, 5.5rem)',
+            fontWeight: 200,
+            lineHeight: 1,
+            letterSpacing: '-0.06em',
+            color: 'var(--md-on-surface)',
           }}>
             {temp != null ? temp : '--'}{unit || '°'}
           </div>
-          <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-body)', marginTop: 6, color: 'var(--md-on-surface)' }}>
+          <div className="rs-mt-2 rs-type-body rs-fw-700" style={{ color: 'var(--md-on-surface)' }}>
             {current.condition || '—'}
           </div>
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', marginTop: 4 }}>
+          <div className="rs-card-meta rs-mt-1 rs-type-micro">
             {location_name || ''}
           </div>
-          <div style={{ display: 'flex', gap: 14, marginTop: 10, alignItems: 'center', fontSize: 'var(--rs-fs-micro)' }}>
+          <div className="rs-flex rs-gap-4 rs-mt-3 rs-items-center rs-type-micro">
             {feels != null && (
               <span className="rs-card-meta">Feels {feels}{unit || '°'}</span>
             )}
@@ -381,20 +387,20 @@ function DetailCard({ label, value, sub, color, badge }) {
   return (
     <div className="rs-wx-panel is-detail">
       <div className="rs-flex rs-justify-between rs-items-start">
-        <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>{label}</div>
+        <div className="rs-card-label rs-mb-1 rs-muted rs-type-nano">{label}</div>
         {badge && (
-          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 4, whiteSpace: 'nowrap' }}>
+          <div className="rs-muted rs-type-nano rs-nowrap" style={{ padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 'var(--md-shape-xs)' }}>
             {badge}
           </div>
         )}
       </div>
-      <div style={{
-        fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 'var(--rs-fs-body)', color: color || 'var(--md-on-surface)', whiteSpace: 'nowrap',
+      <div className="rs-mono rs-type-body rs-nowrap rs-fw-800" style={{
+        color: color || 'var(--md-on-surface)',
       }}>
         {value}
       </div>
       {sub && (
-        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 2 }}>{sub}</div>
+        <div className="rs-card-meta rs-muted rs-type-nano" style={{ marginTop: 2 }}>{sub}</div>
       )}
     </div>
   )
@@ -428,7 +434,7 @@ function DetailsRow({ current, aqi }) {
     })
   }
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: 10 }}>
+    <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))' }}>
       {items.map((it, i) => <DetailCard key={i} {...it} />)}
     </div>
   )
@@ -465,13 +471,13 @@ function HourlyStrip({ hourly, unit }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>NEXT 24 HOURS</div>
-      <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 4 }}>
-        <div style={{ width: W, position: 'relative' }}>
+      <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">NEXT 24 HOURS</div>
+      <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 'var(--rs-space-1)' }}>
+        <div className="rs-relative" style={{ width: W }}>
           {/* Curve overlay */}
           <svg
             width={W} height={H_CURVE}
-            style={{ display: 'block', marginBottom: 6 }}
+            className="rs-mb-2" style={{ display: 'block' }}
           >
             <polyline
               points={pts}
@@ -492,9 +498,8 @@ function HourlyStrip({ hourly, unit }) {
           {/* Temp labels under curve */}
           <div className="rs-flex rs-items-start">
             {hourly.map((h, i) => (
-              <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
-                <div style={{
-                  fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-micro)',
+              <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
+                <div className="rs-mono rs-type-micro rs-fw-700" style={{
                   color: 'var(--md-on-surface)',
                 }}>
                   {h.temperature != null ? Math.round(h.temperature) : '--'}°
@@ -506,7 +511,7 @@ function HourlyStrip({ hourly, unit }) {
           {/* Icon row */}
           <div className="rs-flex rs-mt-2">
             {hourly.map((h, i) => (
-              <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
+              <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
                 <span
                   className="material-symbols-rounded"
                   style={{ fontSize: '1.05rem', color: 'var(--md-on-surface-variant)' }}
@@ -518,17 +523,17 @@ function HourlyStrip({ hourly, unit }) {
           </div>
 
           {/* Precip bars */}
-          <div style={{ display: 'flex', marginTop: 4, height: 18, alignItems: 'flex-end' }}>
+          <div className="rs-flex rs-mt-1 rs-items-end" style={{ height: 18 }}>
             {hourly.map((h, i) => {
               const p = h.precip_prob || 0
               const barH = Math.max(0, (p / 100) * 14)
               return (
-                <div key={i} style={{ width: W_PER_HOUR, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+                <div key={i} className="rs-flex rs-flex-col rs-items-center rs-justify-end" style={{ width: W_PER_HOUR }}>
                   <div style={{
                     width: 14,
                     height: barH,
                     background: PRECIP_COLOR,
-                    borderRadius: 3,
+                    borderRadius: 'var(--md-shape-xs)',
                     opacity: p > 0 ? 0.7 : 0,
                   }} />
                 </div>
@@ -537,11 +542,10 @@ function HourlyStrip({ hourly, unit }) {
           </div>
 
           {/* Precip labels */}
-          <div style={{ display: 'flex', marginTop: 2 }}>
+          <div className="rs-flex" style={{ marginTop: 2 }}>
             {hourly.map((h, i) => (
-              <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
-                <span style={{
-                  fontSize: 'var(--rs-fs-nano)', fontWeight: 600,
+              <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
+                <span className="rs-type-nano rs-fw-600" style={{
                   color: h.precip_prob > 0 ? PRECIP_COLOR : 'transparent',
                 }}>
                   {h.precip_prob > 0 ? `${h.precip_prob}%` : '·'}
@@ -553,8 +557,8 @@ function HourlyStrip({ hourly, unit }) {
           {/* Time labels */}
           <div className="rs-flex rs-mt-1">
             {hourly.map((h, i) => (
-              <div key={i} style={{ width: W_PER_HOUR, textAlign: 'center' }}>
-                <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', opacity: i === 0 ? 0.9 : 0.45 }}>
+              <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
+                <span className="rs-card-label rs-type-nano" style={{ opacity: i === 0 ? 0.9 : 0.45 }}>
                   {i === 0 ? 'NOW' : fmtHour(h.time)}
                 </span>
               </div>
@@ -582,7 +586,7 @@ function DailyForecast({ daily, unit }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>7-DAY FORECAST</div>
+      <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">7-DAY FORECAST</div>
       <div className="rs-flex rs-flex-col">
         {daily.map((d, i) => {
           const minPct = d.temp_min != null ? ((d.temp_min - weekMin) / weekRange) * 100 : 0
@@ -591,34 +595,34 @@ function DailyForecast({ daily, unit }) {
           const isLast = i === daily.length - 1
           return (
             <div key={d.date} className="rs-weather-row" style={{
-              padding: '12px 0',
+              padding: 'var(--rs-space-3) 0',
               borderBottom: isLast ? 'none' : '1px solid var(--md-outline-variant)',
             }}>
               {/* Day labels are short and must never split — "TODAY" was
                   breaking to "TODA / Y" once the column tightened. */}
-              <span style={{ fontWeight: 800, fontSize: 'var(--rs-fs-micro)', whiteSpace: 'nowrap' }}>
+              <span className="rs-type-micro rs-nowrap rs-fw-800">
                 {i === 0 ? 'TODAY' : fmtDay(d.date)}
               </span>
-              <span className="material-symbols-rounded" style={{ fontSize: '1.2rem', color: 'var(--primary)', textAlign: 'center' }}>
+              <span className="material-symbols-rounded rs-text-center rs-c-accent" style={{ fontSize: '1.2rem' }}>
                 {wmoIcon(d.weathercode)}
               </span>
-              <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="rs-card-meta rs-type-micro rs-clip rs-ellipsis rs-nowrap">
                 {d.condition || '—'}
               </span>
               {/* Range bar */}
-              <div className="rs-weather-bar" style={{ position: 'relative', height: 6, background: 'var(--md-surface-container-high)', borderRadius: 3 }}>
+              <div className="rs-weather-bar rs-relative" style={{ height: 6, background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-xs)' }}>
                 <div style={{
                   position: 'absolute',
                   left: `${minPct}%`,
                   width: `${widthPct}%`,
                   top: 0, bottom: 0,
                   background: 'linear-gradient(90deg, oklch(70% 0.12 240), oklch(75% 0.15 60))',
-                  borderRadius: 3,
+                  borderRadius: 'var(--md-shape-xs)',
                 }} />
               </div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-micro)', fontWeight: 700, textAlign: 'right' }}>
+              <span className="rs-mono rs-type-micro rs-text-right rs-fw-700">
                 <span style={{ opacity: 0.5 }}>{d.temp_min != null ? Math.round(d.temp_min) : '--'}°</span>
-                <span style={{ margin: '0 4px', opacity: 0.3 }}>·</span>
+                <span style={{ margin: '0 var(--rs-space-1)', opacity: 0.3 }}>·</span>
                 {d.temp_max != null ? Math.round(d.temp_max) : '--'}°
               </span>
             </div>
@@ -655,12 +659,12 @@ function SunCard({ sunrise, sunset }) {
 
   return (
     <div className="rs-wx-panel">
-      <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 12 }}>SUN</div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap' }}>
-        <div style={{ textAlign: 'center', minWidth: 60 }}>
+      <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">SUN</div>
+      <div className="rs-flex rs-items-center rs-flex-wrap" style={{ justifyContent: 'space-around' }}>
+        <div className="rs-text-center" style={{ minWidth: 60 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(78% 0.16 75)' }}>wb_twilight</span>
-          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 4 }}>SUNRISE</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>
+          <div className="rs-card-label rs-mt-1 rs-muted rs-type-nano">SUNRISE</div>
+          <div className="rs-mono rs-type-tiny rs-fw-700">
             {fmtClockTime(sunrise)}
           </div>
         </div>
@@ -673,10 +677,10 @@ function SunCard({ sunrise, sunset }) {
           <circle cx={sunX} cy={sunY} r={6} fill="oklch(78% 0.16 75)" />
           <line x1={cx - r} y1={cy} x2={cx + r} y2={cy} stroke="var(--md-outline-variant)" strokeWidth={1} opacity={0.5} />
         </svg>
-        <div style={{ textAlign: 'center', minWidth: 60 }}>
+        <div className="rs-text-center" style={{ minWidth: 60 }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(60% 0.18 30)' }}>bedtime</span>
-          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 4 }}>SUNSET</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'var(--rs-fs-tiny)' }}>
+          <div className="rs-card-label rs-mt-1 rs-muted rs-type-nano">SUNSET</div>
+          <div className="rs-mono rs-type-tiny rs-fw-700">
             {fmtClockTime(sunset)}
           </div>
         </div>
@@ -760,24 +764,24 @@ function RadarMap({ lat, lon, radarTs }) {
 
 function WeatherSkeleton() {
   const bar = (w, h = 10) => (
-    <div style={{ height: h, width: w, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+    <div style={{ height: h, width: w, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
   )
   return (
     <div className="rs-flex rs-flex-col rs-gap-5">
       <div className="rs-flex rs-gap-4 rs-items-center">
-        <div style={{ width: 80, height: 80, borderRadius: 16, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+        <div style={{ width: 80, height: 80, borderRadius: 'var(--md-shape-lg)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
         <div className="rs-flex rs-flex-col rs-gap-3">
           {bar('120px', 50)}{bar('160px', 12)}{bar('100px', 10)}
         </div>
       </div>
       <div className="rs-flex rs-gap-3">
         {[0, 1, 2, 3].map(i => (
-          <div key={i} style={{ height: 60, flex: 1, borderRadius: 12, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+          <div key={i} className="rs-grow" style={{ height: 60, borderRadius: 'var(--md-shape-md)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
         ))}
       </div>
       <div className="rs-flex rs-gap-2">
         {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
-          <div key={i} style={{ width: 52, height: 110, borderRadius: 8, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
+          <div key={i} style={{ width: 52, height: 110, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-outline-variant)', opacity: 0.25 }} />
         ))}
       </div>
     </div>

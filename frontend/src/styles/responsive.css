@@ -25,17 +25,65 @@
   .rs-weather-row .rs-weather-bar { display: none; }
 }
 
+/* ── Flights map + list split (FlightsTab) ───────────────────────────────────
+   Side by side on a tablet or larger. On a phone the list took flex 2 of 5,
+   which left a four-column table in about 118px — every heading truncated to
+   one or two letters. Stack instead, and give each half a height it can
+   actually be read at. */
+.rs-flights-split { height: 380px; }
+.rs-flights-map  { flex: 3 1 0; }
+.rs-flights-list { flex: 2 1 0; }
+
+@media (max-width: 600px) {
+  .rs-flights-split {
+    flex-direction: column;
+    height: auto;
+  }
+  .rs-flights-map  { flex: 0 0 240px; }
+  .rs-flights-list { flex: 0 0 300px; }
+}
+
 /* ── Flights radar list row (FlightsTab) ─────────────────────────────────────
    callsign | country | alt | kts | hdg | status.
    Phones drop country + heading; callsign/alt/speed/status stay legible. */
 .rs-flights-row {
   display: grid;
-  grid-template-columns: 1.7fr 1.4fr 1.6fr 0.9fr 0.55fr 1fr;
+  /* minmax(0, ...), not a bare fr. An fr track's automatic minimum is
+     min-content, so a callsign or an airport name wider than its share
+     pushed the whole grid past the panel instead of shrinking: at 390px the
+     header measured 197px inside a 118px column and the last two headings
+     were simply gone. */
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.4fr) minmax(0, 1.6fr)
+                         minmax(0, 0.9fr) minmax(0, 0.55fr) minmax(0, 1fr);
   gap: 6px;
   align-items: center;
 }
+
+/* With the tracks free to shrink, a cell that no longer fits truncates
+   instead of overflowing. */
+.rs-flights-row > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 600px) {
-  .rs-flights-row { grid-template-columns: 1.6fr 1.2fr 0.9fr 0.9fr; }
+  .rs-flights-row {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr)
+                           minmax(0, 0.9fr) minmax(0, 0.9fr);
+  }
   .rs-flights-row .rs-flight-country,
   .rs-flights-row .rs-flight-hdg { display: none; }
 }
+
+/* ── Chronos 3-pane rail layout (ChronosPage) ───────────────────────────────
+   File tree (260px) | editor/graph (minmax(0, 1fr)) | backlinks (260px).
+   Stacks to single column below xl (1200px); 3-pane rail at xl.              */
+@media (min-width: 1200px) {
+  .rs-chronos-rail-grid.rs-chronos-rail-grid,
+  .rs-grid.rs-chronos-rail-grid.rs-chronos-rail-grid {
+    grid-template-columns: 260px minmax(0, 1fr) 260px;
+  }
+}
+

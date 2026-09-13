@@ -234,33 +234,33 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
   };
 
   return (
-    <div className="rs-modal-overlay animate-fade-in" onClick={onClose} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: '10vh' }}>
-      <div className="rs-modal" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 700, margin: '0 auto', maxHeight: '80vh', overflowY: 'auto' }}>
+    <div className="rs-modal-overlay animate-fade-in rs-flex rs-items-start" onClick={onClose} style={{ paddingTop: '10vh' }}>
+      <div className="rs-modal rs-w-full" onClick={e => e.stopPropagation()} style={{ maxWidth: 700, margin: '0 auto', maxHeight: '80vh', overflowY: 'auto' }}>
         <div className="rs-modal-header">
           <h2>{isNew ? 'New Asset' : 'Edit Asset'}</h2>
-          {!isNew && item.ein && <div className="rs-pill" style={{ fontFamily: 'var(--font-mono)' }}>{item.ein}</div>}
+          {!isNew && item.ein && <div className="rs-pill rs-mono">{item.ein}</div>}
           <button className="rs-modal-close" onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
         </div>
 
         <div className="rs-modal-body">
-          {error && <div className="rs-status-strip" style={{ background: 'rgba(248,113,113,0.2)', color: 'var(--rs-status-critical)', marginBottom: 16 }}>{error}</div>}
+          {error && <div className="rs-status-strip rs-mb-4 rs-c-critical" style={{ background: 'color-mix(in srgb, var(--rs-status-critical) 20%, transparent)' }}>{error}</div>}
 
           {!isNew && (
             <div className="rs-mb-5">
-              <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+              <div className="rs-flex rs-gap-4" style={{ overflowX: 'auto', paddingBottom: 'var(--rs-space-2)' }}>
                 {attachments.map(att => (
-                   <div key={att.id} style={{ position: 'relative', width: 120, height: 120, borderRadius: 8, overflow: 'hidden', background: 'var(--md-surface-container-high)', flexShrink: 0 }}>
-                     <img src={`/api/inventory/attachments/${att.id}/download?token=${token}`} alt="Attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                     <button onClick={() => deleteAttachment(att.id)} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer' }}>
+                   <div key={att.id} className="rs-relative rs-clip rs-no-shrink" style={{ width: 120, height: 120, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container-high)' }}>
+                     <img src={`/api/inventory/attachments/${att.id}/download?token=${token}`} alt="Attachment" className="rs-w-full rs-h-full" style={{ objectFit: 'cover' }} />
+                     <button onClick={() => deleteAttachment(att.id)} className="rs-pointer" style={{ position: 'absolute', top: 4, right: 4, background: 'var(--rs-scrim-2)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24 }}>
                        <span className="material-symbols-rounded" style={{ fontSize: '14px' }}>close</span>
                      </button>
                    </div>
                 ))}
                 <div 
                   onClick={() => photoInputRef.current.click()}
-                  style={{ width: 120, height: 120, borderRadius: 8, background: 'var(--md-surface-container)', border: '2px dashed var(--md-outline-variant)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, opacity: uploadingImage ? 0.5 : 1 }}>
+                  className="rs-flex rs-items-center rs-justify-center rs-pointer rs-no-shrink" style={{ width: 120, height: 120, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container)', border: '2px dashed var(--md-outline-variant)', opacity: uploadingImage ? 0.5 : 1 }}>
                   <span className="material-symbols-rounded" style={{ fontSize: '2rem', color: 'var(--md-on-surface-variant)' }}>
                     {uploadingImage ? 'hourglass_empty' : 'add_a_photo'}
                   </span>
@@ -270,7 +270,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div className="rs-gap-4 rs-mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
             <div className="rs-form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Asset Name</label>
               <input type="text" className="rs-input" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. DeWalt 20V Max Drill" autoFocus />
@@ -301,13 +301,13 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
             <div className="rs-form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="rs-flex rs-justify-between rs-items-center">
                  Serial Number
-                 <button type="button" className="rs-pill" onClick={() => document.getElementById('serialPhotoInput').click()} style={{ padding: '2px 8px', fontSize: 'var(--rs-fs-micro)', height: 'auto' }}>
-                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 4, verticalAlign: 'middle' }}>document_scanner</span>
+                 <button type="button" className="rs-pill rs-type-micro" onClick={() => document.getElementById('serialPhotoInput').click()} style={{ padding: '2px 8px', height: 'auto' }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', marginRight: 'var(--rs-space-1)', verticalAlign: 'middle' }}>document_scanner</span>
                     Scan Plate
                  </button>
                  <input type="file" accept="image/*" capture="environment" id="serialPhotoInput" className="rs-hidden" onChange={handleSmartSerial} />
               </label>
-              <input type="text" className="rs-input" name="serial_number" value={formData.serial_number} onChange={handleChange} style={{ fontFamily: 'var(--font-mono)' }} />
+              <input type="text" className="rs-input rs-mono" name="serial_number" value={formData.serial_number} onChange={handleChange} />
             </div>
 
             <div className="rs-form-group">
@@ -330,9 +330,9 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
               <input type="date" className="rs-input" name="warranty_expiry_date" value={formData.warranty_expiry_date} onChange={handleChange} />
             </div>
 
-            <div className="rs-form-group" style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="rs-form-group rs-flex rs-items-center rs-gap-2" style={{ gridColumn: '1 / -1' }}>
               <input type="checkbox" name="is_insured" checked={formData.is_insured} onChange={handleChange} id="is_insured_chk" style={{ width: 18, height: 18 }} />
-              <label htmlFor="is_insured_chk" style={{ margin: 0, cursor: 'pointer' }}>Separately Scheduled / Insured</label>
+              <label htmlFor="is_insured_chk" className="rs-m-0 rs-pointer">Separately Scheduled / Insured</label>
             </div>
 
             <div className="rs-form-group" style={{ gridColumn: '1 / -1' }}>
@@ -342,13 +342,13 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
           </div>
           
           {!isNew && (
-             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, padding: 16, background: 'var(--md-surface-container)', borderRadius: 12 }}>
+             <div className="rs-gap-4 rs-mb-5 rs-p-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'var(--md-surface-container)', borderRadius: 'var(--md-shape-md)' }}>
                 <div>
-                   <h4 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>RECEIPT</h4>
+                   <h4 className="rs-type-tiny" style={{ margin: '0 0 var(--rs-space-2) 0', color: 'var(--md-on-surface-variant)' }}>RECEIPT</h4>
                    {item.receipt_image_path ? (
                       <div className="rs-flex rs-items-center rs-gap-2">
-                         <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
-                         <span style={{ fontSize: 'var(--rs-fs-tiny)' }}>Attached</span>
+                         <span className="material-symbols-rounded rs-c-nominal">check_circle</span>
+                         <span className="rs-type-tiny">Attached</span>
                          <button className="rs-pill" onClick={() => receiptInputRef.current.click()}>Replace</button>
                       </div>
                    ) : (
@@ -359,11 +359,11 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
                    <input type="file" accept="image/*,application/pdf" ref={receiptInputRef} className="rs-hidden" onChange={handleUploadReceipt} />
                 </div>
                 <div>
-                   <h4 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-on-surface-variant)' }}>WARRANTY</h4>
+                   <h4 className="rs-type-tiny" style={{ margin: '0 0 var(--rs-space-2) 0', color: 'var(--md-on-surface-variant)' }}>WARRANTY</h4>
                    {item.warranty_image_path ? (
                       <div className="rs-flex rs-items-center rs-gap-2">
-                         <span className="material-symbols-rounded" style={{ color: 'var(--rs-status-nominal)' }}>check_circle</span>
-                         <span style={{ fontSize: 'var(--rs-fs-tiny)' }}>Attached</span>
+                         <span className="material-symbols-rounded rs-c-nominal">check_circle</span>
+                         <span className="rs-type-tiny">Attached</span>
                          <button className="rs-pill" onClick={() => warrantyInputRef.current.click()}>Replace</button>
                       </div>
                    ) : (
@@ -386,7 +386,7 @@ export default function AssetDetailModal({ item, homeId, onClose, token, onUpdat
         
         <div className="rs-modal-footer rs-justify-between">
           {!isNew ? (
-             <button className="rs-btn-primary" style={{ background: 'transparent', color: 'var(--rs-status-critical)', border: '1px solid #f87171' }} onClick={handleDelete}>
+             <button className="rs-btn-primary rs-c-critical" style={{ background: 'transparent', border: '1px solid #f87171' }} onClick={handleDelete}>
                DELETE
              </button>
           ) : <div></div>}

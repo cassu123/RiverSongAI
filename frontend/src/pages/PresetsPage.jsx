@@ -129,7 +129,7 @@ export default function PresetsPage({ setAction }) {
               placeholder="Preset name (e.g. Deep dive, Quick draft)"
               style={inputStyle}
             />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
               <input type="text" value={draft.config.provider || ''} onChange={e => set('provider', e.target.value)} placeholder="Provider (ollama, claude…)" style={inputStyle} />
               <input type="text" value={draft.config.model    || ''} onChange={e => set('model',    e.target.value)} placeholder="Model id"                        style={inputStyle} />
               <input type="text" value={draft.config.voice_id || ''} onChange={e => set('voice_id', e.target.value)} placeholder="Voice id"                        style={inputStyle} />
@@ -161,7 +161,7 @@ export default function PresetsPage({ setAction }) {
                 </label>
               )}
             </div>
-            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
             <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save}>{editId ? 'UPDATE' : 'CREATE'}</button>
               <button className="rs-pill" onClick={cancel}>CANCEL</button>
@@ -176,14 +176,14 @@ export default function PresetsPage({ setAction }) {
           <div key={p.id} className="rs-card is-wide rs-p-4">
             <div className="rs-card-head">
               <span className="rs-card-label">
-                {p.is_default && <span style={{ marginRight: 4 }}>★</span>}
+                {p.is_default && <span style={{ marginRight: 'var(--rs-space-1)' }}>★</span>}
                 {p.name?.toUpperCase()}
               </span>
               <span className="rs-card-label" style={{ opacity: 0.4 }}>{new Date(p.updated_at).toLocaleDateString()}</span>
             </div>
             <div className="rs-mt-2 rs-flex rs-flex-wrap rs-gap-2">
               {Object.entries(p.config || {}).map(([k, v]) => (
-                <span key={k} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>
+                <span key={k} className="rs-pill rs-type-nano" style={{ padding: '2px 8px' }}>
                   {k.toUpperCase()}: {String(v).slice(0, 30).toUpperCase()}
                 </span>
               ))}
@@ -203,8 +203,8 @@ const inputStyle = {
   boxSizing: 'border-box',
   width: '100%',
   padding: '10px 12px',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'var(--rs-veil-1)',
+  border: '1px solid var(--rs-hairline-strong)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
   fontSize: 'var(--rs-fs-tiny)',

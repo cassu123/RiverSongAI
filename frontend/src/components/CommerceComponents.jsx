@@ -42,7 +42,7 @@ export function CommerceMembers({ workspace, token }) {
         </select>
         <button className="rs-btn-primary" onClick={addMember}>ADD MEMBER</button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-3">
         {members.map(m => (
           <div key={m.id} className="rs-card">
             <div className="rs-card-value">{m.user.username || m.user.email}</div>
@@ -84,7 +84,7 @@ export function CommerceCustomers({ workspace, token }) {
         <input className="rs-input rs-grow" placeholder="Email (optional)" value={email} onChange={e => setEmail(e.target.value)} />
         <button className="rs-btn-primary" onClick={addCustomer}>ADD CUSTOMER</button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-3">
         {customers.map(c => (
           <div key={c.id} className="rs-card">
             <div className="rs-card-value">{c.name}</div>
@@ -124,7 +124,7 @@ export function CommerceSuppliers({ workspace, token }) {
         <input className="rs-input rs-grow" placeholder="Supplier Name" value={name} onChange={e => setName(e.target.value)} />
         <button className="rs-btn-primary" onClick={addSupplier}>ADD SUPPLIER</button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-3">
         {suppliers.map(s => (
           <div key={s.id} className="rs-card">
             <div className="rs-card-value">{s.name}</div>
@@ -173,14 +173,14 @@ export function CommerceSales({ workspace, token }) {
         <input className="rs-input" type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} style={{ width: 80 }} />
         <button className="rs-btn-primary" onClick={addSale}>RECORD SALE</button>
       </div>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="rs-grid rs-grid-cols-1 rs-gap-3">
         {sales.map(s => (
           <div key={s.id} className="rs-card is-wide rs-flex rs-justify-between rs-items-center">
             <div>
               <div className="rs-card-value">Sale #{s.id.slice(0, 8)}</div>
               <div className="rs-card-meta">Items: {s.lines?.reduce((a,b)=>a+b.quantity,0) || 0} | Status: {s.status}</div>
             </div>
-            <div style={{ fontSize: 'var(--rs-fs-h3)', color: 'var(--primary)', fontWeight: 700 }}>
+            <div className="rs-type-h3 rs-c-accent rs-fw-700">
               ${Number(s.total_amount).toFixed(2)}
             </div>
           </div>

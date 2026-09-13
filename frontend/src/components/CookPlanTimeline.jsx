@@ -46,10 +46,10 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
         <div key={lane.id} className="rs-flex rs-items-center rs-gap-2">
           <span
             title={lane.title}
-            style={{
-              width: 74, flexShrink: 0, fontSize: 'var(--rs-fs-nano)', fontWeight: 700,
-              letterSpacing: '0.04em', textTransform: 'uppercase',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            className="rs-no-shrink rs-type-nano rs-clip rs-ellipsis rs-nowrap rs-fw-700" style={{
+              width: 74,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
               color: colorFor[lane.id],
             }}
           >{lane.title}</span>
@@ -80,14 +80,14 @@ export default function CookPlanTimeline({ plan, colorFor, nowMin = null, onPick
         </div>
       ))}
 
-      <div style={{ display: 'flex', gap: 14, marginTop: 2, paddingLeft: 82, flexWrap: 'wrap' }}>
-        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 14, height: 8, borderRadius: 2, background: 'var(--md-on-surface)', opacity: 0.8 }} />
+      <div className="rs-flex rs-gap-4 rs-flex-wrap" style={{ marginTop: 2, paddingLeft: 82 }}>
+        <span className="rs-card-meta rs-flex rs-items-center rs-type-nano" style={{ gap: 5 }}>
+          <span style={{ width: 14, height: 8, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-on-surface)', opacity: 0.8 }} />
           you
         </span>
-        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span className="rs-card-meta rs-flex rs-items-center rs-type-nano" style={{ gap: 5 }}>
           <span style={{
-            width: 14, height: 8, borderRadius: 2, background: 'var(--md-on-surface)', opacity: 0.42,
+            width: 14, height: 8, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-on-surface)', opacity: 0.42,
             backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.28) 3px, rgba(0,0,0,0.28) 6px)',
           }} />
           unattended

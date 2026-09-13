@@ -191,24 +191,24 @@ export default function DocumentsPage({ setAction }) {
   }
 
   return (
-    <div className="rs-foyer animate-fade-in" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'minmax(220px, 280px) 1fr', gap: 16, alignItems: 'stretch' }}>
+    <div className="rs-foyer animate-fade-in rs-gap-4 rs-items-stretch" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'minmax(220px, 280px) 1fr' }}>
       {/* Left rail — document list */}
-      <div className="rs-card" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }}>
+      <div className="rs-card rs-p-3 rs-flex rs-flex-col rs-gap-2" style={{ maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }}>
         <div className="rs-card-label rs-mb-2">DOCUMENTS · {docs.length}</div>
         {docs.length === 0 && <div className="rs-card-meta rs-p-3">Nothing yet. Tap + NEW.</div>}
         {docs.map(d => (
           <button
             key={d.id}
-            className={`rs-drawer-item ${activeId === d.id ? 'is-active' : ''}`}
+            className={`rs-drawer-item rs-text-left ${activeId === d.id ? 'is-active' : ''}`}
             onClick={() => openDoc(d.id)}
-            style={{ textAlign: 'left', padding: '8px 10px' }}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}
           >
             <div className="rs-flex rs-items-center rs-gap-2 rs-w-full">
-              {d.pinned && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>★</span>}
-              <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {d.pinned && <span className="rs-muted rs-type-nano">★</span>}
+              <span className="rs-grow rs-type-micro rs-clip rs-ellipsis rs-nowrap rs-fw-700">
                 {d.title || 'Untitled'}
               </span>
-              <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{d.kind?.toUpperCase()}</span>
+              <span className="rs-card-label rs-muted rs-type-nano">{d.kind?.toUpperCase()}</span>
             </div>
           </button>
         ))}
@@ -226,15 +226,12 @@ export default function DocumentsPage({ setAction }) {
                 value={activeDoc.title}
                 onChange={onChangeTitle}
                 placeholder="Title"
-                style={{
-                  flex: 1,
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 8,
-                  padding: '10px 12px',
+                className="rs-grow rs-type-small rs-fw-700" style={{
+                  background: 'var(--rs-veil-1)',
+                  border: '1px solid var(--rs-hairline-strong)',
+                  borderRadius: 'var(--md-shape-sm)',
+                  padding: 'var(--rs-space-3) var(--rs-space-3)',
                   color: 'var(--md-on-surface)',
-                  fontSize: 'var(--rs-fs-small)',
-                  fontWeight: 700,
                   outline: 'none',
                   fontFamily: 'inherit',
                 }}
@@ -242,14 +239,12 @@ export default function DocumentsPage({ setAction }) {
               <select
                 value={activeDoc.kind}
                 onChange={onChangeKind}
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 8,
+                className="rs-type-nano rs-fw-700" style={{
+                  background: 'var(--rs-veil-1)',
+                  border: '1px solid var(--rs-hairline-strong)',
+                  borderRadius: 'var(--md-shape-sm)',
                   padding: '9px 10px',
                   color: 'var(--md-on-surface)',
-                  fontSize: 'var(--rs-fs-nano)',
-                  fontWeight: 700,
                   letterSpacing: '0.08em',
                   outline: 'none',
                   fontFamily: 'inherit',
@@ -268,25 +263,22 @@ export default function DocumentsPage({ setAction }) {
               onChange={onChangeBody}
               placeholder="Type here. Auto-saves."
               spellCheck={true}
-              style={{
-                flex: 1,
+              className="rs-grow rs-p-4 rs-type-small" style={{
                 minHeight: 'calc(100dvh - 300px)',
-                background: 'rgba(0,0,0,0.18)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 8,
-                padding: 14,
+                background: 'var(--rs-scrim-1)',
+                border: '1px solid var(--rs-hairline)',
+                borderRadius: 'var(--md-shape-sm)',
                 color: 'var(--md-on-surface)',
                 fontFamily: activeDoc.kind === 'markdown' || activeDoc.kind === 'csv' || activeDoc.kind === 'html'
                   ? 'ui-monospace, SFMono-Regular, Menlo, monospace'
                   : 'inherit',
-                fontSize: 'var(--rs-fs-small)',
                 lineHeight: 1.55,
                 outline: 'none',
                 resize: 'vertical',
               }}
             />
 
-            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
           </>
         )}
       </div>

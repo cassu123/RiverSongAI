@@ -31,9 +31,9 @@ export default function GoogleCallbackPage({ onSuccess }) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '1rem', color: 'var(--primary)', fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}>
+    <div className="rs-flex rs-items-center rs-justify-center rs-flex-col rs-c-accent" style={{ height: '100vh', gap: '1rem', fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}>
       {error
-        ? <><span style={{ color: 'var(--error, #f44)' }}>{error}</span><a href="/" style={{ color: 'var(--primary)', fontSize: 'var(--rs-fs-tiny)' }}>Back to sign in</a></>
+        ? <><span style={{ color: 'var(--error, #f44)' }}>{error}</span><a href="/" className="rs-type-tiny rs-c-accent">Back to sign in</a></>
         : <span>SIGNING IN WITH GOOGLE...</span>
       }
     </div>

@@ -22,7 +22,7 @@ function StarRating({ value, size = 14, onChange }) {
   const [hover, setHover] = useState(0)
   const filled = hover || value || 0
   return (
-    <div style={{ display: 'flex', gap: 2 }}>
+    <div className="rs-flex" style={{ gap: 2 }}>
       {[1, 2, 3, 4, 5].map(n => (
         <button 
           key={n} 
@@ -76,7 +76,7 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
     <div className="rs-card">
        <div className="rs-card-inner rs-p-5">
           <div className="rs-card-head rs-mb-5">
-             <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>WHAT THIS SESSION NEEDS</span>
+             <span className="rs-card-label rs-fw-900 rs-c-accent">WHAT THIS SESSION NEEDS</span>
           </div>
           <div>
              <div className="rs-flex rs-flex-col rs-gap-3">
@@ -84,9 +84,9 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
                   <div className="rs-card-meta">All provisions available in pantry.</div>
                 ) : items.map((it, idx) => (
                   <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: it._from_stockroom ? 'rgba(255,184,108,0.1)' : 'var(--md-surface-container-low)' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, minWidth: 60, color: 'var(--primary)' }}>{it.qty} {it.unit}</span>
+                    <span className="rs-mono rs-fw-800 rs-c-accent" style={{ minWidth: 60 }}>{it.qty} {it.unit}</span>
                     <span className="rs-grow">{it.name}</span>
-                    {it._from_stockroom && <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: '#FFB86C' }}>STOCK LOW</span>}
+                    {it._from_stockroom && <span className="rs-card-label rs-type-tiny" style={{ color: '#FFB86C' }}>STOCK LOW</span>}
                   </div>
                 ))}
              </div>
@@ -99,15 +99,15 @@ function PrepShoppingListPanel({ items, sessionId, onPushed, api }) {
                       : (pushing ? 'ADDING...' : 'PUSH TO SHOPPING LIST')}
                   </button>
                   {exportResult ? (
-                    <div style={{ padding: 16, background: 'rgba(74,222,128,0.1)', border: '1px solid #4ade80', borderRadius: 8 }}>
-                      <div style={{ color: 'var(--rs-status-nominal)', fontWeight: 800, marginBottom: 8 }}>EXPORT SUCCESSFUL</div>
+                    <div className="rs-p-4" style={{ background: 'color-mix(in srgb, var(--rs-status-nominal) 10%, transparent)', border: '1px solid #4ade80', borderRadius: 'var(--md-shape-sm)' }}>
+                      <div className="rs-mb-2 rs-c-nominal rs-fw-800">EXPORT SUCCESSFUL</div>
                       {exportResult.cart_url ? (
                          <a href={exportResult.cart_url} target="_blank" rel="noreferrer" className="rs-btn-primary" style={{ display: 'inline-flex', textDecoration: 'none' }}>OPEN WALMART CART</a>
                       ) : (
                          <div>No items were mapped to Walmart products.</div>
                       )}
                       {exportResult.unmapped?.length > 0 && (
-                         <div style={{ marginTop: 12, fontSize: 'var(--rs-fs-small)', color: 'var(--rs-status-critical)' }}>Unmapped: {exportResult.unmapped.join(', ')}</div>
+                         <div className="rs-mt-3 rs-type-small rs-c-critical">Unmapped: {exportResult.unmapped.join(', ')}</div>
                       )}
                     </div>
                   ) : (
@@ -140,15 +140,15 @@ function PrepAdjuster({ entry, recipe, api, onUpdate }) {
   }
 
   return (
-    <div style={{ marginTop: 12, padding: '12px 16px', background: 'var(--md-surface-container-low)', borderRadius: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div className="rs-mt-3 rs-flex rs-gap-3 rs-items-center rs-flex-wrap" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', background: 'var(--md-surface-container-low)', borderRadius: 'var(--md-shape-md)' }}>
        <span className="rs-card-label">SCALE TO</span>
-       <input className="rs-pill" type="number" style={{ width: 60, border: 'none', background: 'rgba(0,0,0,0.2)', textAlign: 'center' }} value={target} onChange={e => setTarget(e.target.value)} />
-       <select className="rs-pill" style={{ border: 'none', background: 'rgba(0,0,0,0.2)' }} value={system} onChange={e => setSystem(e.target.value)}>
+       <input className="rs-pill rs-text-center" type="number" style={{ width: 60, border: 'none', background: 'var(--rs-scrim-1)' }} value={target} onChange={e => setTarget(e.target.value)} />
+       <select className="rs-pill" style={{ border: 'none', background: 'var(--rs-scrim-1)' }} value={system} onChange={e => setSystem(e.target.value)}>
           <option value="">ORIGINAL</option>
           <option value="imperial">IMPERIAL</option>
           <option value="metric">METRIC</option>
        </select>
-       <button className="rs-btn-primary" style={{ height: 32, fontSize: 'var(--rs-fs-tiny)' }} onClick={handleScale} disabled={scaling}>{scaling ? 'SCALING...' : 'APPLY'}</button>
+       <button className="rs-btn-primary rs-type-tiny" style={{ height: 32 }} onClick={handleScale} disabled={scaling}>{scaling ? 'SCALING...' : 'APPLY'}</button>
     </div>
   )
 }
@@ -254,11 +254,11 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)' }} onClick={onClose}>
-       <div ref={modalRef} tabIndex="-1" className="rs-card is-elev animate-page-in" style={{ width: 'min(95%, 720px)', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', animationDuration: '250ms', transformOrigin: 'center' }} onClick={e => e.stopPropagation()}>
-          <div className="rs-card-inner" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
-             <div className="rs-card-head" style={{ marginBottom: 24, padding: '8px 8px 0 8px' }}>
-                <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>{isEditing ? 'EDIT RECIPE' : recipe.meal_type.toUpperCase()}</span>
+    <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--rs-scrim-2)', backdropFilter: 'blur(20px)' }} onClick={onClose}>
+       <div ref={modalRef} tabIndex="-1" className="rs-card is-elev animate-page-in rs-flex rs-flex-col rs-clip" style={{ width: 'min(95%, 720px)', maxHeight: '90vh', animationDuration: '250ms', transformOrigin: 'center' }} onClick={e => e.stopPropagation()}>
+          <div className="rs-card-inner rs-grow rs-p-6" style={{ overflowY: 'auto' }}>
+             <div className="rs-card-head rs-mb-5" style={{ padding: 'var(--rs-space-2) var(--rs-space-2) 0 var(--rs-space-2)' }}>
+                <span className="rs-card-label rs-fw-900 rs-c-accent">{isEditing ? 'EDIT RECIPE' : recipe.meal_type.toUpperCase()}</span>
                 <div className="rs-flex rs-gap-3">
                    <button className="rs-pill" onClick={() => setIsEditing(!isEditing)}>
                       <span className="material-symbols-rounded">{isEditing ? 'close' : 'edit'}</span>
@@ -275,12 +275,12 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                   <div className="rs-chat-input-container" style={{ background: 'var(--md-surface-container-low)' }}>
                      <input className="rs-chat-input" value={edited.title} onChange={e => setEdited({ ...edited, title: e.target.value })} placeholder="RECIPE TITLE" style={{ lineHeight: 1.7 }} />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                     <input className="rs-pill" value={edited.tags_str || ''} onChange={e => setEdited({ ...edited, tags_str: e.target.value, tags: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })} placeholder="DIETARY TAGS (e.g. keto, low-sodium)" style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px', gridColumn: '1 / -1' }} />
-                     <select className="rs-pill" value={edited.meal_type} onChange={e => setEdited({ ...edited, meal_type: e.target.value })} style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px' }}>
+                  <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-5">
+                     <input className="rs-pill" value={edited.tags_str || ''} onChange={e => setEdited({ ...edited, tags_str: e.target.value, tags: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })} placeholder="DIETARY TAGS (e.g. keto, low-sodium)" style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: 'var(--rs-space-3) var(--rs-space-4)', gridColumn: '1 / -1' }} />
+                     <select className="rs-pill" value={edited.meal_type} onChange={e => setEdited({ ...edited, meal_type: e.target.value })} style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                         {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert', 'Other'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                      </select>
-                     <select className="rs-pill" value={edited.primary_protein || ''} onChange={e => setEdited({ ...edited, primary_protein: e.target.value || null })} style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: '12px 16px' }}>
+                     <select className="rs-pill" value={edited.primary_protein || ''} onChange={e => setEdited({ ...edited, primary_protein: e.target.value || null })} style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                         <option value="">NO PRIMARY PROTEIN</option>
                         {['Chicken', 'Beef', 'Pork', 'Fish', 'Seafood', 'Turkey', 'Lamb', 'Vegetarian'].map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
                      </select>
@@ -289,15 +289,15 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                   <div>
                     <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
                       PROVISIONS
-                      <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }} onClick={addIngredient}>ADD PROVISION</button>
+                      <button className="rs-pill rs-type-tiny" onClick={addIngredient}>ADD PROVISION</button>
                     </div>
                     <div className="rs-flex rs-flex-col rs-gap-3">
                       {edited.ingredients?.map((ing, i) => (
                         <div key={i} className="rs-flex rs-gap-2">
-                          <input className="rs-pill" style={{ width: 60, background: 'var(--md-surface-container-low)', border: 'none', textAlign: 'center' }} placeholder="QTY" value={ing.qty} onChange={e => updateIngredient(i, 'qty', e.target.value)} />
+                          <input className="rs-pill rs-text-center" style={{ width: 60, background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="QTY" value={ing.qty} onChange={e => updateIngredient(i, 'qty', e.target.value)} />
                           <input className="rs-pill" style={{ width: 80, background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="UNIT" value={ing.unit} onChange={e => updateIngredient(i, 'unit', e.target.value)} />
-                          <input className="rs-pill" style={{ flex: 1, background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="INGREDIENT NAME" value={ing.name} onChange={e => updateIngredient(i, 'name', e.target.value)} />
-                          <button className="rs-pill" style={{ padding: 8, color: 'var(--md-error)' }} onClick={() => removeIngredient(i)}><span className="material-symbols-rounded">delete</span></button>
+                          <input className="rs-pill rs-grow" style={{ background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="INGREDIENT NAME" value={ing.name} onChange={e => updateIngredient(i, 'name', e.target.value)} />
+                          <button className="rs-pill rs-p-2 rs-c-error" onClick={() => removeIngredient(i)}><span className="material-symbols-rounded">delete</span></button>
                         </div>
                       ))}
                     </div>
@@ -306,28 +306,28 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                   <div>
                     <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
                       EXECUTION SEQUENCE
-                      <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }} onClick={addStep}>ADD STEP</button>
+                      <button className="rs-pill rs-type-tiny" onClick={addStep}>ADD STEP</button>
                     </div>
                     <div className="rs-flex rs-flex-col rs-gap-3">
                       {edited.steps?.map((step, i) => (
                         <div key={i} className="rs-flex rs-gap-3 rs-items-start">
-                          <span style={{ color: 'var(--text-muted)', marginTop: 12, fontFamily: 'var(--font-mono)', fontWeight: 900 }}>{String(i+1).padStart(2, '0')}</span>
+                          <span className="rs-mt-3 rs-muted rs-mono rs-fw-900">{String(i+1).padStart(2, '0')}</span>
                           <textarea 
-                            className="rs-pill" 
-                            style={{ flex: 1, minHeight: 60, borderRadius: 16, background: 'var(--md-surface-container-low)', border: 'none', padding: '12px 16px', lineHeight: 1.7, resize: 'vertical' }} 
+                            className="rs-pill rs-grow" 
+                            style={{ minHeight: 60, borderRadius: 'var(--md-shape-lg)', background: 'var(--md-surface-container-low)', border: 'none', padding: 'var(--rs-space-3) var(--rs-space-4)', lineHeight: 1.7, resize: 'vertical' }} 
                             value={step} 
                             onChange={e => updateStep(i, e.target.value)} 
                           />
-                          <button className="rs-pill" style={{ padding: 8, color: 'var(--md-error)', marginTop: 8 }} onClick={() => removeStep(i)}><span className="material-symbols-rounded">delete</span></button>
+                          <button className="rs-pill rs-p-2 rs-mt-2 rs-c-error" onClick={() => removeStep(i)}><span className="material-symbols-rounded">delete</span></button>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 32, padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
+                  <div className="rs-mt-6 rs-p-4" style={{ background: 'var(--rs-scrim-1)', borderRadius: 'var(--md-shape-md)' }}>
                      <div className="rs-card-label rs-mb-3">ADAPT EQUIPMENT</div>
                      <div className="rs-flex rs-gap-3">
-                       <input className="rs-pill" style={{ flex: 1, background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="E.g., Air Fryer, Instant Pot, Dutch Oven" value={targetEquipment} onChange={e => setTargetEquipment(e.target.value)} />
+                       <input className="rs-pill rs-grow" style={{ background: 'var(--md-surface-container-low)', border: 'none' }} placeholder="E.g., Air Fryer, Instant Pot, Dutch Oven" value={targetEquipment} onChange={e => setTargetEquipment(e.target.value)} />
                        <button className="rs-btn-primary" onClick={handleTranslateEquipment} disabled={translating || !targetEquipment.trim()}>
                          <span className="material-symbols-rounded">sync_alt</span>
                          {translating ? 'TRANSLATING...' : 'TRANSLATE'}
@@ -337,15 +337,15 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
 
                   <div className="rs-flex rs-gap-3 rs-mt-3">
                      <button className="rs-btn-primary rs-grow" onClick={handleSave} disabled={saving}>{saving ? 'SAVING...' : 'SAVE CHANGES'}</button>
-                     <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={() => { if(confirm('Delete this recipe?')) onDelete(recipe.id) }}>DELETE</button>
+                     <button className="rs-pill rs-c-error" onClick={() => { if(confirm('Delete this recipe?')) onDelete(recipe.id) }}>DELETE</button>
                   </div>
                </div>
              ) : (
                <>
-                 <div className="rs-card-value" style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 8 }}>{recipe.title}</div>
+                 <div className="rs-card-value rs-mb-2 rs-fw-800" style={{ fontSize: '1.75rem' }}>{recipe.title}</div>
                  {recipe.tags && recipe.tags.length > 0 && (
                    <div className="rs-flex rs-gap-2 rs-flex-wrap rs-mb-3">
-                     {recipe.tags.map((t, i) => <span key={i} className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '4px 8px', borderRadius: 4 }}>{t.toUpperCase()}</span>)}
+                     {recipe.tags.map((t, i) => <span key={i} className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)' }}>{t.toUpperCase()}</span>)}
                    </div>
                  )}
                  <div className="rs-mb-6"><StarRating value={recipe.rating} size={20} onChange={async (v) => {
@@ -354,18 +354,18 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                  }} /></div>
 
                  {recipe.blacklisted?.length > 0 && (
-                   <div className="rs-card" style={{ borderColor: 'var(--md-error)', background: 'rgba(239,68,68,0.05)', marginBottom: 32 }}>
+                   <div className="rs-card rs-mb-6" style={{ borderColor: 'var(--md-error)', background: 'color-mix(in srgb, var(--rs-status-critical) 5%, transparent)' }}>
                       <div className="rs-card-inner">
-                         <div className="rs-card-label" style={{ color: 'var(--md-error)', marginBottom: 12 }}>BANNED INGREDIENTS DETECTED</div>
+                         <div className="rs-card-label rs-mb-3 rs-c-error">BANNED INGREDIENTS DETECTED</div>
                          <div className="rs-flex rs-flex-col rs-gap-2">
                             {recipe.blacklisted.map((b, i) => (
-                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 'var(--rs-fs-body)' }}>
-                                 <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>{b.name}</span>
+                              <div key={i} className="rs-flex rs-items-center rs-gap-3 rs-type-body">
+                                 <span className="rs-c-error rs-fw-700">{b.name}</span>
                                  {b.substitute && (
                                    <>
                                      <span style={{ opacity: 0.7 }}>→</span>
-                                     <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{b.substitute}</span>
-                                     <button className="rs-pill" style={{ padding: '2px 10px', fontSize: 'var(--rs-fs-tiny)' }} onClick={() => applySubstitute(b.name, b.substitute)}>APPLY SUBSTITUTE</button>
+                                     <span className="rs-c-accent rs-fw-600">{b.substitute}</span>
+                                     <button className="rs-pill rs-type-tiny" style={{ padding: '2px 10px' }} onClick={() => applySubstitute(b.name, b.substitute)}>APPLY SUBSTITUTE</button>
                                    </>
                                  )}
                               </div>
@@ -375,13 +375,13 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                    </div>
                  )}
 
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 48 }}>
+                 <div className="rs-gap-7" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                    <div>
                      <div className="rs-card-label rs-mb-4">PROVISIONS</div>
                      <div className="rs-flex rs-flex-col rs-gap-3">
                        {recipe.ingredients?.map((ing, i) => (
                          <div key={i} className="rs-pill" style={{ justifyContent: 'flex-start', background: 'var(--md-surface-container-low)' }}>
-                           <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, minWidth: 40 }}>{ing.qty}</span>
+                           <span className="rs-mono rs-fw-800" style={{ minWidth: 40 }}>{ing.qty}</span>
                            <span className="rs-grow">{ing.unit} {ing.name}</span>
                          </div>
                        ))}
@@ -392,8 +392,8 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                      <div className="rs-flex rs-flex-col rs-gap-5">
                        {recipe.steps.map((s, i) => (
                          <div key={i} className="rs-flex rs-gap-4 rs-items-start">
-                            <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 900, marginTop: 4 }}>{String(i+1).padStart(2, '0')}</span>
-                            <div style={{ flex: 1, lineHeight: 1.6 }}>{s}</div>
+                            <span className="rs-mt-1 rs-muted rs-mono rs-fw-900">{String(i+1).padStart(2, '0')}</span>
+                            <div className="rs-grow" style={{ lineHeight: 1.6 }}>{s}</div>
                          </div>
                        ))}
                      </div>
@@ -402,8 +402,8 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                  
                  <div className="rs-mt-7 rs-flex rs-gap-3 rs-flex-wrap">
                     <button
-                      className="gh-cook-btn-next"
-                      style={{ flex: 2, height: 48, justifyContent: 'center' }}
+                      className="gh-cook-btn-next rs-justify-center"
+                      style={{ flex: 2, height: 48 }}
                       onClick={() => {
                         onClose();
                         onCook(recipe);
@@ -622,16 +622,16 @@ export default function CulinaryPage({ setAction }) {
       <div className="rs-flex rs-justify-between rs-items-center rs-flex-wrap rs-gap-3">
         <div className="rs-flex rs-gap-2">
           <button
-            className={`gh-kitchen-nav-btn ${cookbookSubTab === 'recipes' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${cookbookSubTab === 'recipes' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setCookbookSubTab('recipes')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>menu_book</span>
             <span>All Recipes ({recipes.length})</span>
           </button>
           <button
-            className={`gh-kitchen-nav-btn ${cookbookSubTab === 'banned' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${cookbookSubTab === 'banned' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setCookbookSubTab('banned')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>block</span>
@@ -641,8 +641,8 @@ export default function CulinaryPage({ setAction }) {
 
         {cookbookSubTab === 'recipes' && (
           <button
-            className="gh-cook-btn-next"
-            style={{ flex: 'none', height: 42, padding: '0 20px', fontSize: 'var(--rs-fs-small)' }}
+            className="gh-cook-btn-next rs-type-small"
+            style={{ flex: 'none', height: 42, padding: '0 var(--rs-space-5)' }}
             onClick={() => setShowAddRecipe(true)}
           >
             <span className="material-symbols-rounded">add</span>
@@ -654,26 +654,26 @@ export default function CulinaryPage({ setAction }) {
       {cookbookSubTab === 'recipes' ? (
         <>
           {/* Search & Filter Bar */}
-          <div className="gh-card" style={{ padding: '14px 20px' }}>
+          <div className="gh-card" style={{ padding: 'var(--rs-space-4) var(--rs-space-5)' }}>
             <div className="rs-flex rs-gap-4 rs-items-center rs-flex-wrap">
-              <div style={{ flex: 2, minWidth: 220, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)' }}>
-                <span className="material-symbols-rounded" style={{ fontSize: 20, color: 'var(--text-muted)' }}>search</span>
+              <div className="rs-flex rs-items-center rs-gap-3" style={{ flex: 2, minWidth: 220, background: 'var(--rs-veil-2)', padding: 'var(--rs-space-2) var(--rs-space-4)', borderRadius: 'var(--md-shape-full)', border: '1px solid var(--rs-hairline)' }}>
+                <span className="material-symbols-rounded rs-muted" style={{ fontSize: 20 }}>search</span>
                 <input
-                  style={{ all: 'unset', width: '100%', fontSize: 'var(--rs-fs-small)', color: 'var(--fg)' }}
+                  className="rs-w-full rs-type-small rs-c-fg" style={{ all: 'unset' }}
                   placeholder="Search recipes, ingredients..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
               <div className="rs-flex rs-gap-2 rs-flex-wrap">
-                <select className="rs-pill" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 'var(--rs-fs-tiny)' }}>
+                <select className="rs-pill rs-type-tiny" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ border: 'none', background: 'var(--rs-veil-2)', color: '#fff' }}>
                   <option value="ALL">ALL MEALS</option>
                   {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 'var(--rs-fs-tiny)' }}>
+                <select className="rs-pill rs-type-tiny" value={filterProtein} onChange={e => setFilterProtein(e.target.value)} style={{ border: 'none', background: 'var(--rs-veil-2)', color: '#fff' }}>
                   {uniqueProteins.map(p => <option key={p} value={p}>{p === 'ALL' ? 'ALL PROTEINS' : p.toUpperCase()}</option>)}
                 </select>
-                <select className="rs-pill" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 'var(--rs-fs-tiny)' }}>
+                <select className="rs-pill rs-type-tiny" value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ border: 'none', background: 'var(--rs-veil-2)', color: '#fff' }}>
                   <option value="NEWEST">NEWEST</option>
                   <option value="RATING">TOP RATED</option>
                 </select>
@@ -689,13 +689,13 @@ export default function CulinaryPage({ setAction }) {
               .filter(r => filterProtein === 'ALL' || r.primary_protein === filterProtein)
               .sort((a, b) => sortMode === 'RATING' ? (b.rating || 0) - (a.rating || 0) : new Date(b.created_at || 0) - new Date(a.created_at || 0))
               .map(r => (
-              <div key={r.id} className="rs-card is-tappable animate-page-in" style={{ padding: 0, overflow: 'hidden', animationDuration: '300ms' }} onClick={() => setActiveRecipe(r)}>
+              <div key={r.id} className="rs-card is-tappable animate-page-in rs-clip" style={{ padding: 0, animationDuration: '300ms' }} onClick={() => setActiveRecipe(r)}>
                 <div className="rs-card-inner" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-                  <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: 'var(--md-surface-container-highest)' }}>
+                  <div className="rs-w-full rs-relative rs-clip" style={{ aspectRatio: '16/10', background: 'var(--md-surface-container-highest)' }}>
                     {r.image_url ? (
-                      <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={r.image_url} alt="" className="rs-w-full rs-h-full" style={{ objectFit: 'cover' }} />
                     ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.15 }}>
+                      <div className="rs-w-full rs-flex rs-items-center rs-justify-center rs-h-full" style={{ opacity: 0.15 }}>
                         <span className="material-symbols-rounded" style={{ fontSize: '4.5rem' }}>restaurant</span>
                       </div>
                     )}
@@ -706,12 +706,12 @@ export default function CulinaryPage({ setAction }) {
                   </div>
                   <div className="rs-p-5">
                     <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
-                      <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 800, color: 'var(--md-primary)', textTransform: 'uppercase' }}>
+                      <span className="rs-type-micro rs-fw-800 rs-c-primary" style={{ textTransform: 'uppercase' }}>
                         {r.meal_type}
                       </span>
                       <button
-                        className="gh-glance-action"
-                        style={{ padding: '4px 12px', fontSize: 'var(--rs-fs-micro)' }}
+                        className="gh-glance-action rs-type-micro"
+                        style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleCookRecipe(r);
@@ -721,11 +721,11 @@ export default function CulinaryPage({ setAction }) {
                         <span>Cook</span>
                       </button>
                     </div>
-                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--fg)', lineHeight: 1.3 }}>{r.title}</div>
-                    <div style={{ marginTop: 14, display: 'flex', gap: 14, fontSize: 'var(--rs-fs-small)', color: 'var(--text-muted)' }}>
+                    <div className="rs-fw-800 rs-c-fg" style={{ fontSize: '1.45rem', lineHeight: 1.3 }}>{r.title}</div>
+                    <div className="rs-mt-4 rs-flex rs-gap-4 rs-type-small rs-muted">
                       <span>{r.primary_protein?.toUpperCase() || 'NO PROTEIN'}</span>
                       <span>·</span>
-                      <span style={{ fontFamily: 'var(--font-mono)' }}>{r.servings} SERVINGS</span>
+                      <span className="rs-mono">{r.servings} SERVINGS</span>
                     </div>
                   </div>
                 </div>
@@ -737,10 +737,10 @@ export default function CulinaryPage({ setAction }) {
         /* Dietary Restrictions & AI Substitutes View */
         <div className="rs-card-flow">
           {banned.map(item => (
-            <div key={item.id} className="rs-card animate-page-in" style={{ animationDuration: '300ms', padding: 24 }}>
+            <div key={item.id} className="rs-card animate-page-in rs-p-5" style={{ animationDuration: '300ms' }}>
               <div className="rs-card-inner">
                 <div className="rs-card-head rs-mb-3">
-                  <span className="rs-card-label" style={{ color: 'var(--md-error)', fontWeight: 900 }}>RESTRICTION</span>
+                  <span className="rs-card-label rs-c-error rs-fw-900">RESTRICTION</span>
                   <div className="rs-flex rs-gap-2">
                     <button className="rs-pill" onClick={() => getRecommendations(item.id, item.name)} disabled={recLoading[item.id]}>
                       <span className="material-symbols-rounded">psychology</span>
@@ -752,18 +752,18 @@ export default function CulinaryPage({ setAction }) {
                   </div>
                 </div>
                 <div className="rs-card-value" style={{ fontSize: '1.5rem' }}>{item.name}</div>
-                {item.substitute && <div className="rs-card-meta rs-mt-2">PREFERRED SUBSTITUTE: <span style={{ color: 'var(--md-primary)', fontWeight: 800 }}>{item.substitute.toUpperCase()}</span></div>}
+                {item.substitute && <div className="rs-card-meta rs-mt-2">PREFERRED SUBSTITUTE: <span className="rs-c-primary rs-fw-800">{item.substitute.toUpperCase()}</span></div>}
                 
                 {recommendations[item.id] && (
                   <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-2">
                     <div className="rs-card-label">AI SUGGESTIONS</div>
                     {recommendations[item.id].map((rec, idx) => (
-                      <div key={idx} className="rs-pill" style={{ justifyContent: 'flex-start', background: 'rgba(255,255,255,0.04)', cursor: 'pointer' }} onClick={async () => {
+                      <div key={idx} className="rs-pill rs-pointer" style={{ justifyContent: 'flex-start', background: 'var(--rs-veil-1)' }} onClick={async () => {
                         await api.patch(`/household/banned/${item.id}`, { substitute: rec.name });
                         fetchData('cookbook');
                       }}>
-                        <span style={{ fontWeight: 700, color: 'var(--md-primary)', marginRight: 10 }}>{rec.name}</span>
-                        <span style={{ fontSize: 'var(--rs-fs-tiny)', opacity: 0.8 }}>{rec.reason}</span>
+                        <span className="rs-fw-700 rs-c-primary" style={{ marginRight: 'var(--rs-space-3)' }}>{rec.name}</span>
+                        <span className="rs-type-tiny" style={{ opacity: 0.8 }}>{rec.reason}</span>
                       </div>
                     ))}
                   </div>
@@ -798,16 +798,16 @@ export default function CulinaryPage({ setAction }) {
         {/* Sub-toggle: Dinner Calendar vs Batch Prep */}
         <div className="rs-flex rs-gap-2">
           <button
-            className={`gh-kitchen-nav-btn ${planSubTab === 'dinner' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${planSubTab === 'dinner' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setPlanSubTab('dinner')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>calendar_month</span>
             <span>7-Day Dinners</span>
           </button>
           <button
-            className={`gh-kitchen-nav-btn ${planSubTab === 'prep' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${planSubTab === 'prep' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setPlanSubTab('prep')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>set_meal</span>
@@ -822,8 +822,8 @@ export default function CulinaryPage({ setAction }) {
             <div className="gh-card">
               <div className="rs-flex rs-justify-between rs-items-center rs-mb-4 rs-flex-wrap rs-gap-3">
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-h3)', fontWeight: 700, color: 'var(--fg)' }}>This Week's Dinner Menu</h3>
-                  <div style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)' }}>Household dinner calendar and ingredient procurement</div>
+                  <h3 className="rs-m-0 rs-type-h3 rs-fw-700 rs-c-fg">This Week's Dinner Menu</h3>
+                  <div className="rs-type-tiny rs-muted">Household dinner calendar and ingredient procurement</div>
                 </div>
                 <div className="rs-flex rs-gap-2">
                   <button className="gh-glance-action" onClick={async () => {
@@ -850,38 +850,38 @@ export default function CulinaryPage({ setAction }) {
               </div>
 
               {/* 7 Days Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+              <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
                 {week.map(w => {
                   const isToday = w.dateStr === new Date().toISOString().split('T')[0];
                   return (
-                    <div key={w.dateStr} style={{ 
-                      background: isToday ? 'rgba(0, 229, 255, 0.08)' : (w.entry ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'), 
-                      borderRadius: 16, padding: 14, 
-                      border: isToday ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid rgba(255,255,255,0.08)',
-                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 120
+                    <div key={w.dateStr} className="rs-p-4 rs-flex rs-flex-col rs-justify-between" style={{
+                      background: isToday ? 'rgba(0, 229, 255, 0.08)' : (w.entry ? 'var(--rs-veil-1)' : 'rgba(255,255,255,0.02)'),
+                      borderRadius: 'var(--md-shape-lg)',
+                      border: isToday ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid var(--rs-hairline)',
+                      minHeight: 120,
                     }}>
                       <div>
-                        <div style={{ fontSize: 'var(--rs-fs-small)', fontWeight: 800, color: isToday ? '#00e5ff' : 'rgba(220,230,245,0.75)', marginBottom: 8 }}>
+                        <div className="rs-mb-2 rs-type-small rs-fw-800" style={{ color: isToday ? '#00e5ff' : 'rgba(220,230,245,0.75)' }}>
                           {w.dayName.toUpperCase()} {isToday && '· TODAY'}
                         </div>
                         {w.entry ? (
                           <>
-                            <div style={{ fontWeight: 750, fontSize: 'var(--rs-fs-body)', color: 'var(--fg)', lineHeight: 1.35 }}>
+                            <div className="rs-type-body rs-c-fg" style={{ fontWeight: 750, lineHeight: 1.35 }}>
                               {w.entry.recipe_title || w.entry.label || 'Planned'}
                             </div>
-                            <div style={{ fontSize: 'var(--rs-fs-micro)', color: w.entry.status === 'cooked' ? '#4ade80' : '#00e5ff', marginTop: 6, fontWeight: 700 }}>
+                            <div className="rs-mt-2 rs-type-micro rs-fw-700" style={{ color: w.entry.status === 'cooked' ? 'var(--rs-status-nominal)' : '#00e5ff' }}>
                               {w.entry.status.toUpperCase()}
                             </div>
                           </>
                         ) : (
-                          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', fontStyle: 'italic' }}>Open</div>
+                          <div className="rs-muted rs-type-tiny" style={{ fontStyle: 'italic' }}>Open</div>
                         )}
                       </div>
 
                       {isToday && w.entry?.recipe_id && (
                         <button
-                          className="gh-cook-btn-next"
-                          style={{ marginTop: 10, height: 34, fontSize: 'var(--rs-fs-micro)', width: '100%', justifyContent: 'center' }}
+                          className="gh-cook-btn-next rs-mt-3 rs-w-full rs-justify-center rs-type-micro"
+                          style={{ height: 34 }}
                           onClick={() => handleCookTodayDinner(w.entry)}
                         >
                           <span className="material-symbols-rounded" style={{ fontSize: 15 }}>skillet</span>
@@ -897,35 +897,35 @@ export default function CulinaryPage({ setAction }) {
             {/* Dinner Proposals & Voting */}
             {proposals.length > 0 && (
               <div className="gh-card">
-                <h3 style={{ margin: '0 0 14px 0', fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)' }}>
+                <h3 className="rs-type-body rs-fw-700 rs-c-fg" style={{ margin: '0 0 var(--rs-space-4) 0' }}>
                   Household Dinner Proposals
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
                   {proposals.map(p => (
-                    <div key={p.id} className="rs-card animate-page-in" style={{ padding: 18, border: p.status === 'approved' ? '1px solid #00e5ff' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div key={p.id} className="rs-card animate-page-in rs-p-5" style={{ border: p.status === 'approved' ? '1px solid #00e5ff' : '1px solid var(--rs-hairline)' }}>
                       <div className="rs-card-inner">
                         <div className="rs-flex rs-justify-between rs-items-center rs-mb-2">
-                          <span style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 800, color: p.status === 'approved' ? '#00e5ff' : 'inherit' }}>
+                          <span className="rs-type-micro rs-fw-800" style={{ color: p.status === 'approved' ? '#00e5ff' : 'inherit' }}>
                             {p.status.toUpperCase()} PROPOSAL
                           </span>
                           <div className="rs-flex rs-gap-2">
-                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: 'var(--rs-fs-micro)', color: 'var(--rs-status-nominal)', background: 'rgba(74,222,128,0.1)' }}>{p.votes_yes.length} YES</span>
-                            <span className="rs-pill" style={{ padding: '2px 8px', fontSize: 'var(--rs-fs-micro)', color: 'var(--rs-status-critical)', background: 'rgba(248,113,113,0.1)' }}>{p.votes_no.length} NO</span>
+                            <span className="rs-pill rs-type-micro rs-c-nominal" style={{ padding: '2px 8px', background: 'color-mix(in srgb, var(--rs-status-nominal) 10%, transparent)' }}>{p.votes_yes.length} YES</span>
+                            <span className="rs-pill rs-type-micro rs-c-critical" style={{ padding: '2px 8px', background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)' }}>{p.votes_no.length} NO</span>
                           </div>
                         </div>
-                        <div style={{ fontSize: 'var(--rs-fs-h3)', fontWeight: 800, color: 'var(--fg)', marginBottom: 14 }}>
+                        <div className="rs-mb-4 rs-type-h3 rs-fw-800 rs-c-fg">
                           {p.recipe?.title}
                         </div>
                         <div className="rs-flex rs-gap-2">
-                          <button className="rs-btn-primary" style={{ flex: 1, height: 36, fontSize: 'var(--rs-fs-tiny)' }} onClick={async () => {
+                          <button className="rs-btn-primary rs-grow rs-type-tiny" style={{ height: 36 }} onClick={async () => {
                             await api.post(`/dinner/${p.id}/vote`, { vote: 'yes' });
                             fetchData('plan');
                           }}>APPROVE</button>
-                          <button className="rs-pill" style={{ flex: 1, height: 36, fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-error)' }} onClick={async () => {
+                          <button className="rs-pill rs-grow rs-type-tiny rs-c-error" style={{ height: 36 }} onClick={async () => {
                             await api.post(`/dinner/${p.id}/vote`, { vote: 'no' });
                             fetchData('plan');
                           }}>VETO</button>
-                          <button className="rs-pill" style={{ height: 36, padding: '0 10px' }} onClick={async () => {
+                          <button className="rs-pill" style={{ height: 36, padding: '0 var(--rs-space-3)' }} onClick={async () => {
                             await api.delete(`/dinner/${p.id}`);
                             fetchData('plan');
                           }}><span className="material-symbols-rounded">close</span></button>
@@ -942,11 +942,11 @@ export default function CulinaryPage({ setAction }) {
           <div className="rs-flex rs-flex-col rs-gap-4">
             {!activePrep ? (
               <div className="gh-card rs-text-center rs-p-7">
-                <h3 style={{ margin: '0 0 8px 0', fontSize: 'var(--rs-fs-h3)', color: 'var(--fg)' }}>No Active Prep Session</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-small)', marginBottom: 20 }}>
+                <h3 className="rs-type-h3 rs-c-fg" style={{ margin: '0 0 var(--rs-space-2) 0' }}>No Active Prep Session</h3>
+                <p className="rs-mb-5 rs-muted rs-type-small">
                   Stage multiple dishes to cook concurrently with synchronized timing.
                 </p>
-                <button className="gh-cook-btn-next" style={{ display: 'inline-flex', padding: '0 24px' }} onClick={async () => {
+                <button className="gh-cook-btn-next" style={{ display: 'inline-flex', padding: '0 var(--rs-space-5)' }} onClick={async () => {
                   await api.post('/prep', { label: 'New Session' });
                   fetchData('plan');
                 }}>Start Prep Session</button>
@@ -955,17 +955,17 @@ export default function CulinaryPage({ setAction }) {
               <div className="gh-card">
                 <div className="rs-flex rs-justify-between rs-items-center rs-mb-5">
                   <div>
-                    <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-h3)', fontWeight: 800, color: 'var(--fg)' }}>
+                    <h3 className="rs-m-0 rs-type-h3 rs-fw-800 rs-c-fg">
                       Active Prep: {activePrep.label || 'Multi-Dish Meal'}
                     </h3>
-                    <div style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)' }}>
+                    <div className="rs-type-tiny rs-muted">
                       {activePrep.recipes?.length || 0} dishes staged
                     </div>
                   </div>
                   <div className="rs-flex rs-gap-3">
                     <button
-                      className="gh-cook-btn-next"
-                      style={{ height: 42, padding: '0 20px', fontSize: 'var(--rs-fs-small)' }}
+                      className="gh-cook-btn-next rs-type-small"
+                      style={{ height: 42, padding: '0 var(--rs-space-5)' }}
                       onClick={() => setActiveTab('cook')}
                     >
                       <span className="material-symbols-rounded">skillet</span>
@@ -982,10 +982,10 @@ export default function CulinaryPage({ setAction }) {
 
                 <div className="rs-flex rs-flex-col rs-gap-3">
                   {(activePrep.recipes || []).map((pr, i) => (
-                    <div key={i} style={{ padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div key={i} className="rs-p-4" style={{ background: 'var(--rs-veil-1)', borderRadius: 'var(--md-shape-lg)', border: '1px solid var(--rs-hairline)' }}>
                       <div className="rs-flex rs-justify-between rs-items-center">
-                        <div style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)' }}>{pr.recipe_title}</div>
-                        <button className="rs-pill" style={{ color: 'var(--md-error)' }} onClick={async () => {
+                        <div className="rs-type-body rs-fw-700 rs-c-fg">{pr.recipe_title}</div>
+                        <button className="rs-pill rs-c-error" onClick={async () => {
                           await api.delete(`/prep/${activePrep.id}/recipes/${pr.entry_id}`);
                           fetchData('plan');
                         }}><span className="material-symbols-rounded">remove_circle</span></button>
@@ -998,16 +998,16 @@ export default function CulinaryPage({ setAction }) {
                 {/* Staged vs Needs inline toggle */}
                 <div className="rs-flex rs-gap-2 rs-mt-5">
                   <button
-                    className={`gh-kitchen-nav-btn ${prepView === 'recipes' ? 'is-active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
+                    className={`gh-kitchen-nav-btn rs-type-tiny ${prepView === 'recipes' ? 'is-active' : ''}`}
+                    style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                     onClick={() => setPrepView('recipes')}
                   >
                     <span className="material-symbols-rounded">list_alt</span>
                     <span>Staged Recipes</span>
                   </button>
                   <button
-                    className={`gh-kitchen-nav-btn ${prepView === 'list' ? 'is-active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: 'var(--rs-fs-tiny)' }}
+                    className={`gh-kitchen-nav-btn rs-type-tiny ${prepView === 'list' ? 'is-active' : ''}`}
+                    style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                     onClick={() => setPrepView('list')}
                   >
                     <span className="material-symbols-rounded">shopping_cart</span>
@@ -1046,16 +1046,16 @@ export default function CulinaryPage({ setAction }) {
       <div className="rs-flex rs-justify-between rs-items-center rs-flex-wrap rs-gap-3">
         <div className="rs-flex rs-gap-2">
           <button
-            className={`gh-kitchen-nav-btn ${pantrySubTab === 'list' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${pantrySubTab === 'list' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setPantrySubTab('list')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>shopping_cart</span>
             <span>Grocery List</span>
           </button>
           <button
-            className={`gh-kitchen-nav-btn ${pantrySubTab === 'stockroom' ? 'is-active' : ''}`}
-            style={{ padding: '6px 16px', fontSize: 'var(--rs-fs-tiny)' }}
+            className={`gh-kitchen-nav-btn rs-type-tiny ${pantrySubTab === 'stockroom' ? 'is-active' : ''}`}
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}
             onClick={() => setPantrySubTab('stockroom')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>inventory_2</span>
@@ -1081,12 +1081,12 @@ export default function CulinaryPage({ setAction }) {
             <div key={item.id} className="rs-card is-wide animate-page-in" style={{ animationDuration: '300ms' }}>
               <div className="rs-card-inner">
                 <div className="rs-card-head">
-                  <span className="rs-card-label" style={{ color: item.quantity <= item.min_quantity ? '#f87171' : '#4ade80', fontWeight: 900 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-h3)', fontWeight: 800 }}>{item.quantity.toFixed(2)}</span> IN STOCK
+                  <span className="rs-card-label rs-fw-900" style={{ color: item.quantity <= item.min_quantity ? 'var(--rs-status-critical)' : 'var(--rs-status-nominal)' }}>
+                    <span className="rs-mono rs-type-h3 rs-fw-800">{item.quantity.toFixed(2)}</span> IN STOCK
                   </span>
                   <span className="rs-card-label" style={{ opacity: 0.7 }}>{item.brand?.toUpperCase()}</span>
                 </div>
-                <div className="rs-card-value" style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--fg)' }}>{item.name}</div>
+                <div className="rs-card-value rs-fw-800 rs-c-fg" style={{ fontSize: '1.6rem' }}>{item.name}</div>
                 <div className="rs-mt-5 rs-flex rs-gap-3">
                   <button className="rs-pill is-active rs-grow" onClick={() => setAdjustItem(item)}>ADJUST</button>
                   <button className="rs-pill" onClick={() => {
@@ -1109,8 +1109,8 @@ export default function CulinaryPage({ setAction }) {
     <div className="gh-kitchen-stage animate-fade-in">
       {/* Header */}
       <div className="rs-foyer-head rs-mb-5">
-        <h1 className="rs-greeting" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--fg)', letterSpacing: '-0.02em' }}>Kitchen</h1>
-        <div className="rs-greeting-sub" style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--fg)', marginTop: 6 }}>Cookbook, meal plans, autonomous cooking guides & groceries.</div>
+        <h1 className="rs-greeting rs-fw-800 rs-c-fg" style={{ fontSize: '2.5rem', letterSpacing: '-0.02em' }}>Kitchen</h1>
+        <div className="rs-greeting-sub rs-mt-2 rs-type-body rs-c-fg">Cookbook, meal plans, autonomous cooking guides & groceries.</div>
       </div>
 
       {/* Top Google Home Category Nav Bar (Sub-navigation) */}
@@ -1179,7 +1179,7 @@ export default function CulinaryPage({ setAction }) {
       {error ? (
         <div className="rs-card is-wide" style={{ borderColor: 'var(--md-error)' }}>
           <div className="rs-card-inner">
-            <div className="rs-card-label" style={{ color: 'var(--md-error)' }}>KITCHEN ERROR</div>
+            <div className="rs-card-label rs-c-error">KITCHEN ERROR</div>
             <div className="rs-card-meta">{error}</div>
           </div>
         </div>
@@ -1227,7 +1227,7 @@ export default function CulinaryPage({ setAction }) {
             <div className="rs-card-label rs-mb-4">ADJUST STOCK: {adjustItem.name.toUpperCase()}</div>
             <div className="rs-flex rs-gap-3 rs-mb-5 rs-items-center rs-justify-center">
               <button className="rs-pill" onClick={() => setAdjustItem({...adjustItem, quantity: Math.max(0, adjustItem.quantity - 0.25)})}>-</button>
-              <div style={{ flex: 1, textAlign: 'center', fontSize: '1.75rem', fontWeight: 800 }}>{adjustItem.quantity.toFixed(2)}</div>
+              <div className="rs-grow rs-text-center rs-fw-800" style={{ fontSize: '1.75rem' }}>{adjustItem.quantity.toFixed(2)}</div>
               <button className="rs-pill" onClick={() => setAdjustItem({...adjustItem, quantity: adjustItem.quantity + 0.25})}>+</button>
             </div>
             <div className="rs-flex rs-gap-3">

@@ -90,21 +90,21 @@ export default function StepTimer({ timer, api, onChanged }) {
     <div
       role="timer"
       aria-live={done ? 'assertive' : 'off'}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-        marginTop: 8, padding: '8px 10px', borderRadius: 8,
+      className="rs-flex rs-items-center rs-gap-2 rs-flex-wrap rs-mt-2" style={{
+        padding: 'var(--rs-space-2) var(--rs-space-3)',
+        borderRadius: 'var(--md-shape-sm)',
         background: done
           ? 'color-mix(in srgb, var(--md-error) 18%, transparent)'
           : 'var(--md-surface-container-high)',
         border: done ? '1px solid var(--md-error)' : '1px solid var(--md-outline-variant)',
       }}
     >
-      <span style={{
-        fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 'var(--rs-fs-body)',
-        minWidth: 66, color: done ? 'var(--md-error)' : 'var(--primary)',
+      <span className="rs-mono rs-type-body rs-fw-800" style={{
+        minWidth: 66,
+        color: done ? 'var(--md-error)' : 'var(--primary)',
       }}>{mmss(left)}</span>
 
-      <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', flex: 1, minWidth: 60 }}>
+      <span className="rs-card-label rs-grow rs-type-nano" style={{ minWidth: 60 }}>
         {done ? 'TIME' : paused ? 'PAUSED' : timer.label}
       </span>
 
@@ -112,7 +112,7 @@ export default function StepTimer({ timer, api, onChanged }) {
           it can usefully do. */}
       {!done && (
         <button
-          className="rs-pill" style={{ padding: '4px 10px' }}
+          className="rs-pill" style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
           aria-label={paused ? 'Resume timer' : 'Pause timer'}
           onClick={() => act(paused ? 'resume' : 'pause')}
         >
@@ -126,15 +126,15 @@ export default function StepTimer({ timer, api, onChanged }) {
           you want having just looked in the oven, and the server counts that
           from now rather than from a deadline already in the past. */}
       <button
-        className="rs-pill" style={{ padding: '4px 10px', fontSize: 'var(--rs-fs-micro)' }}
+        className="rs-pill rs-type-micro" style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
         aria-label="Add a minute"
         onClick={() => act('extend', 60)}
       >+1 MIN</button>
 
       <button
-        className="rs-pill"
+        className="rs-pill rs-type-micro"
         style={{
-          padding: '4px 10px', fontSize: 'var(--rs-fs-micro)',
+          padding: 'var(--rs-space-1) var(--rs-space-3)',
           color: done ? 'var(--md-error)' : undefined,
           borderColor: done ? 'var(--md-error)' : undefined,
         }}

@@ -31,9 +31,12 @@ export default function ToastHost() {
   if (toasts.length === 0) return null
 
   return (
-    <div style={{
-      position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
-      display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 380,
+    <div className="rs-flex rs-flex-col rs-gap-2" style={{
+      position: 'fixed',
+      bottom: 20,
+      right: 20,
+      zIndex: 9999,
+      maxWidth: 380,
     }}>
       {toasts.map(t => {
         const c = KIND_COLORS[t.kind] || KIND_COLORS.error
@@ -41,14 +44,12 @@ export default function ToastHost() {
           <div
             key={t.id}
             onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
-            style={{
-              padding: '10px 14px',
+            className="rs-type-tiny rs-pointer" style={{
+              padding: 'var(--rs-space-3) var(--rs-space-4)',
               background: 'rgba(10, 10, 14, 0.92)',
               border: `1px solid ${c.border}`,
-              borderRadius: 8,
+              borderRadius: 'var(--md-shape-sm)',
               color: c.text,
-              fontSize: 'var(--rs-fs-tiny)',
-              cursor: 'pointer',
               boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             }}
           >

@@ -80,19 +80,19 @@ export default function AdminModelFamiliesSection({ token }) {
           return (
             <div
               key={family.id}
-              style={{ padding: 12, opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}
+              className="rs-p-3" style={{ opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}
             >
               <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>
+                  <div className="rs-type-small rs-fw-600">
                     {family.displayName}
                     {ov.quirky_name && (
-                      <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 'var(--rs-fs-tiny)', color: 'var(--md-primary)' }}>
+                      <span className="rs-type-tiny rs-fw-400 rs-c-primary" style={{ marginLeft: 'var(--rs-space-2)' }}>
                         → {ov.quirky_name}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 'var(--rs-fs-nano)', color: 'var(--md-outline)' }}>
+                  <div className="rs-type-nano" style={{ color: 'var(--md-outline)' }}>
                     {family.provider} · {family.blurb}
                   </div>
                 </div>
@@ -102,8 +102,8 @@ export default function AdminModelFamiliesSection({ token }) {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-                <label style={{ fontSize: 'var(--rs-fs-micro)' }}>
+              <div className="rs-gap-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                <label className="rs-type-micro">
                   <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
                     Quirky name
                   </span>
@@ -119,7 +119,7 @@ export default function AdminModelFamiliesSection({ token }) {
                 </label>
 
                 {TIER_ORDER.map(tier => (
-                  <label key={tier} style={{ fontSize: 'var(--rs-fs-micro)' }}>
+                  <label key={tier} className="rs-type-micro">
                     <span style={{ display: 'block', color: 'var(--md-outline)', marginBottom: 2 }}>
                       {TIER_META[tier].label} model_id
                     </span>

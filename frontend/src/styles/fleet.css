@@ -146,3 +146,17 @@
 @media (prefers-reduced-motion: reduce) {
   .rs-fleet-status.is-live .rs-fleet-dot { animation: none; }
 }
+
+/* --- Rail layouts (xl >= 1200px) -------------------------------------------
+   Named layout classes for fleet rail views. Stacks to 1 column below 1200px. */
+@media (min-width: 1200px) {
+  .rs-fleet-overview-rail-grid.rs-fleet-overview-rail-grid,
+  .rs-grid.rs-fleet-overview-rail-grid.rs-fleet-overview-rail-grid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+  .rs-unit-detail-rail-grid.rs-unit-detail-rail-grid,
+  .rs-grid.rs-unit-detail-rail-grid.rs-unit-detail-rail-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+

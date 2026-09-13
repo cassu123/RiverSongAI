@@ -41,34 +41,39 @@ function LocationSearch({ onSelect }) {
   }, [q])
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="rs-relative">
       <input
-        className="rs-input"
+        className="rs-input rs-w-full rs-type-tiny"
         placeholder="Search city to set radar origin…"
         value={q}
         onChange={e => setQ(e.target.value)}
-        style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)', boxSizing: 'border-box' }}
+        style={{ boxSizing: 'border-box' }}
         autoFocus
       />
       {(results.length > 0 || searching) && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+        <div className="rs-mt-1 rs-clip" style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          zIndex: 200,
           background: 'var(--md-surface-container-high)',
           border: '1px solid var(--md-outline-variant)',
-          borderRadius: 8, marginTop: 4, overflow: 'hidden',
+          borderRadius: 'var(--md-shape-sm)',
         }}>
           {searching && (
-            <div className="rs-card-meta" style={{ padding: '8px 14px', fontSize: 'var(--rs-fs-micro)' }}>Searching…</div>
+            <div className="rs-card-meta rs-type-micro" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}>Searching…</div>
           )}
           {results.map((r, i) => (
             <button key={i} onClick={() => {
               onSelect({ lat: parseFloat(r.lat), lon: parseFloat(r.lon), location_query: r.display_name })
               setQ(''); setResults([])
-            }} style={{
-              display: 'block', width: '100%', textAlign: 'left',
-              padding: '9px 14px', background: 'none', border: 'none',
+            }} className="rs-w-full rs-text-left rs-pointer rs-type-micro" style={{
+              display: 'block',
+              padding: '9px 14px',
+              background: 'none',
+              border: 'none',
               borderTop: i > 0 ? '1px solid var(--md-outline-variant)' : 'none',
-              cursor: 'pointer', fontSize: 'var(--rs-fs-micro)',
             }}>
               {r.display_name}
             </button>
@@ -147,7 +152,7 @@ function FlightMap({ lat, lon, radiusDeg, aircraft }) {
   }, [aircraft, radiusDeg, lat, lon, mapReady])
 
   return (
-    <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' }} />
+    <div ref={mapRef} className="rs-w-full rs-h-full rs-clip" style={{ borderRadius: 'var(--md-shape-sm)' }} />
   )
 }
 
@@ -155,30 +160,30 @@ function AircraftRow({ a, i, total }) {
   const statusColor = a.on_ground ? 'var(--md-on-surface-variant)' : 'oklch(71% 0.17 145)'
   return (
     <div className="rs-flights-row" style={{
-      padding: '8px 12px',
+      padding: 'var(--rs-space-2) var(--rs-space-3)',
       borderBottom: i < total - 1 ? '1px solid var(--md-outline-variant)' : 'none',
     }}>
       <div>
-        <div style={{ fontWeight: 800, fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div className="rs-type-micro rs-nowrap rs-clip rs-ellipsis rs-fw-800" style={{ letterSpacing: '0.05em' }}>
           {a.callsign || '—'}
         </div>
-        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 1 }}>
+        <div className="rs-card-meta rs-muted rs-type-nano" style={{ marginTop: 1 }}>
           {a.icao24}
         </div>
       </div>
-      <div className="rs-card-meta rs-flight-country" style={{ fontSize: 'var(--rs-fs-nano)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div className="rs-card-meta rs-flight-country rs-type-nano rs-clip rs-ellipsis rs-nowrap">
         {a.origin_country || '—'}
       </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+      <div className="rs-mono rs-type-nano rs-nowrap rs-fw-700">
         {a.altitude_ft != null ? `${a.altitude_ft.toLocaleString()} ft` : '—'}
       </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)', whiteSpace: 'nowrap' }}>
+      <div className="rs-mono rs-type-nano rs-nowrap">
         {a.velocity_kts != null ? `${a.velocity_kts}` : '—'}
       </div>
-      <div className="rs-flight-hdg" style={{ fontSize: 'var(--rs-fs-tiny)', textAlign: 'center' }}>
+      <div className="rs-flight-hdg rs-text-center rs-type-tiny">
         {trackArrow(a.heading_deg)}
       </div>
-      <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, color: statusColor, textAlign: 'right' }}>
+      <div className="rs-type-nano rs-text-right rs-fw-700" style={{ color: statusColor }}>
         {a.on_ground ? 'GND' : 'AIR'}
       </div>
     </div>
@@ -326,11 +331,11 @@ export default function FlightsTab({ token, active }) {
             type="range" min={0.1} max={2.0} step={0.1}
             value={radiusDeg}
             onChange={e => handleRadiusChange(e.target.value)}
-            style={{ width: '100%', accentColor: 'var(--primary)' }}
+            className="rs-w-full" style={{ accentColor: 'var(--primary)' }}
           />
           <div className="rs-flex rs-justify-between">
-            <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>~11 km</span>
-            <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>~222 km</span>
+            <span className="rs-card-meta rs-muted rs-type-nano">~11 km</span>
+            <span className="rs-card-meta rs-muted rs-type-nano">~222 km</span>
           </div>
         </SettingsRow>
         <SettingsRow label="FILTER">
@@ -358,7 +363,7 @@ export default function FlightsTab({ token, active }) {
         <SettingsRow label="RADAR ORIGIN">
           <LocationSearch onSelect={handleLocationSelect} />
           {wxSettings?.location_query && (
-            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginTop: 6 }}>
+            <div className="rs-card-meta rs-mt-2 rs-muted rs-type-nano">
               {wxSettings.location_query.split(',').slice(0, 2).join(',')}
             </div>
           )}
@@ -368,11 +373,11 @@ export default function FlightsTab({ token, active }) {
       {/* Status row */}
       <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
         <div className="rs-flex rs-items-center rs-gap-3">
-          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)', fontWeight: 700 }}>
+          <span className="rs-card-meta rs-type-micro rs-fw-700">
             OVERHEAD RADAR
           </span>
           {!loading && !error && (
-            <span className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+            <span className="rs-card-label rs-muted rs-type-nano">
               {aircraft.length} aircraft · {radiusDeg}° ≈ {radiusKm} km
             </span>
           )}
@@ -389,9 +394,9 @@ export default function FlightsTab({ token, active }) {
 
       {/* No-location state */}
       {error === 'location' && (
-        <div style={{ padding: '16px 0' }}>
+        <div style={{ padding: 'var(--rs-space-4) 0' }}>
           <div className="rs-text-center rs-mb-5">
-            <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>
+            <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>
               flight
             </span>
             <div className="rs-card-label rs-mb-2">NO RADAR ORIGIN SET</div>
@@ -405,8 +410,8 @@ export default function FlightsTab({ token, active }) {
 
       {/* Generic error */}
       {error && error !== 'location' && (
-        <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>
             flight_off
           </span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
@@ -416,15 +421,17 @@ export default function FlightsTab({ token, active }) {
 
       {/* Map + list split */}
       {!error && (
-        <div style={{ display: 'flex', gap: 16, height: 380 }}>
+        <div className="rs-flights-split rs-flex rs-gap-4">
 
           {/* Map — 60% */}
-          <div style={{ flex: '3 1 0', position: 'relative', minWidth: 0 }}>
+          <div className="rs-flights-map rs-relative rs-min-w-0">
             {loading && (
-              <div style={{
-                position: 'absolute', inset: 0, zIndex: 10, borderRadius: 8,
+              <div className="rs-flex rs-items-center rs-justify-center" style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 10,
+                borderRadius: 'var(--md-shape-sm)',
                 background: 'var(--md-surface-container)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2 }}>flight</span>
               </div>
@@ -432,10 +439,9 @@ export default function FlightsTab({ token, active }) {
             {lat && lon ? (
               <FlightMap lat={lat} lon={lon} radiusDeg={radiusDeg} aircraft={loading ? [] : sortedAircraft} />
             ) : (
-              <div style={{
-                width: '100%', height: '100%', borderRadius: 8,
+              <div className="rs-w-full rs-flex rs-items-center rs-justify-center rs-h-full" style={{
+                borderRadius: 'var(--md-shape-sm)',
                 background: 'var(--md-surface-container)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.15 }}>map</span>
               </div>
@@ -443,49 +449,47 @@ export default function FlightsTab({ token, active }) {
           </div>
 
           {/* Aircraft list — 40% */}
-          <div style={{
-            flex: '2 1 0', minWidth: 0, display: 'flex', flexDirection: 'column',
-            border: '1px solid var(--md-outline-variant)', borderRadius: 8, overflow: 'hidden',
+          <div className="rs-flights-list rs-flex rs-flex-col rs-min-w-0 rs-clip" style={{
+            border: '1px solid var(--md-outline-variant)',
+            borderRadius: 'var(--md-shape-sm)',
           }}>
             {/* Column headers */}
-            <div className="rs-flights-row" style={{
-              padding: '7px 12px', flexShrink: 0,
+            <div className="rs-flights-row rs-no-shrink" style={{
+              padding: '7px 12px',
               borderBottom: '1px solid var(--md-outline-variant)',
               background: 'var(--md-surface-container)',
             }}>
               {['CALLSIGN', 'COUNTRY', 'ALT', 'KTS', 'HDG', 'STATUS'].map(h => (
-                <div key={h} className={'rs-card-label' + (h === 'COUNTRY' ? ' rs-flight-country' : h === 'HDG' ? ' rs-flight-hdg' : '')} style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)',
-                  textAlign: h === 'STATUS' ? 'right' : 'left',
-                }}>{h}</div>
+                <div key={h} className={`${'rs-card-label' + (h === 'COUNTRY' ? ' rs-flight-country' : h === 'HDG' ? ' rs-flight-hdg' : '')} rs-muted rs-type-nano`} style={{ textAlign: h === 'STATUS' ? 'right' : 'left' }}>{h}</div>
               ))}
             </div>
 
             {/* Rows */}
-            <div style={{ overflowY: 'auto', flex: 1 }}>
+            <div className="rs-grow" style={{ overflowY: 'auto' }}>
               {loading && (
                 <div>
                   {[0,1,2,3,4,5].map(i => (
                     <div key={i} className="rs-flights-row" style={{
-                      padding: '8px 12px',
+                      padding: 'var(--rs-space-2) var(--rs-space-3)',
                       borderBottom: '1px solid var(--md-outline-variant)',
                     }}>
-                      <div style={{ height: 9, width: '80%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-                      <div style={{ height: 8, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-                      <div style={{ height: 8, width: '75%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-                      <div style={{ height: 8, width: '60%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-                      <div style={{ height: 8, width: '80%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
-                      <div style={{ height: 8, width: '70%', borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3, marginLeft: 'auto' }} />
+                      <div style={{ height: 9, width: '80%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+                      <div style={{ height: 8, width: '70%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '75%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '60%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+                      <div style={{ height: 8, width: '80%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.25 }} />
+                      <div style={{ height: 8, width: '70%', borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3, marginLeft: 'auto' }} />
                     </div>
                   ))}
                 </div>
               )}
               {!loading && sortedAircraft.length === 0 && (
-                <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-                  <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 10 }}>
+                <div className="rs-text-center" style={{ padding: 'var(--rs-space-6) var(--rs-space-4)' }}>
+                  <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2rem' }}>
                     flight_land
                   </span>
-                  <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>CLEAR SKIES</div>
-                  <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
+                  <div className="rs-card-label rs-mb-1 rs-type-nano">CLEAR SKIES</div>
+                  <div className="rs-card-meta rs-type-nano">
                     No aircraft in {radiusKm} km radius.
                   </div>
                 </div>
@@ -500,8 +504,8 @@ export default function FlightsTab({ token, active }) {
 
       {/* Footer: last updated */}
       {!error && !loading && agoText && (
-        <div style={{ marginTop: 8, textAlign: 'right' }}>
-          <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+        <div className="rs-mt-2 rs-text-right">
+          <span className="rs-card-meta rs-muted rs-type-nano">
             Updated {agoText}
           </span>
         </div>

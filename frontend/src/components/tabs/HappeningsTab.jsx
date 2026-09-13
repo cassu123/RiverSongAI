@@ -20,44 +20,44 @@ export default function HappeningsTab({ token, active }) {
   }, [token, active])
 
   if (loading) return (
-    <div style={{ padding: 40, textAlign: 'center', opacity: 0.5 }}>
+    <div className="rs-p-7 rs-text-center" style={{ opacity: 0.5 }}>
       <span className="material-symbols-rounded" style={{ fontSize: '2rem', animation: 'spin 2s linear infinite' }}>whatshot</span>
     </div>
   )
   
-  if (error) return <div style={{ padding: 20, color: 'var(--rs-status-critical)' }}>Error: {error}</div>
+  if (error) return <div className="rs-p-5 rs-c-critical">Error: {error}</div>
   if (!data) return null
 
   const { trending = [], events_nearby = [] } = data
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
+    <div className="rs-gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}>
       
       {/* Trending (HN + Reddit) */}
-      <div className="rs-card" style={{ padding: '20px', maxHeight: '800px', overflowY: 'auto' }}>
+      <div className="rs-card" style={{ padding: 'var(--rs-space-5)', maxHeight: '800px', overflowY: 'auto' }}>
         <div className="rs-card-label rs-mb-4">TRENDING DISCUSSIONS</div>
         {trending.length > 0 ? trending.map((t, i) => (
-          <div key={i} style={{ marginBottom: 16, display: 'flex', gap: 12, borderBottom: i < trending.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 16 }}>
-            <div style={{ 
-              width: 24, height: 24, borderRadius: 4, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+          <div key={i} className="rs-mb-4 rs-flex rs-gap-3" style={{ borderBottom: i < trending.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 'var(--rs-space-4)' }}>
+            <div className="rs-flex rs-items-center rs-justify-center rs-no-shrink rs-type-small rs-c-fg rs-fw-800" style={{
+              width: 24,
+              height: 24,
+              borderRadius: 'var(--md-shape-xs)',
               background: t.source === 'hackernews' ? '#ff6600' : '#ff4500',
-              color: 'var(--fg)', fontSize: 'var(--rs-fs-small)', fontWeight: 800
             }}>
               {t.source === 'hackernews' ? 'Y' : 'r'}
             </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="rs-grow rs-min-w-0">
               <a href={t.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>
+                <div className="rs-mb-2 rs-type-tiny rs-fw-700" style={{ lineHeight: 1.3 }}>
                   {t.title}
                 </div>
               </a>
               {t.image_url && (
-                <div style={{ marginBottom: 8, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--md-outline-variant)', maxHeight: 120 }}>
-                  <img src={t.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <div className="rs-mb-2 rs-clip" style={{ borderRadius: 'var(--md-shape-xs)', border: '1px solid var(--md-outline-variant)', maxHeight: 120 }}>
+                  <img src={t.image_url} alt="" className="rs-w-full rs-h-full" style={{ objectFit: 'cover', display: 'block' }} />
                 </div>
               )}
-              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div className="rs-card-meta rs-flex rs-items-center rs-gap-3 rs-flex-wrap rs-type-nano">
                 <span className="rs-flex rs-items-center rs-gap-1">
                   <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>arrow_upward</span>
                   {t.score.toLocaleString()}
@@ -67,7 +67,7 @@ export default function HappeningsTab({ token, active }) {
                   {t.comments.toLocaleString()}
                 </span>
                 {t.subreddit && (
-                  <span style={{ background: 'var(--md-surface-container-high)', padding: '2px 6px', borderRadius: 4 }}>
+                  <span style={{ background: 'var(--md-surface-container-high)', padding: '2px 6px', borderRadius: 'var(--md-shape-xs)' }}>
                     r/{t.subreddit}
                   </span>
                 )}
@@ -78,39 +78,39 @@ export default function HappeningsTab({ token, active }) {
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No trending discussions.</div>
+          <div className="rs-card-meta rs-type-micro">No trending discussions.</div>
         )}
       </div>
 
       {/* Events Nearby */}
-      <div className="rs-card" style={{ padding: '20px', maxHeight: '800px', overflowY: 'auto' }}>
+      <div className="rs-card" style={{ padding: 'var(--rs-space-5)', maxHeight: '800px', overflowY: 'auto' }}>
         <div className="rs-card-label rs-mb-4 rs-flex rs-justify-between">
           <span>EVENTS NEARBY</span>
           <span style={{ opacity: 0.5 }}>Eventbrite</span>
         </div>
         {events_nearby.length > 0 ? events_nearby.map((e, i) => (
-          <div key={i} style={{ marginBottom: 16, display: 'flex', gap: 12, borderBottom: i < events_nearby.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 16 }}>
+          <div key={i} className="rs-mb-4 rs-flex rs-gap-3" style={{ borderBottom: i < events_nearby.length - 1 ? '1px solid var(--md-outline-variant)' : 'none', paddingBottom: 'var(--rs-space-4)' }}>
             {e.image_url ? (
-              <img src={e.image_url} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+              <img src={e.image_url} alt="" className="rs-no-shrink" style={{ width: 64, height: 64, borderRadius: 'var(--md-shape-sm)', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--md-surface-container-high)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="rs-flex rs-items-center rs-justify-center rs-no-shrink" style={{ width: 64, height: 64, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container-high)' }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.5rem', opacity: 0.3 }}>event</span>
               </div>
             )}
-            <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="rs-grow rs-min-w-0">
               <a href={e.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>
+                <div className="rs-mb-1 rs-type-tiny rs-fw-700" style={{ lineHeight: 1.3 }}>
                   {e.title}
                 </div>
               </a>
-              <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 600, color: 'var(--primary)', marginBottom: 4 }}>
+              <div className="rs-mb-1 rs-type-nano rs-fw-600 rs-c-accent">
                 {new Date(e.start_time).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
-              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.venue || e.city}</span>
-                <span style={{ whiteSpace: 'nowrap' }}>{e.distance_mi} mi</span>
+              <div className="rs-card-meta rs-mb-1 rs-flex rs-justify-between rs-type-nano">
+                <span className="rs-nowrap rs-clip rs-ellipsis">{e.venue || e.city}</span>
+                <span className="rs-nowrap">{e.distance_mi} mi</span>
               </div>
-              <div style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, background: 'var(--md-surface-container-highest)', display: 'inline-block', padding: '2px 6px', borderRadius: 4 }}>
+              <div className="rs-type-nano rs-fw-700" style={{ background: 'var(--md-surface-container-highest)', display: 'inline-block', padding: '2px 6px', borderRadius: 'var(--md-shape-xs)' }}>
                 {e.price_max > 0 ? (
                   e.price_min === e.price_max ? `$${e.price_min}` : `$${e.price_min} - $${e.price_max}`
                 ) : 'Free'}
@@ -118,7 +118,7 @@ export default function HappeningsTab({ token, active }) {
             </div>
           </div>
         )) : (
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-micro)' }}>No local events found.</div>
+          <div className="rs-card-meta rs-type-micro">No local events found.</div>
         )}
       </div>
 

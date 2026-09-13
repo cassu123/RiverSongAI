@@ -305,12 +305,12 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
   }, [])
 
   const ActionSlot = useMemo(() => (
-    <div className="rs-chat-input-container" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(16px)', borderRadius: '24px', padding: '6px 12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rs-chat-input-container" style={{ background: 'var(--rs-scrim-1)', backdropFilter: 'blur(16px)', borderRadius: '24px', padding: 'var(--rs-space-2) var(--rs-space-3)', border: '1px solid var(--rs-hairline)' }}>
       <textarea
         ref={inputRef}
         rows={1}
-        className="rs-chat-textarea"
-        style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 500 }}
+        className="rs-chat-textarea rs-type-body rs-fw-500"
+       
         placeholder="Ask River Song..."
         value={inputText}
         onChange={e => setInputText(e.target.value)}
@@ -358,16 +358,16 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       
       {embedded && (
         <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
-          <h3 style={{ margin: 0, fontSize: 'var(--rs-fs-h3)', color: 'var(--primary)' }}>Vehicle Assistant</h3>
+          <h3 className="rs-m-0 rs-type-h3 rs-c-accent">Vehicle Assistant</h3>
           <button className="rs-pill" onClick={onClose}>
             <span className="material-symbols-rounded">close</span>
           </button>
         </div>
       )}
       {!embedded && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20, alignItems: 'center' }}>
+        <div className="rs-flex rs-gap-2 rs-mb-5 rs-items-center rs-justify-end">
           <RateIndicator activeModel={selectedModel} token={token} />
-          {savingModel && <span className="rs-card-label" style={{ color: 'var(--primary)', opacity: 1, marginRight: 12 }}>SYNCING…</span>}
+          {savingModel && <span className="rs-card-label rs-c-accent" style={{ opacity: 1, marginRight: 'var(--rs-space-3)' }}>SYNCING…</span>}
           <button className="rs-pill" onClick={() => setShowSystem(!showSystem)}>
             <span className="material-symbols-rounded">settings_input_component</span>
           </button>
@@ -385,7 +385,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           <div className="rs-card-inner">
             <div className="rs-card-label">System Directives</div>
             <textarea
-              style={{ all: 'unset', width: '100%', marginTop: 12, fontSize: 'var(--rs-fs-small)', minHeight: '80px', color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}
+              className="rs-w-full rs-mt-3 rs-type-small rs-mono rs-c-fg" style={{ all: 'unset', minHeight: '80px' }}
               placeholder="Inject custom neural constraints..."
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
@@ -404,7 +404,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
                 <div className="rs-card-inner">
                   <div className="rs-card-head">
                     <span className="rs-card-label">{fmtDate(s.updated_at)}</span>
-                    <span className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '2px 8px', borderRadius: 4 }}>{s.title}</span>
+                    <span className="rs-card-label" style={{ background: 'var(--primary)', color: 'var(--bg-base)', padding: '2px 8px', borderRadius: 'var(--md-shape-xs)' }}>{s.title}</span>
                   </div>
                 </div>
               </div>
@@ -412,7 +412,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
           )}
         </div>
       ) : (
-        <div className="rs-thread" style={{ paddingBottom: embedded ? '20px' : '120px', flex: 1, overflowY: 'auto' }}>
+        <div className="rs-thread rs-grow" style={{ paddingBottom: embedded ? '20px' : '120px', overflowY: 'auto' }}>
           {viewingSession && (
             <div className="rs-mb-5">
               <button className="rs-pill is-active" onClick={() => setViewingSession(null)}>
@@ -422,32 +422,33 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
             </div>
           )}
           {modelNotice && (
-            <div className="rs-model-notice animate-fade-in" style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 16px', marginBottom: 16, borderRadius: 10,
-              background: 'rgba(230,170,60,0.13)', border: '1px solid rgba(230,170,60,0.3)',
-              color: '#e6c07b', fontSize: 'var(--rs-fs-small)',
+            <div className="rs-model-notice animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4 rs-type-small" style={{
+              padding: 'var(--rs-space-3) var(--rs-space-4)',
+              borderRadius: 'var(--md-shape-sm)',
+              background: 'rgba(230,170,60,0.13)',
+              border: '1px solid rgba(230,170,60,0.3)',
+              color: '#e6c07b',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>info</span>
               <span className="rs-grow">
                 {modelNotice.name} is unavailable{modelNotice.reason ? ` — ${modelNotice.reason}` : '.'}
                 {modelNotice.usingName ? ` Using ${modelNotice.usingName} for now.` : ' Pick another model to continue.'}
               </span>
-              <button onClick={() => setModelNotice(null)} style={{ all: 'unset', cursor: 'pointer', opacity: 0.7 }}>
+              <button onClick={() => setModelNotice(null)} className="rs-pointer" style={{ all: 'unset', opacity: 0.7 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
               </button>
             </div>
           )}
           {error && (
-            <div className="rs-error-banner animate-fade-in" style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 16px', marginBottom: 16, borderRadius: 10,
-              background: 'rgba(220,60,60,0.15)', border: '1px solid rgba(220,60,60,0.3)',
-              color: 'var(--rs-status-critical)', fontSize: 'var(--rs-fs-small)',
+            <div className="rs-error-banner animate-fade-in rs-flex rs-items-center rs-gap-3 rs-mb-4 rs-type-small rs-c-critical" style={{
+              padding: 'var(--rs-space-3) var(--rs-space-4)',
+              borderRadius: 'var(--md-shape-sm)',
+              background: 'rgba(220,60,60,0.15)',
+              border: '1px solid rgba(220,60,60,0.3)',
             }}>
               <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>error</span>
               <span className="rs-grow">{error}</span>
-              <button onClick={() => setError(null)} style={{ all: 'unset', cursor: 'pointer', opacity: 0.7 }}>
+              <button onClick={() => setError(null)} className="rs-pointer" style={{ all: 'unset', opacity: 0.7 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
               </button>
             </div>
@@ -578,7 +579,7 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       )}
 
       {embedded && (
-        <div style={{ marginTop: 'auto', paddingTop: 16 }}>
+        <div style={{ marginTop: 'auto', paddingTop: 'var(--rs-space-4)' }}>
           {ActionSlot}
         </div>
       )}

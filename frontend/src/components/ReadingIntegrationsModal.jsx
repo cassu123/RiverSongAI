@@ -109,22 +109,22 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
 
   return (
     <Sheet open={open} onClose={onClose} title="Data Sources">
-      <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="rs-flex rs-flex-col rs-gap-5" style={{ padding: '0 var(--rs-space-5) var(--rs-space-5)' }}>
         
         {/* Libby */}
         <div className="rs-card">
           <div className="rs-card-inner">
             <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
-              <span className="material-symbols-rounded" style={{color: 'var(--md-primary)', fontSize: '2rem'}}>local_library</span>
+              <span className="material-symbols-rounded rs-c-primary" style={{ fontSize: '2rem' }}>local_library</span>
               <div>
-                <div style={{fontWeight: 700}}>Libby / OverDrive</div>
+                <div className="rs-fw-700">Libby / OverDrive</div>
                 <div className="rs-card-meta">Live loans and holds telemetry</div>
               </div>
             </div>
             {connections.libby ? (
                <div>
                  <div className="rs-status-strip rs-mb-3">
-                    <span className="rs-status-dot" style={{ background: '#4ade80' }} />
+                    <span className="rs-status-dot" style={{ background: 'var(--rs-status-nominal)' }} />
                     <span>CONNECTED</span>
                  </div>
                  <button className="rs-pill btn-danger" onClick={handleLibbyDisconnect}>DISCONNECT</button>
@@ -150,14 +150,14 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
               <span className="material-symbols-rounded" style={{color: '#4285f4', fontSize: '2rem'}}>play_arrow</span>
               <div>
-                <div style={{fontWeight: 700}}>Google Play Books</div>
+                <div className="rs-fw-700">Google Play Books</div>
                 <div className="rs-card-meta">Sync annotations and reading states</div>
               </div>
             </div>
             {connections.google_play ? (
                <div>
                  <div className="rs-status-strip rs-mb-3">
-                    <span className="rs-status-dot" style={{ background: '#4ade80' }} />
+                    <span className="rs-status-dot" style={{ background: 'var(--rs-status-nominal)' }} />
                     <span>CONNECTED</span>
                  </div>
                  <div className="rs-flex rs-gap-2">
@@ -180,12 +180,12 @@ export default function ReadingIntegrationsModal({ open, onClose, onRefresh }) {
             <div className="rs-flex rs-items-center rs-gap-3 rs-mb-3">
               <span className="material-symbols-rounded" style={{color: 'var(--text-dim)', fontSize: '2rem'}}>upload_file</span>
               <div>
-                <div style={{fontWeight: 700}}>Legacy Archive Import</div>
+                <div className="rs-fw-700">Legacy Archive Import</div>
                 <div className="rs-card-meta">Goodreads, Kobo, or Play Books CSV</div>
               </div>
             </div>
             <div className="rs-flex rs-gap-2">
-              <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} style={{fontSize: 'var(--rs-fs-tiny)', flex: 1}} />
+              <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} className="rs-grow rs-type-tiny" />
               <button className="rs-pill is-active" disabled={!csvFile} onClick={handleCsvImport}>IMPORT</button>
             </div>
           </div>

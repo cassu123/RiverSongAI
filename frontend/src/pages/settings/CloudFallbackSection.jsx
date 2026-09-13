@@ -36,9 +36,9 @@ export default function CloudFallbackSection({ llmSettings, saveFallback, enable
         />
 
         {llmSettings?.cloud_fallback_enabled && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rs-mt-4">
+          <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-4 rs-mt-4">
             <div className="rs-card-meta">
-              <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>Provider</span>
+              <span className="rs-card-label rs-mb-1 rs-type-nano">Provider</span>
               <select
                 className="settings-select rs-w-full"
                
@@ -56,7 +56,7 @@ export default function CloudFallbackSection({ llmSettings, saveFallback, enable
 
             {llmSettings?.cloud_fallback_provider && (
               <div className="rs-card-meta">
-                <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 4 }}>Model</span>
+                <span className="rs-card-label rs-mb-1 rs-type-nano">Model</span>
                 <select
                   className="settings-select rs-w-full"
                  

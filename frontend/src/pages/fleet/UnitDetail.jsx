@@ -134,42 +134,42 @@ export default function UnitDetail() {
       <div className="rs-flex rs-justify-between rs-items-center">
         <h2>{unit.name || unit.unit_id}</h2>
         <div className="rs-flex rs-gap-3 rs-items-center">
-          <span style={{ padding: '4px 8px', borderRadius: 4, background: unit.online ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)' }}>
+          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: unit.online ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)' }}>
             {unit.online ? 'Online' : 'Offline'}
           </span>
-          <span style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.1)' }}>
+          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'var(--rs-veil-3)' }}>
             Mode: {unit.operating_mode || 'idle'}
           </span>
-          <span style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.1)' }}>
+          <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'var(--rs-veil-3)' }}>
             Tier: {unit.connectivity_tier || 'lan'}
           </span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 20, borderBottom: '1px solid rgba(255,255,255,0.1)', margin: '20px 0', paddingBottom: 10 }}>
+      <div className="rs-flex rs-gap-5" style={{ borderBottom: '1px solid var(--rs-hairline)', margin: 'var(--rs-space-5) 0', paddingBottom: 'var(--rs-space-3)' }}>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'live' ? 'bold' : 'normal' }} onClick={() => setTab('live')}>Live</button>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'history' ? 'bold' : 'normal' }} onClick={() => setTab('history')}>History</button>
         <button className="rs-btn-ghost" style={{ fontWeight: tab === 'settings' ? 'bold' : 'normal' }} onClick={() => setTab('settings')}>Settings</button>
       </div>
 
       {tab === 'live' && (
-        <div className="grid grid-cols-1 rail:grid-cols-[2fr_1fr] gap-5">
+        <div className="rs-grid rs-grid-cols-1 rs-unit-detail-rail-grid rs-gap-5">
           <div className="rs-flex rs-flex-col rs-gap-5">
             {/* Telemetry Grid */}
-            <div className="rs-card grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div><small style={{ color: 'var(--text-muted)' }}>Battery</small><div>{latestT.battery_pct ?? '--'}% ({latestT.battery_v ?? '--'}V)</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Fuel</small><div>{latestT.fuel_pct ?? '--'}%</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>RPM</small><div>{latestT.rpm ?? '--'}</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Speed</small><div>{latestT.speed_kmh ?? '--'} km/h</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Temp</small><div>{latestT.temperature_c ?? '--'} &deg;C</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Heading</small><div>{latestT.heading_deg ?? '--'}&deg;</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>Progress</small><div>{latestT.progress_pct ?? '--'}%</div></div>
-              <div><small style={{ color: 'var(--text-muted)' }}>GPS Acc</small><div>{latestT.gps_accuracy_m ?? '--'}m</div></div>
+            <div className="rs-card rs-grid rs-grid-cols-2 rs-md-grid-cols-4 rs-gap-4 rs-text-center">
+              <div><small className="rs-muted">Battery</small><div>{latestT.battery_pct ?? '--'}% ({latestT.battery_v ?? '--'}V)</div></div>
+              <div><small className="rs-muted">Fuel</small><div>{latestT.fuel_pct ?? '--'}%</div></div>
+              <div><small className="rs-muted">RPM</small><div>{latestT.rpm ?? '--'}</div></div>
+              <div><small className="rs-muted">Speed</small><div>{latestT.speed_kmh ?? '--'} km/h</div></div>
+              <div><small className="rs-muted">Temp</small><div>{latestT.temperature_c ?? '--'} &deg;C</div></div>
+              <div><small className="rs-muted">Heading</small><div>{latestT.heading_deg ?? '--'}&deg;</div></div>
+              <div><small className="rs-muted">Progress</small><div>{latestT.progress_pct ?? '--'}%</div></div>
+              <div><small className="rs-muted">GPS Acc</small><div>{latestT.gps_accuracy_m ?? '--'}m</div></div>
             </div>
 
             {/* Map */}
             <div className="rs-map">
-              <MapContainer center={[latestT.lat || 0, latestT.lng || 0]} zoom={18} style={{ height: '100%', width: '100%' }}>
+              <MapContainer center={[latestT.lat || 0, latestT.lng || 0]} zoom={18} className="rs-w-full rs-h-full">
                 <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={20} />
                 {latestT.lat && <Marker position={[latestT.lat, latestT.lng]} />}
               </MapContainer>
@@ -178,12 +178,12 @@ export default function UnitDetail() {
             {/* Alerts */}
             <div className="rs-card">
               <h3>Recent Alerts</h3>
-              {alerts.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No alerts.</p>}
+              {alerts.length === 0 && <p className="rs-muted">No alerts.</p>}
               {alerts.map(a => (
-                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 10, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div key={a.id} className="rs-flex rs-justify-between rs-p-3" style={{ borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                   <div>
                     <strong style={{ color: a.level === 'critical' ? 'var(--danger)' : 'white' }}>{a.title}</strong>
-                    <div style={{ fontSize: '0.85em', color: 'var(--text-muted)' }}>{new Date(a.timestamp + 'Z').toLocaleString()}</div>
+                    <div className="rs-muted" style={{ fontSize: '0.85em' }}>{new Date(a.timestamp + 'Z').toLocaleString()}</div>
                     {a.message && <div style={{ fontSize: '0.9em' }}>{a.message}</div>}
                   </div>
                   {!a.acknowledged && (
@@ -219,12 +219,12 @@ export default function UnitDetail() {
             </div>
 
             <div className="rs-card">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'bold' }}>
+              <label className="rs-flex rs-items-center rs-gap-3" style={{ fontWeight: 'bold' }}>
                 <input type="checkbox" checked={manualMode} onChange={e => setManualMode(e.target.checked)} />
                 Enable Manual Mode
               </label>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" style={{ marginTop: 20, opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
+              <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 rs-gap-3 rs-mt-5" style={{ opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }}>
                 <div />
                 <button className="rs-btn-ghost" {...bindManualKey('manual.drive', { direction: 'forward', throttle: 0.3, duration_ms: 500 })}>&#8593;</button>
                 <div />
@@ -236,7 +236,7 @@ export default function UnitDetail() {
                 <div />
               </div>
               <div className="rs-mt-5">
-                <button className="rs-btn-primary" style={{ width: '100%', opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }} {...bindManualKey('manual.blades', { engage: true })}>Engage Blades</button>
+                <button className="rs-btn-primary rs-w-full" style={{ opacity: manualMode ? 1 : 0.5, pointerEvents: manualMode ? 'auto' : 'none' }} {...bindManualKey('manual.blades', { engage: true })}>Engage Blades</button>
               </div>
             </div>
           </div>
@@ -246,9 +246,9 @@ export default function UnitDetail() {
       {tab === 'history' && (
         <div className="rs-card">
           <div className="rs-table-wrap">
-            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+            <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <tr style={{ borderBottom: '1px solid var(--rs-hairline)' }}>
                   <th className="rs-p-3">Started At</th>
                   <th className="rs-p-3">Program</th>
                   <th className="rs-p-3">Status</th>
@@ -256,7 +256,7 @@ export default function UnitDetail() {
               </thead>
               <tbody>
                 {sessions.map(s => (
-                  <tr key={s.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <tr key={s.session_id} style={{ borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                     <td className="rs-p-3">{new Date(s.started_at + 'Z').toLocaleString()}</td>
                     <td className="rs-p-3">{s.program_id || 'Manual'}</td>
                     <td className="rs-p-3">{s.status}</td>
@@ -275,7 +275,7 @@ export default function UnitDetail() {
             Re-run Setup Wizard
           </button>
           
-          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="rs-mt-5" style={{ paddingTop: 'var(--rs-space-5)', borderTop: '1px solid var(--rs-hairline)' }}>
             <h3>Danger Zone</h3>
             <button className="rs-btn-danger" onClick={async () => {
               if (confirm('Delete this unit? This cannot be undone.')) {

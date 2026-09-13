@@ -60,7 +60,7 @@ function Switch({ on, onClick, disabled, label, labelOn = 'ON', labelOff = 'OFF'
       </button>
       {/* nowrap: "ADMIN" and "VISIBLE" were breaking mid-word on phones,
           rendering as ADMI / N beside the knob. */}
-      <span className="toggle-value" style={{ minWidth: 30, fontSize: 'var(--rs-fs-nano)', whiteSpace: 'nowrap' }}>
+      <span className="toggle-value rs-type-nano rs-nowrap" style={{ minWidth: 30 }}>
         {on ? labelOn : labelOff}
       </span>
     </div>
@@ -133,9 +133,9 @@ export default function ProviderSwitchesSection({ token }) {
         <strong>Allowed</strong> is the hard gate — when off, nothing routes to that
         provider, including River&rsquo;s automatic model choice and including admins.
         <strong> Users</strong> controls whether non-admin accounts can select it.
-        {busy && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>Saving…</span>}
+        {busy && <span className="rs-c-accent" style={{ marginLeft: 'var(--rs-space-2)' }}>Saving…</span>}
       </p>
-      <p className="rs-card-meta" style={{ marginBottom: 14, opacity: 0.75 }}>
+      <p className="rs-card-meta rs-mb-4" style={{ opacity: 0.75 }}>
         Local and free providers are switchable too — costing nothing is not a reason
         to be unblockable.
       </p>
@@ -143,11 +143,11 @@ export default function ProviderSwitchesSection({ token }) {
       {error && (
         <div
           role="alert"
-          style={{
-            display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 8, marginBottom: 10,
+          className="rs-flex rs-gap-2 rs-mb-3 rs-type-micro" style={{
+            padding: 'var(--rs-space-3) var(--rs-space-3)',
+            borderRadius: 'var(--md-shape-sm)',
             background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
             border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
-            fontSize: 'var(--rs-fs-micro)',
           }}
         >
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
@@ -157,22 +157,19 @@ export default function ProviderSwitchesSection({ token }) {
 
       {/* Column headers */}
       <div
-        style={{
+        className="rs-gap-4 rs-items-center rs-mb-2" style={{
           display: 'grid',
           gridTemplateColumns: '1fr auto auto',
-          gap: 14,
-          alignItems: 'center',
-          paddingBottom: 6,
+          paddingBottom: 'var(--rs-space-2)',
           borderBottom: '1px solid var(--md-outline-variant)',
-          marginBottom: 6,
         }}
       >
-        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>PROVIDER</span>
-        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>ALLOWED</span>
-        <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>USERS</span>
+        <span className="rs-card-label rs-type-nano">PROVIDER</span>
+        <span className="rs-card-label rs-type-nano">ALLOWED</span>
+        <span className="rs-card-label rs-type-nano">USERS</span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div className="rs-flex rs-flex-col" style={{ gap: 2 }}>
         {rows.map((r) => {
           const meta = PROVIDER_LABEL[r.provider] || { name: r.provider, note: '' }
           // "Off" has three causes and they need three different actions.
@@ -192,18 +189,16 @@ export default function ProviderSwitchesSection({ token }) {
           return (
             <div
               key={r.provider}
-              style={{
+              className="rs-gap-4 rs-items-center" style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr auto auto',
-                gap: 14,
-                alignItems: 'center',
-                padding: '8px 0',
+                padding: 'var(--rs-space-2) 0',
                 opacity: r.enabled ? 1 : 0.62,
               }}
             >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)' }}>{meta.name}</div>
-                <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
+              <div className="rs-min-w-0">
+                <div className="rs-type-tiny rs-fw-600">{meta.name}</div>
+                <div className="rs-card-meta rs-type-nano">
                   {blockedReason ? (
                     <span
                       style={{
@@ -245,7 +240,7 @@ export default function ProviderSwitchesSection({ token }) {
           )
         })}
         {rows.length === 0 && (
-          <p className="rs-mpop-empty" style={{ padding: '12px 0' }}>
+          <p className="rs-mpop-empty" style={{ padding: 'var(--rs-space-3) 0' }}>
             Loading providers…
           </p>
         )}

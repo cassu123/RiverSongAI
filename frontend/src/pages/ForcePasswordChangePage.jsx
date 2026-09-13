@@ -55,21 +55,21 @@ export default function ForcePasswordChangePage() {
   }
 
   return (
-    <div className="rs-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
+    <div className="rs-root rs-flex rs-items-center rs-justify-center" style={{ background: 'var(--bg-base)' }}>
       <div className="rs-card animate-fade-in" style={{ maxWidth: 400, width: '90%' }}>
         <header className="rs-card-head">
-          <span className="rs-card-label" style={{ color: 'var(--md-error)' }}>SECURITY UPDATE REQUIRED</span>
+          <span className="rs-card-label rs-c-error">SECURITY UPDATE REQUIRED</span>
         </header>
         
-        <h1 className="rs-greeting" style={{ fontSize: '1.5rem', marginBottom: 12 }}>New Credentials</h1>
+        <h1 className="rs-greeting rs-mb-3" style={{ fontSize: '1.5rem' }}>New Credentials</h1>
         <p className="rs-card-meta rs-mb-5">An administrator has requested a mandatory password update for your account.</p>
 
         {success ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div className="rs-status-dot" style={{ width: 48, height: 48, margin: '0 auto 16px', background: '#4ade80', animation: 'none', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
+            <div className="rs-status-dot rs-flex rs-items-center rs-justify-center" style={{ width: 48, height: 48, margin: '0 auto 16px', background: 'var(--rs-status-nominal)', animation: 'none', borderRadius: '50%' }}>
               <span className="material-symbols-rounded" style={{ color: 'var(--bg-base)' }}>check</span>
             </div>
-            <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-h3)' }}>Update Complete</div>
+            <div className="rs-card-value rs-type-h3">Update Complete</div>
             <div className="rs-card-meta">Re-authenticating...</div>
           </div>
         ) : (
@@ -78,14 +78,13 @@ export default function ForcePasswordChangePage() {
               <div className="rs-card-label rs-mb-2">NEW PASSWORD</div>
               <input 
                 type="password"
-                className="rs-chat-textarea"
-                style={{ 
-                  background: 'var(--md-surface-container-low)', 
+                className="rs-chat-textarea rs-w-full"
+                style={{
+                  background: 'var(--md-surface-container-low)',
                   border: '1px solid var(--md-outline-variant)',
-                  borderRadius: 12,
-                  padding: '12px 16px',
-                  width: '100%',
-                  boxSizing: 'border-box'
+                  borderRadius: 'var(--md-shape-md)',
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
+                  boxSizing: 'border-box',
                 }}
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
@@ -99,14 +98,13 @@ export default function ForcePasswordChangePage() {
               <div className="rs-card-label rs-mb-2">CONFIRM PASSWORD</div>
               <input 
                 type="password"
-                className="rs-chat-textarea"
-                style={{ 
-                  background: 'var(--md-surface-container-low)', 
+                className="rs-chat-textarea rs-w-full"
+                style={{
+                  background: 'var(--md-surface-container-low)',
                   border: '1px solid var(--md-outline-variant)',
-                  borderRadius: 12,
-                  padding: '12px 16px',
-                  width: '100%',
-                  boxSizing: 'border-box'
+                  borderRadius: 'var(--md-shape-md)',
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
+                  boxSizing: 'border-box',
                 }}
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
@@ -115,7 +113,7 @@ export default function ForcePasswordChangePage() {
               />
             </div>
 
-            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)' }}>{error}</div>}
+            {error && <div className="rs-type-tiny rs-c-error">{error}</div>}
 
             <div className="rs-flex rs-gap-3 rs-mt-3">
               <button type="submit" className="rs-btn-primary rs-grow" disabled={loading}>

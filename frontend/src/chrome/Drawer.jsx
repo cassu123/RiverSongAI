@@ -68,7 +68,7 @@ export default function Drawer({
         <div className="rs-drawer-head">
           <div className="rs-flex rs-items-center rs-gap-3">
             <RsMark mark="mono" size={26} />
-            <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>
+            <span className="rs-type-body rs-fw-700 rs-c-fg" style={{ letterSpacing: '-0.01em' }}>
               Spaces & Services
             </span>
           </div>
@@ -101,13 +101,13 @@ export default function Drawer({
         </div>
 
         {/* Account & Quick Controls Footer */}
-        <div className="rs-drawer-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 14, marginTop: 10 }}>
+        <div className="rs-drawer-footer rs-mt-3" style={{ borderTop: '1px solid var(--rs-hairline)', paddingTop: 'var(--rs-space-4)' }}>
           <div className="rs-flex rs-items-center rs-justify-between rs-gap-3">
             <button
-              className={`rs-drawer-profile ${currentPage === 'profile' ? 'is-active' : ''}`}
+              className={`rs-drawer-profile rs-grow ${currentPage === 'profile' ? 'is-active' : ''}`}
               onClick={() => navigate('profile')}
               aria-current={currentPage === 'profile' ? 'page' : undefined}
-              style={{ flex: 1, padding: '8px 10px', borderRadius: 16 }}
+              style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-lg)' }}
             >
               <span className="rs-drawer-avatar" aria-hidden="true">{initials}</span>
               <span className="rs-drawer-profile-body">
@@ -121,18 +121,18 @@ export default function Drawer({
               onClick={() => navigate('settings')}
               title="Settings"
               aria-label="Settings"
-              style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }}
+              style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--rs-veil-2)' }}
             >
               <EnvIcon name="settings" className="rs-icon" />
             </button>
 
             {onLogout && (
               <button
-                className="rs-icon-btn"
+                className="rs-icon-btn rs-c-critical"
                 onClick={() => { onClose(); onLogout() }}
                 title="Sign out"
                 aria-label="Sign out"
-                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--rs-status-critical)' }}
+                style={{ width: 40, height: 40, borderRadius: '50%', background: 'color-mix(in srgb, var(--rs-status-critical) 15%, transparent)' }}
               >
                 <EnvIcon name="logout" className="rs-icon" />
               </button>
@@ -140,8 +140,8 @@ export default function Drawer({
           </div>
 
           {userIsAdmin && (
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
-              <span style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', fontWeight: 500 }}>Admin Mode</span>
+            <div className="rs-mt-3 rs-flex rs-items-center rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-md)', background: 'var(--rs-veil-1)' }}>
+              <span className="rs-type-tiny rs-muted rs-fw-500">Admin Mode</span>
               <button
                 className={`rs-drawer-toggle ${adminMode ? 'is-on' : ''}`}
                 onClick={() => onAdminToggle(!adminMode)}

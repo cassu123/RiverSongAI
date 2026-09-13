@@ -7,10 +7,6 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Ibarra+Real+Nova:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@300;400;600&family=Outfit:wght@300;400;600&family=Inter:wght@400;700;900&display=swap');
 
-/* Tailwind v4: single import + load the existing v3-style JS config for the
-   Material You theme tokens via the @config compatibility directive. */
-@import "tailwindcss";
-@config "../../tailwind.config.js";
 
 /* ============================================================
    Icon containment
@@ -97,11 +93,15 @@
   --md-outline:         #899398;
   --md-outline-variant: #40484E;
 
-  /* Shape tokens */
+  /* Shape tokens. --md-shape-md was referenced in three places and defined in
+     none; var() with no fallback on an undefined property is invalid at
+     computed-value time, so those elements were rendering square. */
   --md-shape-full: 999px;
   --md-shape-xl:   20px;
   --md-shape-lg:   14px;
+  --md-shape-md:   12px;
   --md-shape-sm:   8px;
+  --md-shape-xs:   4px;
 
   /* Chrome Blur */
   --glass-blur: blur(24px);
@@ -112,6 +112,35 @@
   --rs-motion-mid:  350ms;
   --rs-motion-slow: 750ms;
   --rs-motion-curve: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Surface veils and hairlines.
+
+     Components had been writing rgba(255,255,255,0.05) and
+     1px solid rgba(255,255,255,0.12) by hand — a fixed white lift that no
+     environment could move. The border alphas in particular are the whole
+     difference between the ethereal environments and the tactical ones, and
+     --card-border-alpha already carries that (0.12 vs 0.25); it just never
+     reached anything drawn inline. Three weights, all derived from it, so a
+     hairline gets heavier when the environment says it should.
+
+     Each is an offset plus a fraction of the alpha, not a straight multiple.
+     A straight multiple put the tactical environments at 0.19-0.25 against
+     the ethereal 0.09-0.12, and every panel edge on Harkonnen and UNSC read
+     as a framed window floating over the backdrop. The offset keeps the
+     spread to about 1.4x, so tactical is still the crisper of the two and
+     its heaviest border (0.145) lands near the 0.12 these were frozen at
+     before any of this was theme-aware. */
+  --rs-veil-1:   rgba(255, 255, 255, 0.04);
+  --rs-veil-2:   rgba(255, 255, 255, 0.06);
+  --rs-veil-3:   rgba(255, 255, 255, 0.10);
+  --rs-hairline-soft:   rgba(255, 255, 255, calc(0.035 + var(--card-border-alpha, 0.12) * 0.15));
+  --rs-hairline:        rgba(255, 255, 255, calc(0.05  + var(--card-border-alpha, 0.12) * 0.25));
+  --rs-hairline-strong: rgba(255, 255, 255, calc(0.07  + var(--card-border-alpha, 0.12) * 0.3));
+
+  /* Scrims — dark washes over media and behind overlays. */
+  --rs-scrim-1:  rgba(0, 0, 0, 0.25);
+  --rs-scrim-2:  rgba(0, 0, 0, 0.6);
+  --rs-scrim-3:  rgba(0, 0, 0, 0.8);
 
   /* Semantic Status Colors */
   --rs-status-nominal:  #4ade80;
@@ -222,3 +251,17 @@ p {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+.animate-pulse {
+  animation: rs-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes rs-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+.animate-scale-in {
+  animation: rs-fade-in var(--rs-motion-mid) var(--rs-motion-curve) both;
+}
+
