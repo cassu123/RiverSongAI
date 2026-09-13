@@ -1,0 +1,211 @@
+/* ============================================================
+   STLViewer — Tokenized 3D CAD Viewport
+   ------------------------------------------------------------
+   Component-local styles for the 3D model viewer, control header,
+   and overlay states.
+   ============================================================ */
+
+.rs-stl-viewer {
+  position: relative;
+  margin-block: var(--rs-space-4);
+  border-radius: var(--md-shape-xl);
+  overflow: hidden;
+  border: 1px solid var(--rs-hairline-strong);
+  background: var(--bg-base);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.rs-stl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--md-surface-container-high);
+  border-bottom: 1px solid var(--rs-hairline);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  position: relative;
+  z-index: 10;
+}
+
+.rs-stl-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-2);
+}
+
+.rs-stl-status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--md-shape-full);
+  background: var(--primary);
+  animation: rs-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.rs-stl-title {
+  font-size: var(--rs-fs-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg);
+}
+
+.rs-stl-dimensions {
+  font-size: var(--rs-fs-nano);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: var(--md-surface-container);
+  padding: 2px 8px;
+  border-radius: var(--md-shape-sm);
+  border: 1px solid var(--rs-hairline);
+}
+
+.rs-stl-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rs-stl-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: var(--rs-fs-micro);
+  border-radius: var(--md-shape-xs);
+  border: none;
+  background: var(--md-surface-container);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--rs-motion-fast) var(--rs-motion-curve),
+              color var(--rs-motion-fast) var(--rs-motion-curve);
+}
+
+.rs-stl-btn:hover {
+  background: var(--md-surface-container-high);
+  color: var(--fg);
+}
+
+.rs-stl-btn.is-active {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.rs-stl-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: var(--rs-fs-micro);
+  font-weight: 500;
+  border-radius: var(--md-shape-xs);
+  background: var(--rs-status-nominal);
+  color: #ffffff;
+  text-decoration: none;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background var(--rs-motion-fast) var(--rs-motion-curve);
+}
+
+.rs-stl-download-btn:hover {
+  background: color-mix(in srgb, var(--rs-status-nominal) 85%, white);
+}
+
+.rs-stl-canvas {
+  width: 100%;
+  position: relative;
+  cursor: grab;
+}
+
+.rs-stl-canvas:active {
+  cursor: grabbing;
+}
+
+.rs-stl-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rs-space-2);
+  color: var(--primary);
+}
+
+.rs-stl-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--primary);
+  border-top-color: transparent;
+  border-radius: var(--md-shape-full);
+  animation: rs-stl-spin 1s linear infinite;
+}
+
+@keyframes rs-stl-spin {
+  to { transform: rotate(360deg); }
+}
+
+.rs-stl-loading-text {
+  font-size: var(--rs-fs-micro);
+  font-family: var(--font-mono);
+}
+
+.rs-stl-error-overlay {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-base) 90%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--rs-space-4);
+  text-align: center;
+}
+
+.rs-stl-error-title {
+  font-size: var(--rs-fs-small);
+  color: var(--rs-status-critical);
+  font-weight: 600;
+  margin-block-end: var(--rs-space-1);
+}
+
+.rs-stl-error-msg {
+  font-size: var(--rs-fs-micro);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-block-end: var(--rs-space-3);
+}
+
+.rs-stl-error-btn {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--md-surface-container);
+  color: var(--fg);
+  font-size: var(--rs-fs-micro);
+  border-radius: var(--md-shape-sm);
+  border: 1px solid var(--rs-hairline);
+  text-decoration: none;
+  transition: background var(--rs-motion-fast) var(--rs-motion-curve);
+}
+
+.rs-stl-error-btn:hover {
+  background: var(--md-surface-container-high);
+}
+
+.rs-stl-helper {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  pointer-events: none;
+  font-size: var(--rs-fs-nano);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+  padding: 2px 8px;
+  border-radius: var(--md-shape-xs);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
