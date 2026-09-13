@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import './STLViewer.css'
 
 export default function STLViewer({ url, scadCode, className = '', height = 360 }) {
   const mountRef = useRef(null)
@@ -269,29 +270,27 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
   const effectiveDownloadUrl = blobUrl || url
 
   return (
-    <div className={`relative my-4 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-2xl ${className}`}>
+    <div className={`rs-stl-viewer ${className}`}>
       {/* 3D Viewport Header */}
-      <div className="flex items-center justify-between px-3.5 py-2 bg-slate-900/90 border-b border-slate-800 backdrop-blur-sm z-10">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+      <div className="rs-stl-header">
+        <div className="rs-stl-title-group">
+          <span className="rs-stl-status-dot" />
+          <span className="rs-stl-title">
             3D CAD Viewport
           </span>
           {dimensions && (
-            <span className="text-[11px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700/60">
+            <span className="rs-stl-dimensions">
               {dimensions.x} × {dimensions.y} × {dimensions.z} mm
             </span>
           )}
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1.5">
+        <div className="rs-stl-actions">
           <button
             type="button"
             onClick={() => setAutoRotate(!autoRotate)}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              autoRotate ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
+            className={`rs-stl-btn ${autoRotate ? 'is-active' : ''}`}
             title="Toggle Auto Rotation"
           >
             <span className="material-symbols-rounded" style={{ fontSize: "1rem", verticalAlign: "-3px" }}>autorenew</span> Rotate
@@ -299,9 +298,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
           <button
             type="button"
             onClick={() => setWireframe(!wireframe)}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              wireframe ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
+            className={`rs-stl-btn ${wireframe ? 'is-active' : ''}`}
             title="Toggle Wireframe"
           >
             <span className="material-symbols-rounded" style={{ fontSize: "1rem", verticalAlign: "-3px" }}>grid_on</span> Wireframe
@@ -309,7 +306,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
           <button
             type="button"
             onClick={handleResetCamera}
-            className="px-2 py-1 text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 rounded transition-colors"
+            className="rs-stl-btn"
             title="Reset Camera Position"
           >
             <span className="material-symbols-rounded" style={{ fontSize: "1rem", verticalAlign: "-3px" }}>filter_center_focus</span> Center
@@ -318,7 +315,7 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
             <a
               href={effectiveDownloadUrl}
               download="model.stl"
-              className="px-2.5 py-1 text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded transition-colors flex items-center gap-1 shadow-sm"
+              className="rs-stl-download-btn"
               title="Download STL Binary for 3D Printing"
             >
               <span className="material-symbols-rounded" style={{ fontSize: "1rem", verticalAlign: "-3px" }}>download</span> STL
@@ -328,26 +325,26 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
       </div>
 
       {/* 3D Canvas Canvas Mount */}
-      <div ref={mountRef} className="w-full relative cursor-grab active:cursor-grabbing" style={{ height }} />
+      <div ref={mountRef} className="rs-stl-canvas" style={{ height }} />
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 text-cyan-400">
-          <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-mono">Compiling & Rendering 3D Mesh…</span>
+        <div className="rs-stl-loading-overlay">
+          <div className="rs-stl-spinner" />
+          <span className="rs-stl-loading-text">Compiling & Rendering 3D Mesh…</span>
         </div>
       )}
 
       {/* Error Overlay */}
       {error && (
-        <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-center">
-          <span className="text-sm text-red-400 font-semibold mb-1">⚠️ 3D Mesh Render Failed</span>
-          <span className="text-xs text-slate-400 font-mono mb-3">{error}</span>
+        <div className="rs-stl-error-overlay">
+          <span className="rs-stl-error-title">⚠️ 3D Mesh Render Failed</span>
+          <span className="rs-stl-error-msg">{error}</span>
           {effectiveDownloadUrl && (
             <a
               href={effectiveDownloadUrl}
               download="model.stl"
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700"
+              className="rs-stl-error-btn"
             >
               Download Raw STL
             </a>
@@ -356,10 +353,11 @@ export default function STLViewer({ url, scadCode, className = '', height = 360 
       )}
 
       {/* Helper text on bottom */}
-      <div className="absolute bottom-2 left-3 pointer-events-none text-[10px] font-mono text-slate-400 bg-slate-950/70 px-2 py-0.5 rounded backdrop-blur-xs">
+      <div className="rs-stl-helper">
         Drag to rotate &middot; Right-click to pan &middot; Scroll to zoom
       </div>
     </div>
   )
 }
+
 

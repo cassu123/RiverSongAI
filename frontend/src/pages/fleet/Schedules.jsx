@@ -106,9 +106,9 @@ export default function Schedules() {
 
       <div className="rs-card">
         <div className="rs-table-wrap">
-          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <tr style={{ borderBottom: '1px solid var(--rs-hairline)' }}>
                 <th className="rs-p-3">Enabled</th>
                 <th className="rs-p-3">Name</th>
                 <th className="rs-p-3">Program</th>
@@ -121,13 +121,13 @@ export default function Schedules() {
               {schedules.map(s => {
                 const p = programs.find(x => x.program_id === s.program_id)
                 return (
-                  <tr key={s.schedule_id || s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <tr key={s.schedule_id || s.id} style={{ borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                     <td className="rs-p-3">
                       <input type="checkbox" checked={s.enabled} onChange={() => toggleEnabled(s)} />
                     </td>
                     <td className="rs-p-3">{s.name}</td>
                     <td className="rs-p-3">{p ? p.name : 'Unknown'}</td>
-                    <td className="rs-p-3">{renderCron(s.cron_utc)}<br/><small style={{color: 'var(--text-muted)'}}>{s.timezone_display}</small></td>
+                    <td className="rs-p-3">{renderCron(s.cron_utc)}<br/><small className="rs-muted">{s.timezone_display}</small></td>
                     <td className="rs-p-3">{s.next_run ? new Date(s.next_run + 'Z').toLocaleString() : 'Pending'}</td>
                     <td className="rs-p-3">
                       <button className="rs-btn-ghost" style={{ marginRight: 5 }} onClick={() => openEdit(s)}>Edit</button>
@@ -143,11 +143,11 @@ export default function Schedules() {
       </div>
 
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--rs-scrim-3)', zIndex: 1000 }}>
           <div className="rs-card" style={{ width: 500 }}>
             <h3>{editingId ? 'Edit Schedule' : 'Create Schedule'}</h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginTop: 16 }}>
+            <div className="rs-gap-4 rs-mt-4" style={{ display: 'grid', gridTemplateColumns: '1fr' }}>
               <div>
                 <label>Name</label><br/>
                 <input type="text" className="rs-input rs-w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
@@ -180,7 +180,7 @@ export default function Schedules() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+            <div className="rs-flex rs-gap-3 rs-mt-5 rs-justify-end">
               <button className="rs-btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="rs-btn-primary" onClick={handleSave}>Save</button>
             </div>

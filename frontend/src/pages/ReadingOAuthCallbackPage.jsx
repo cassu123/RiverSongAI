@@ -27,13 +27,9 @@ export default function ReadingOAuthCallbackPage() {
   }, [])
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+    <div className="rs-flex rs-items-center rs-justify-center rs-type-nano" style={{
       height: '100vh',
       fontFamily: 'var(--font-display, monospace)',
-      fontSize: 'var(--rs-fs-nano)',
       letterSpacing: '0.15em',
       color: 'var(--text-dim, #aaa)',
     }}>

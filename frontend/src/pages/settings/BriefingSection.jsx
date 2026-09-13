@@ -52,7 +52,7 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
             }
             return (
               <div className="rs-mt-3">
-                <div className="rs-card-label" style={{ marginBottom: 8, fontSize: 'var(--rs-fs-nano)' }}>NEWS SOURCE CATEGORIES</div>
+                <div className="rs-card-label rs-mb-2 rs-type-nano">NEWS SOURCE CATEGORIES</div>
                 <div className="rs-flex rs-flex-wrap rs-gap-2">
                   {PULSE_CATS.map(({ key, label }) => {
                     const on = active.includes(key)
@@ -60,17 +60,14 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
                       <button
                         key={key}
                         onClick={() => toggle(key)}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: 4,
+                        className="rs-type-nano rs-pointer rs-fw-700" style={{
+                          padding: 'var(--rs-space-1) var(--rs-space-3)',
+                          borderRadius: 'var(--md-shape-xs)',
                           border: `1px solid ${on ? 'var(--primary)' : 'oklch(30% 0.01 265)'}`,
                           background: on ? 'oklch(20% 0.06 265)' : 'transparent',
                           color: on ? 'var(--primary)' : 'oklch(50% 0.01 265)',
-                          fontSize: 'var(--rs-fs-nano)',
-                          fontWeight: 700,
                           letterSpacing: '0.06em',
                           textTransform: 'uppercase',
-                          cursor: 'pointer',
                           transition: 'all 0.15s ease',
                         }}
                       >
@@ -109,7 +106,7 @@ export default function BriefingSection({ briefingSettings, setBriefingSettings,
           <div style={{ height: 24 }} />
           
           <div className="rs-card-label rs-mb-3">LOCATION (FOR WEATHER & FLIGHTS)</div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-4">
             <div>
               <div className="rs-card-meta rs-mb-2">Latitude</div>
               <input

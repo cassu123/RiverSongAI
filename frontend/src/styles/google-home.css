@@ -828,7 +828,7 @@
 
 .gh-cook-hero-card {
   background: color-mix(in srgb, var(--bg-base) 65%, transparent);
-  border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.15));
+  border: 1px solid var(--rs-hairline-strong);
   border-radius: var(--card-radius, 28px);
   padding: 32px 28px;
   box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
@@ -1027,7 +1027,7 @@
   font-size: 1.05rem !important;
   min-height: 48px !important;
   background: color-mix(in srgb, var(--bg-base) 70%, transparent);
-  border: 1px solid rgba(255, 255, 255, var(--card-border-alpha, 0.16));
+  border: 1px solid var(--rs-hairline-strong);
   color: var(--fg) !important;
   border-radius: var(--inner-radius, 12px) !important;
   padding: 10px 16px;

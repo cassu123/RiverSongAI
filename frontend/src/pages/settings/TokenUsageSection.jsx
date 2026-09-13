@@ -77,8 +77,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           {[7, 30, 90].map(d => (
             <button
               key={d}
-              className={`rs-pill ${days === d ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-nano)' }}
+              className={`rs-pill rs-type-nano ${days === d ? 'is-active' : ''}`}
               onClick={() => setDays(d)}
             >{d}D</button>
           ))}
@@ -97,8 +96,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           ].map(s => (
             <button
               key={s.id}
-              className={`rs-pill ${!account && scope === s.id ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-nano)' }}
+              className={`rs-pill rs-type-nano ${!account && scope === s.id ? 'is-active' : ''}`}
               onClick={() => { setAccount(''); setScope(s.id) }}
             >{s.label}</button>
           ))}
@@ -107,8 +105,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           {children.map(c => (
             <button
               key={c.id}
-              className={`rs-pill ${account === c.id ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-nano)' }}
+              className={`rs-pill rs-type-nano ${account === c.id ? 'is-active' : ''}`}
               onClick={() => setAccount(c.id)}
             >{(c.display_name || c.email || c.id).toUpperCase()}</button>
           ))}
@@ -116,7 +113,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
       </div>
 
       {!loading && data && (account || scope !== 'mine') && (
-        <p className="rs-card-meta" style={{ marginTop: -8, marginBottom: 16 }}>
+        <p className="rs-card-meta rs-mb-4" style={{ marginTop: -8 }}>
           {account
             ? 'One account. You can see this because you are recorded as their parent.'
             : scope === 'dependents'
@@ -129,17 +126,17 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
 
       {!loading && data && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 24, marginBottom: 24 }}>
+          <div className="rs-gap-5 rs-mb-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
             <div>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>INPUT</div>
+              <div className="rs-card-label rs-type-nano">INPUT</div>
               <div className="rs-card-value">{fmtTokens(data.total_input)}</div>
             </div>
             <div>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>OUTPUT</div>
+              <div className="rs-card-label rs-type-nano">OUTPUT</div>
               <div className="rs-card-value">{fmtTokens(data.total_output)}</div>
             </div>
             <div>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>EST. COST</div>
+              <div className="rs-card-label rs-type-nano">EST. COST</div>
               <div className="rs-card-value" style={{ color: data.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)' }}>
                 {fmtCostUsd(data.estimated_cost_usd)}
               </div>
@@ -149,7 +146,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           {/* WHERE the tokens went — per feature, tap a row for its model mix */}
           {bySource.length > 0 && (
             <>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 8 }}>WHERE</div>
+              <div className="rs-card-label rs-mb-2 rs-type-nano">WHERE</div>
               <div className="rs-flex rs-flex-col rs-gap-2 rs-mb-5">
                 {bySource.map(src => {
                   const meta = SOURCE_LABELS[src.source] || { label: src.source.toUpperCase(), icon: 'more_horiz' }
@@ -159,28 +156,29 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
                   return (
                     <div key={src.source}
                       onClick={() => setOpenSource(open ? null : src.source)}
-                      style={{
-                        padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                      className="rs-pointer" style={{
+                        padding: 'var(--rs-space-3) var(--rs-space-3)',
+                        borderRadius: 'var(--md-shape-sm)',
                         background: 'var(--md-surface-container-low)',
                         border: '1px solid var(--md-outline-variant)',
                       }}>
                       <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
                         <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.7 }}>{meta.icon}</span>
-                        <span style={{ fontWeight: 700, fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.06em', flex: 1, minWidth: 120 }}>{meta.label}</span>
-                        <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', fontVariantNumeric: 'tabular-nums' }}>
+                        <span className="rs-grow rs-type-micro rs-fw-700" style={{ letterSpacing: '0.06em', minWidth: 120 }}>{meta.label}</span>
+                        <span className="rs-card-meta rs-type-nano" style={{ fontVariantNumeric: 'tabular-nums' }}>
                           {src.calls} calls · {fmtTokens(total)}
                         </span>
-                        <span style={{ fontSize: 'var(--rs-fs-nano)', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: src.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)' }}>
+                        <span className="rs-type-nano rs-fw-700" style={{ fontVariantNumeric: 'tabular-nums', color: src.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)' }}>
                           {fmtCostUsd(src.estimated_cost_usd)}
                         </span>
                       </div>
-                      <div style={{ height: 4, borderRadius: 2, marginTop: 8, background: 'var(--md-surface-container-high)' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, borderRadius: 2, background: 'var(--primary)', opacity: 0.85 }} />
+                      <div className="rs-mt-2" style={{ height: 4, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-surface-container-high)' }}>
+                        <div className="rs-h-full" style={{ width: `${pct}%`, borderRadius: 'var(--md-shape-xs)', background: 'var(--primary)', opacity: 0.85 }} />
                       </div>
                       {open && (
                         <div className="rs-mt-3 rs-flex rs-flex-col rs-gap-1">
                           {src.models.map((m, i) => (
-                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 'var(--rs-fs-nano)', opacity: 0.85, flexWrap: 'wrap' }}>
+                            <div key={i} className="rs-flex rs-justify-between rs-gap-2 rs-flex-wrap rs-type-nano" style={{ opacity: 0.85 }}>
                               <span>{m.model} <span style={{ opacity: 0.5 }}>({m.provider})</span></span>
                               <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 {m.calls} calls · {fmtTokens(m.input_tokens + m.output_tokens)} · {fmtCostUsd(m.estimated_cost_usd)}
@@ -200,25 +198,25 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
             <p className="rs-card-meta">No usage recorded yet.</p>
           ) : (
             <>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)', marginBottom: 8 }}>BY MODEL</div>
-              <div className="rs-table-wrap" style={{ padding: 0, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 12 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--rs-fs-tiny)' }}>
+              <div className="rs-card-label rs-mb-2 rs-type-nano">BY MODEL</div>
+              <div className="rs-table-wrap" style={{ padding: 0, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+                <table className="rs-w-full rs-type-tiny" style={{ borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--md-surface-container-high)' }}>
-                      <th style={{ textAlign: 'left', padding: '12px 16px' }} className="rs-card-label">MODEL</th>
-                      <th style={{ textAlign: 'right', padding: '12px 16px' }} className="rs-card-label">CALLS</th>
-                      <th style={{ textAlign: 'right', padding: '12px 16px' }} className="rs-card-label">COST</th>
+                      <th style={{ textAlign: 'left', padding: 'var(--rs-space-3) var(--rs-space-4)' }} className="rs-card-label">MODEL</th>
+                      <th style={{ textAlign: 'right', padding: 'var(--rs-space-3) var(--rs-space-4)' }} className="rs-card-label">CALLS</th>
+                      <th style={{ textAlign: 'right', padding: 'var(--rs-space-3) var(--rs-space-4)' }} className="rs-card-label">COST</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.by_model.map((row, i) => (
                       <tr key={i} style={{ borderTop: '1px solid var(--md-outline-variant)' }}>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ fontWeight: 600 }}>{row.model}</div>
-                          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{row.provider.toUpperCase()}</div>
+                        <td style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
+                          <div className="rs-fw-600">{row.model}</div>
+                          <div className="rs-muted rs-type-nano">{row.provider.toUpperCase()}</div>
                         </td>
-                        <td style={{ textAlign: 'right', padding: '12px 16px', fontVariantNumeric: 'tabular-nums' }}>{row.calls}</td>
-                        <td style={{ textAlign: 'right', padding: '12px 16px', color: row.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)', fontWeight: 600 }}>
+                        <td className="rs-text-right" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', fontVariantNumeric: 'tabular-nums' }}>{row.calls}</td>
+                        <td className="rs-text-right rs-fw-600" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', color: row.estimated_cost_usd > 0 ? 'var(--primary)' : 'var(--rs-status-nominal)' }}>
                           {fmtCostUsd(row.estimated_cost_usd)}
                         </td>
                       </tr>

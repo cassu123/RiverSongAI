@@ -20,7 +20,7 @@ const STATUS_STYLES = {
 function StatusPill({ status }) {
   const s = STATUS_STYLES[status] || STATUS_STYLES.not_configured
   return (
-    <span className="rs-pill" style={{ background: s.bg, color: s.fg, fontSize: 'var(--rs-fs-nano)' }}>
+    <span className="rs-pill rs-type-nano" style={{ background: s.bg, color: s.fg }}>
       {s.label}
     </span>
   )
@@ -34,7 +34,7 @@ function Section({ title, status, message, children }) {
         <StatusPill status={status} />
       </div>
       {message && (
-        <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>{message}</div>
+        <div className="rs-mb-2 rs-muted rs-type-micro">{message}</div>
       )}
       {children}
     </div>
@@ -77,7 +77,7 @@ export default function SlaePage({ setAction }) {
       <div className="rs-foyer animate-fade-in">
         <div className="rs-foyer-head">
           <h1 className="rs-greeting">SLAE Control</h1>
-          <div className="rs-greeting-sub" style={{ color: 'var(--md-error)' }}>{error.toUpperCase()}</div>
+          <div className="rs-greeting-sub rs-c-error">{error.toUpperCase()}</div>
         </div>
       </div>
     )
@@ -101,7 +101,7 @@ export default function SlaePage({ setAction }) {
         {(roles.roles || []).length === 0 ? (
           <div className="rs-card-meta">No roles registered yet.</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr auto', columnGap: 12, rowGap: 6, fontSize: 'var(--rs-fs-micro)' }}>
+          <div className="rs-type-micro" style={{ display: 'grid', gridTemplateColumns: '110px 1fr auto', columnGap: 'var(--rs-space-3)', rowGap: 'var(--rs-space-2)' }}>
             {roles.roles.map((r) => {
               const inv = r.last_invocation
               const dot = inv ? (inv.success ? 'var(--md-secondary)' : 'var(--md-error)') : 'rgba(255,255,255,0.18)'
@@ -110,8 +110,8 @@ export default function SlaePage({ setAction }) {
                   <span style={{ opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{r.name}</span>
                   <span style={{ opacity: 0.7 }}>
                     {r.provider}/{r.model}
-                    {r.json_mode && <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 'var(--rs-fs-nano)' }}>JSON</span>}
-                    <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: 'var(--rs-fs-nano)' }}>T={r.temperature}</span>
+                    {r.json_mode && <span className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-2)' }}>JSON</span>}
+                    <span className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-2)' }}>T={r.temperature}</span>
                   </span>
                   <span title={inv ? `${inv.ts} (${inv.elapsed_ms ?? '—'} ms)` : 'No invocations yet'} style={{
                     width: 8, height: 8, borderRadius: '50%', background: dot, alignSelf: 'center',
@@ -125,26 +125,26 @@ export default function SlaePage({ setAction }) {
 
       <Section title="LANGFUSE TRACING" status={langfuse.status} message={langfuse.message}>
         {langfuse.dashboard_url && (
-          <div style={{ fontSize: 'var(--rs-fs-micro)', marginBottom: 8 }}>
+          <div className="rs-mb-2 rs-type-micro">
             <a href={langfuse.dashboard_url} target="_blank" rel="noreferrer" style={{ color: 'var(--md-secondary)' }}>
               OPEN DASHBOARD →
             </a>
           </div>
         )}
         {(langfuse.recent_traces || []).length > 0 && (
-          <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>
+          <div className="rs-muted rs-type-micro">
             {langfuse.recent_traces.length} recent traces.
           </div>
         )}
       </Section>
 
       <Section title="GRAPHITI KNOWLEDGE GRAPH" status={graphiti.status} message={graphiti.message}>
-        <div style={{ display: 'flex', gap: 16, fontSize: 'var(--rs-fs-micro)', opacity: 0.8, marginBottom: 8 }}>
+        <div className="rs-flex rs-gap-4 rs-mb-2 rs-type-micro" style={{ opacity: 0.8 }}>
           <div>NODES: <strong>{graphiti.node_count ?? 0}</strong></div>
           <div>EDGES: <strong>{graphiti.edge_count ?? 0}</strong></div>
         </div>
         {graphiti.neo4j_browser_url && (
-          <div style={{ fontSize: 'var(--rs-fs-micro)' }}>
+          <div className="rs-type-micro">
             <a href={graphiti.neo4j_browser_url} target="_blank" rel="noreferrer" style={{ color: 'var(--md-secondary)' }}>
               OPEN NEO4J BROWSER →
             </a>
@@ -158,7 +158,7 @@ export default function SlaePage({ setAction }) {
         ) : (
           <div className="rs-flex rs-flex-col rs-gap-1">
             {recent.events.slice(0, 20).map((e, i) => (
-              <div key={i} style={{ fontSize: 'var(--rs-fs-micro)', opacity: 0.8 }}>
+              <div key={i} className="rs-type-micro" style={{ opacity: 0.8 }}>
                 <span style={{ opacity: 0.6 }}>{e.ts}</span>{' '}
                 <span>{e.source}</span>{' — '}
                 <span style={{ opacity: 0.7 }}>{e.summary}</span>

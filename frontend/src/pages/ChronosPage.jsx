@@ -230,15 +230,15 @@ export default function ChronosPage({ setAction }) {
   }, [])
 
   return (
-    <div className="grid grid-cols-1 rail:grid-cols-[260px_1fr_260px] h-full gap-4">
+    <div className="rs-grid rs-grid-cols-1 rs-chronos-rail-grid rs-h-full rs-gap-4">
       
       {/* Search Modal */}
       {showQuickSwitcher && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }} onClick={() => setShowQuickSwitcher(false)}>
-          <div className="rs-card is-elev" style={{ width: '100%', maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 12 }}>
+        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }} onClick={() => setShowQuickSwitcher(false)}>
+          <div className="rs-card is-elev rs-w-full" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+            <div className="rs-flex rs-gap-3 rs-items-center" style={{ borderBottom: '1px solid var(--md-outline-variant)', paddingBottom: 'var(--rs-space-3)' }}>
                <span className="material-symbols-rounded">search</span>
-               <input autoFocus type="text" style={{ all: 'unset', flex: 1 }} placeholder="JUMP TO NOTE..." onChange={handleSearch} />
+               <input autoFocus type="text" className="rs-grow" style={{ all: 'unset' }} placeholder="JUMP TO NOTE..." onChange={handleSearch} />
             </div>
             <div className="rs-mt-3 rs-flex rs-flex-col rs-gap-1">
               {searchResults.map(r => (
@@ -254,20 +254,20 @@ export default function ChronosPage({ setAction }) {
       {/* Left Rail: File Tree */}
       <div className="rs-card rs-flex rs-flex-col rs-p-3">
         <div className="rs-flex rs-gap-1 rs-mb-4">
-          <button className={`rs-pill ${activeRoot === 'personal' ? 'is-active' : ''}`} style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={() => setActiveRoot('personal')}>PERSONAL</button>
-          <button className={`rs-pill ${activeRoot === 'household' ? 'is-active' : ''}`} style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={() => setActiveRoot('household')}>HOUSEHOLD</button>
+          <button className={`rs-pill rs-grow rs-nowrap ${activeRoot === 'personal' ? 'is-active' : ''}`} onClick={() => setActiveRoot('personal')}>PERSONAL</button>
+          <button className={`rs-pill rs-grow rs-nowrap ${activeRoot === 'household' ? 'is-active' : ''}`} onClick={() => setActiveRoot('household')}>HOUSEHOLD</button>
           <button className="rs-pill" onClick={createNote} title="New Note">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
           </button>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="rs-grow" style={{ overflowY: 'auto' }}>
           <TreeList items={fileTree} onSelect={loadNote} activePath={activeNote?.path} />
         </div>
       </div>
 
       {/* Center: Editor/Viewer/Graph */}
-      <div className="rs-card" style={{ display: 'flex', flexDirection: 'column', padding: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--md-outline-variant)' }}>
+      <div className="rs-card rs-flex rs-flex-col" style={{ padding: 0 }}>
+        <div className="rs-flex rs-items-center rs-gap-3" style={{ padding: 'var(--rs-space-3) var(--rs-space-5)', borderBottom: '1px solid var(--md-outline-variant)' }}>
           {/* View mode toggle */}
           <div className="rs-flex rs-gap-1">
             <button
@@ -286,7 +286,7 @@ export default function ChronosPage({ setAction }) {
             </button>
           </div>
 
-          <div className="rs-card-label" style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div className="rs-card-label rs-grow rs-nowrap rs-clip rs-ellipsis">
             {viewMode === 'graph'
               ? `GRAPH · ${graphData.nodes.filter(n => !n.ghost).length} notes · ${graphData.edges.length} links`
               : (activeNote?.path || 'CHRONOS VAULT')}
@@ -298,7 +298,7 @@ export default function ChronosPage({ setAction }) {
                 {isSummarizing ? 'SCRIBING...' : 'AI SUM'}
               </button>
               <button className="rs-pill" onClick={renameNote}>RENAME</button>
-              <button className="rs-pill" onClick={deleteNote} style={{ color: 'var(--md-error)' }}>DELETE</button>
+              <button className="rs-pill rs-c-error" onClick={deleteNote}>DELETE</button>
               <button className={`rs-pill ${editMode ? 'is-active' : ''}`} onClick={() => setEditMode(!editMode)}>
                 {editMode ? 'FINISH' : 'EDIT'}
               </button>
@@ -314,9 +314,9 @@ export default function ChronosPage({ setAction }) {
 
         {/* Graph view */}
         {viewMode === 'graph' ? (
-          <div style={{ flex: 1, position: 'relative' }}>
+          <div className="rs-grow rs-relative">
             {graphLoading ? (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="rs-flex rs-items-center rs-justify-center rs-h-full">
                 <span className="rs-card-meta">LOADING GRAPH...</span>
               </div>
             ) : (
@@ -330,12 +330,12 @@ export default function ChronosPage({ setAction }) {
           </div>
         ) : (
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+        <div className="rs-grow rs-p-5" style={{ overflowY: 'auto' }}>
           {loading ? (
             <div className="rs-card-meta">RETRIEVING DATA...</div>
           ) : activeNote ? (
             editMode ? (
-              <div style={{ height: '100%' }}>
+              <div className="rs-h-full">
                 <CodeMirror
                   value={editorContent}
                   height="100%"
@@ -356,8 +356,8 @@ export default function ChronosPage({ setAction }) {
                         const targetPath = `${activeRoot}/${title}.md`
                         return (
                           <button
-                            className="rs-pill"
-                            style={{ padding: '0 8px', height: '1.4rem', fontSize: 'var(--rs-fs-tiny)' }}
+                            className="rs-pill rs-type-tiny"
+                            style={{ padding: '0 var(--rs-space-2)', height: '1.4rem' }}
                             onClick={async () => {
                               const exists = await loadNote(targetPath)
                               if (!exists) {
@@ -382,7 +382,7 @@ export default function ChronosPage({ setAction }) {
               </div>
             )
           ) : (
-             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
+             <div className="rs-flex rs-items-center rs-justify-center rs-h-full" style={{ opacity: 0.2 }}>
                <span className="material-symbols-rounded" style={{ fontSize: '80px' }}>history</span>
              </div>
           )}
@@ -396,7 +396,7 @@ export default function ChronosPage({ setAction }) {
         <div className="rs-flex rs-flex-col rs-gap-2">
           {backlinks.map(b => (
             <div key={b.virtual_path} className="rs-card is-tappable rs-p-3" onClick={() => loadNote(b.virtual_path)}>
-              <div className="rs-card-label" style={{ fontSize: 'var(--rs-fs-nano)' }}>{b.title}</div>
+              <div className="rs-card-label rs-type-nano">{b.title}</div>
             </div>
           ))}
           {backlinks.length === 0 && <div className="rs-card-meta">No references.</div>}
@@ -424,17 +424,17 @@ function TreeItem({ item, onSelect, activePath }) {
       <div>
         <button className="rs-drawer-item rs-drawer-item--compact rs-w-full" onClick={() => setExpanded(!expanded)}>
           <span className="material-symbols-rounded">{expanded ? 'expand_more' : 'chevron_right'}</span>
-          <span style={{ flex: 1, textAlign: 'left' }}>{item.name}</span>
+          <span className="rs-grow rs-text-left">{item.name}</span>
         </button>
-        {expanded && <div style={{ paddingLeft: 12 }}><TreeList items={item.children} onSelect={onSelect} activePath={activePath} /></div>}
+        {expanded && <div style={{ paddingLeft: 'var(--rs-space-3)' }}><TreeList items={item.children} onSelect={onSelect} activePath={activePath} /></div>}
       </div>
     )
   }
 
   return (
-    <button className={`rs-drawer-item rs-drawer-item--compact ${isSelected ? 'is-active' : ''}`} style={{ width: '100%' }} onClick={() => onSelect(item.path)}>
+    <button className={`rs-drawer-item rs-drawer-item--compact rs-w-full ${isSelected ? 'is-active' : ''}`} onClick={() => onSelect(item.path)}>
       <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>description</span>
-      <span style={{ flex: 1, textAlign: 'left' }}>{item.name.replace(/\.md$/, '')}</span>
+      <span className="rs-grow rs-text-left">{item.name.replace(/\.md$/, '')}</span>
     </button>
   )
 }

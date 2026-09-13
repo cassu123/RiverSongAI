@@ -113,7 +113,7 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
           {checkpoint.service_level.toUpperCase()} : {checkpoint.description}
         </h2>
         
-        <div className="form-grid" style={{ marginBottom: '20px' }}>
+        <div className="form-grid" style={{ marginBottom: 'var(--rs-space-5)' }}>
           {checkpoint.expected_spec && (
             <div className="pulse-field">
               <label className="rs-card-label">SPECIFICATION</label>
@@ -129,18 +129,18 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
         </div>
 
         <h3 className="rs-card-label">» MANUAL EXCERPT</h3>
-        <div style={{ background: 'var(--bg-layer-2)', padding: '12px', borderRadius: '8px', marginBottom: '20px', minHeight: '60px' }}>
+        <div style={{ background: 'var(--bg-layer-2)', padding: 'var(--rs-space-3)', borderRadius: 'var(--md-shape-sm)', marginBottom: 'var(--rs-space-5)', minHeight: '60px' }}>
           <RsMarkdown content={manualExcerpt} />
         </div>
 
         <h3 className="rs-card-label">» MEDIA GALLERY</h3>
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '20px', paddingBottom: '10px' }}>
+        <div className="rs-flex" style={{ gap: 'var(--rs-space-3)', overflowX: 'auto', marginBottom: 'var(--rs-space-5)', paddingBottom: 'var(--rs-space-3)' }}>
           {media.map(m => (
-            <div key={m.id} style={{ position: 'relative', width: '150px', height: '100px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
-              <img src={`/api/vehicles/media/${m.id}?thumb=true`} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: m.kind === 'video' ? 0.7 : 1 }} alt={m.title} 
+            <div key={m.id} className="rs-relative rs-no-shrink rs-clip" style={{ width: '150px', height: '100px', borderRadius: 'var(--md-shape-sm)', background: '#000' }}>
+              <img src={`/api/vehicles/media/${m.id}?thumb=true`} className="rs-w-full rs-h-full" style={{ objectFit: 'cover', opacity: m.kind === 'video' ? 0.7 : 1 }} alt={m.title} 
                    onError={(e) => { e.target.style.display = 'none'; }} />
-              {m.kind === 'video' && <div style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--fg)'}}>▶</div>}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 'var(--rs-fs-nano)', padding: '4px' }}>
+              {m.kind === 'video' && <div className="rs-c-fg" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>▶</div>}
+              <div className="rs-type-nano" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'var(--rs-scrim-2)', color: '#fff', padding: 'var(--rs-space-1)' }}>
                 {m.title}
               </div>
               <a href={`/api/vehicles/media/${m.id}`} target="_blank" rel="noreferrer" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
@@ -150,13 +150,13 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
           {loadingMedia && <div style={{ color: 'var(--text-dim)' }}>Loading media...</div>}
         </div>
         
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
+        <div className="rs-flex" style={{ gap: 'var(--rs-space-3)', marginBottom: '30px' }}>
           <input type="file" ref={fileInputRef} className="rs-hidden" accept="image/*,video/*" onChange={handleUpload} />
           <button className="rs-pill" onClick={() => fileInputRef.current.click()} disabled={busy}>+ UPLOAD MEDIA</button>
           <button className="rs-pill" onClick={handleArchiveWeb} disabled={busy}>FIND A GUIDE (WEB)</button>
         </div>
 
-        <hr style={{ borderColor: 'var(--border-color)', margin: '20px 0' }} />
+        <hr style={{ borderColor: 'var(--border-color)', margin: 'var(--rs-space-5) 0' }} />
         
         <h3 className="rs-card-label">» LOG COMPLETION</h3>
         <div className="form-grid">
@@ -174,7 +174,7 @@ export default function JobWalkthroughModal({ vehicle, checkpoint, onClose, onLo
           </div>
         </div>
         
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+        <div className="rs-flex rs-justify-end" style={{ gap: 'var(--rs-space-3)', marginTop: 'var(--rs-space-5)' }}>
           <button className="rs-pill" onClick={onClose}>CANCEL</button>
           <button className="rs-pill is-active" onClick={completeJob}>COMPLETE & LOG</button>
         </div>

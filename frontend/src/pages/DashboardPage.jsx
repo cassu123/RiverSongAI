@@ -60,7 +60,7 @@ function NimTelemetry({ token }) {
   return (
     <div>
       <div className="rs-card-label">NIM TRAFFIC</div>
-      <div className="rs-card-value">{rpm !== null ? rpm : '—'}<small style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginLeft: 4 }}>RPM</small></div>
+      <div className="rs-card-value">{rpm !== null ? rpm : '—'}<small className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-1)' }}>RPM</small></div>
       <div className="rs-card-meta">Global request rate</div>
     </div>
   )
@@ -212,12 +212,12 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                 </div>
                 <div>
                   <div className="rs-card-label">NEURAL LATENCY</div>
-                  <div className="rs-card-value">12<small style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginLeft: 4 }}>MS</small></div>
+                  <div className="rs-card-value">12<small className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-1)' }}>MS</small></div>
                   <div className="rs-card-meta">Link speed</div>
                 </div>
                 <div>
                   <div className="rs-card-label">SECTOR SYNC</div>
-                  <div className="rs-card-value">1.2<small style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginLeft: 4 }}>GB/S</small></div>
+                  <div className="rs-card-value">1.2<small className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-1)' }}>GB/S</small></div>
                   <div className="rs-card-meta">Data throughput</div>
                 </div>
                 <NimTelemetry token={token} />
@@ -301,7 +301,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                     <div className="rs-health-subvalue">Automatic trigger matching</div>
                   </div>
                 </div>
-                <div className="flex justify-end mt-6">
+                <div className="rs-flex rs-justify-end rs-mt-6">
                   <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('feeds'); }}>
                     <span>Open Feeds Panel</span>
                     <span className="material-symbols-rounded">arrow_forward</span>
@@ -342,7 +342,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
             <div className="rs-card-meta">Fleet & Hardware status</div>
 
             {expandedCard === 'integrity' && (
-              <div className="flex justify-end mt-6 animate-fade-in">
+              <div className="rs-flex rs-justify-end rs-mt-6 animate-fade-in">
                 <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('fleet'); }}>
                   <span>Open Fleet Panel</span>
                   <span className="material-symbols-rounded">arrow_forward</span>
@@ -404,7 +404,7 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
                     </div>
                   )}
                 </div>
-                <div className="flex justify-end mt-6">
+                <div className="rs-flex rs-justify-end rs-mt-6">
                   <button className="rs-btn-primary" onClick={(e) => { e.stopPropagation(); onNavigate('memory'); }}>
                     <span>Open Memory Vault</span>
                     <span className="material-symbols-rounded">arrow_forward</span>

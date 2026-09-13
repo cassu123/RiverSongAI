@@ -162,7 +162,7 @@ export default function SkillsPage({ setAction }) {
               rows={6}
               style={{ ...inputStyle, resize: 'vertical' }}
             />
-            {error && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-micro)' }}>{error.toUpperCase()}</div>}
+            {error && <div className="rs-type-micro rs-c-error">{error.toUpperCase()}</div>}
             <div className="rs-flex rs-gap-3">
               <button className="rs-pill is-active" onClick={save} disabled={saving}>
                 {saving ? 'SAVING…' : (activeId ? 'UPDATE' : 'CREATE')}
@@ -178,7 +178,7 @@ export default function SkillsPage({ setAction }) {
           <div className="rs-card-meta">Nothing yet. Tap + ADD to tell River about you.</div>
         )}
         {skills.map(s => (
-          <div key={s.id} className="rs-card is-wide" style={{ padding: 16, opacity: s.is_active ? 1 : 0.55 }}>
+          <div key={s.id} className="rs-card is-wide rs-p-4" style={{ opacity: s.is_active ? 1 : 0.55 }}>
             <div className="rs-card-head">
               <span className="rs-card-label">{s.name?.toUpperCase()}</span>
               <span className="rs-card-label" style={{ opacity: 0.4 }}>
@@ -188,11 +188,11 @@ export default function SkillsPage({ setAction }) {
             {s.trigger_phrases && (
               <div className="rs-mt-2 rs-mb-2 rs-flex rs-flex-wrap rs-gap-2">
                 {s.trigger_phrases.split(',').map(t => t.trim()).filter(Boolean).map((t, i) => (
-                  <span key={i} className="rs-pill" style={{ fontSize: 'var(--rs-fs-nano)', padding: '2px 8px' }}>{t}</span>
+                  <span key={i} className="rs-pill rs-type-nano" style={{ padding: '2px 8px' }}>{t}</span>
                 ))}
               </div>
             )}
-            <div style={{ fontSize: 'var(--rs-fs-small)', lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap', opacity: 0.9 }}>
+            <div className="rs-mt-2 rs-type-small" style={{ lineHeight: 1.5, whiteSpace: 'pre-wrap', opacity: 0.9 }}>
               {s.prompt}
             </div>
             <div className="rs-mt-3 rs-flex rs-gap-2">
@@ -213,8 +213,8 @@ const inputStyle = {
   boxSizing: 'border-box',
   width: '100%',
   padding: '10px 12px',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'var(--rs-veil-1)',
+  border: '1px solid var(--rs-hairline-strong)',
   borderRadius: 8,
   color: 'var(--md-on-surface)',
   fontSize: 'var(--rs-fs-small)',

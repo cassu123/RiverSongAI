@@ -73,6 +73,62 @@ describe('inline styles', () => {
     expect(offenders).toEqual([])
   })
 
+  // The veil/hairline/scrim tokens exist because a frozen white or black
+  // wash cannot follow the environment. Only the bands those tokens actually
+  // cover are checked: a 2% whisper or a deliberate 90% white wash is a
+  // decision, and there is no token pretending to be it.
+  it('draws no surface veil or hairline by hand', () => {
+    const RGBA = /rgba\(\s*(255,\s*255,\s*255|0,\s*0,\s*0)\s*,\s*([0-9.]+)\s*\)/g
+    const offenders = []
+    for (const file of files) {
+      const src = readFileSync(file, 'utf8')
+      for (const span of styleSpans(src)) {
+        let m
+        RGBA.lastIndex = 0
+        while ((m = RGBA.exec(span)) !== null) {
+          // Exempt what the tokens deliberately do not cover: a gradient
+          // stop, and the colour of a shadow or filter — those are tuned per
+          // effect, and pinning them to a shared scrim would change the blur
+          // they were drawn against.
+          const before = span.slice(0, m.index)
+          const key = before.match(/([a-zA-Z]+)\s*:[^:]*$/)
+          if (key && /^(boxShadow|textShadow|filter|backdropFilter)$/.test(key[1])) continue
+          // Anything after the owning key, not just up to the next ')': a
+          // gradient lists several stops and each one closes its own paren.
+          if (key && before.slice(key.index).includes('gradient(')) continue
+          const a = Number(m[2])
+          const white = m[1].startsWith('255')
+          const covered = white
+            ? a >= 0.03 && a <= 0.14
+            : (a >= 0.18 && a <= 0.3) || (a >= 0.5 && a <= 0.68) || (a >= 0.75 && a <= 0.85)
+          if (covered) offenders.push(`${relative(SRC, file)}: ${m[0]}`)
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  // --md-shape-* covers 4, 8, 12, 14 and 20. A bare number within 3px of one
+  // of those is that shape written out longhand.
+  it('names no border radius that a shape token already covers', () => {
+    const SHAPES = [4, 8, 12, 14, 20, 999]
+    const offenders = []
+    for (const file of files) {
+      const src = readFileSync(file, 'utf8')
+      for (const span of styleSpans(src)) {
+        const re = /\bborderRadius\s*:\s*'?(\d+)(?:px)?'?(?![\w.])/g
+        let m
+        while ((m = re.exec(span)) !== null) {
+          const n = Number(m[1])
+          if (SHAPES.some((s) => Math.abs(s - n) <= 3)) {
+            offenders.push(`${relative(SRC, file)}: ${m[0]}`)
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
   // Generic palette values belong in themes.css so every environment can move
   // them. Two things stay literal and are out of scope here: brand colours
   // (#96bf48, #0071dc, ...), and colours held in plain data objects — a chart

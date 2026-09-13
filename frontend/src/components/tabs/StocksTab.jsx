@@ -27,11 +27,11 @@ function LineChart({ data }) {
   const last = closes[closes.length - 1]
   return (
     <div className="rs-mb-3">
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H }} preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${W} ${H}`} className="rs-w-full" style={{ height: H }} preserveAspectRatio="none">
         <polyline points={pts} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
       </svg>
       <div className="rs-flex rs-justify-between">
-        <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+        <span className="rs-card-meta rs-muted rs-type-nano">
           {data[0]?.date} → {data[data.length - 1]?.date}
         </span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-micro)', fontWeight: 700, color }}>
@@ -53,10 +53,10 @@ function relTime(iso) {
 
 function NewsList({ items }) {
   if (!items.length) return (
-    <div className="rs-card-meta" style={{ color: 'var(--text-muted)', padding: '12px 0', fontSize: 'var(--rs-fs-micro)' }}>No recent news.</div>
+    <div className="rs-card-meta rs-muted rs-type-micro" style={{ padding: 'var(--rs-space-3) 0' }}>No recent news.</div>
   )
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div className="rs-flex rs-flex-col" style={{ gap: 0 }}>
       {items.map((n, i) => (
         <a
           key={i}
@@ -64,13 +64,13 @@ function NewsList({ items }) {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            display: 'block', padding: '10px 0',
+            display: 'block', padding: 'var(--rs-space-3) 0',
             borderBottom: i < items.length - 1 ? '1px solid var(--md-outline-variant)' : 'none',
             textDecoration: 'none', color: 'inherit',
           }}
         >
-          <div style={{ fontWeight: 700, fontSize: 'var(--rs-fs-tiny)', lineHeight: 1.35, marginBottom: 3 }}>{n.headline}</div>
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
+          <div className="rs-type-tiny rs-fw-700" style={{ lineHeight: 1.35, marginBottom: 3 }}>{n.headline}</div>
+          <div className="rs-card-meta rs-type-nano">
             {n.source} · {relTime(n.published_at)}
           </div>
         </a>
@@ -84,7 +84,7 @@ function SparkBar({ change }) {
   const up = (change ?? 0) >= 0
   const w = Math.min(Math.abs(change ?? 0) * 4, 48)
   return (
-    <svg width={56} height={20} style={{ flexShrink: 0 }}>
+    <svg width={56} height={20} className="rs-no-shrink">
       <rect x={up ? 28 : 28 - w} y={6} width={w || 2} height={8} rx={2}
         fill={up ? 'oklch(71% 0.17 145)' : 'oklch(64% 0.17 22)'} opacity={0.7} />
       <line x1={28} y1={3} x2={28} y2={17} stroke="var(--md-outline-variant)" strokeWidth={1} />
@@ -99,41 +99,40 @@ function QuoteRow({ quote, selected, onSelect, onRemove }) {
   return (
     <div
       onClick={() => onSelect(quote.ticker)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 0', borderBottom: '1px solid var(--md-outline-variant)',
-        cursor: 'pointer',
+      className="rs-flex rs-items-center rs-gap-3 rs-pointer" style={{
+        padding: 'var(--rs-space-3) 0',
+        borderBottom: '1px solid var(--md-outline-variant)',
         background: selected ? 'rgba(var(--primary-rgb,100,100,255),0.06)' : 'transparent',
         borderRadius: selected ? 4 : 0,
       }}
     >
       <div style={{ minWidth: 52 }}>
-        <div style={{ fontWeight: 900, fontSize: 'var(--rs-fs-small)', letterSpacing: '0.08em', color: 'var(--primary)' }}>
+        <div className="rs-type-small rs-fw-900 rs-c-accent" style={{ letterSpacing: '0.08em' }}>
           {quote.ticker}
         </div>
         {quote.name && (
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', marginTop: 1 }}>
+          <div className="rs-card-meta rs-type-nano" style={{ marginTop: 1 }}>
             {quote.name.length > 18 ? quote.name.slice(0, 18) + '…' : quote.name}
           </div>
         )}
       </div>
       <SparkBar change={quote.change} />
-      <div style={{ flex: 1, textAlign: 'right' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 'var(--rs-fs-body)' }}>
+      <div className="rs-grow rs-text-right">
+        <div className="rs-mono rs-type-body rs-fw-800">
           {quote.price != null ? `$${Number(quote.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
         </div>
       </div>
-      <div style={{ minWidth: 80, textAlign: 'right' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-tiny)', fontWeight: 700, color: changeColor }}>
+      <div className="rs-text-right" style={{ minWidth: 80 }}>
+        <div className="rs-mono rs-type-tiny rs-fw-700" style={{ color: changeColor }}>
           {up ? '+' : ''}{quote.change != null ? quote.change.toFixed(2) : '--'}
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-nano)', color: changeColor, opacity: 0.8 }}>
+        <div className="rs-mono rs-type-nano" style={{ color: changeColor, opacity: 0.8 }}>
           {up ? '+' : ''}{quote.change_pct != null ? quote.change_pct.toFixed(2) : '--'}%
         </div>
       </div>
       <button
         onClick={e => { e.stopPropagation(); onRemove(quote.ticker) }}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--md-on-surface-variant)', opacity: 0.4, flexShrink: 0 }}
+        className="rs-p-1 rs-pointer rs-no-shrink" style={{ background: 'none', border: 'none', color: 'var(--md-on-surface-variant)', opacity: 0.4 }}
         title={`Remove ${quote.ticker}`}
       >
         <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>close</span>
@@ -270,7 +269,7 @@ export default function StocksTab({ token, active }) {
 
   const watchlist = settings?.watchlist || []
   const colHeader = (label, align = 'left') => (
-    <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', textAlign: align }}>{label}</div>
+    <div className="rs-card-label rs-muted rs-type-nano" style={{ textAlign: align }}>{label}</div>
   )
 
   return (
@@ -298,13 +297,13 @@ export default function StocksTab({ token, active }) {
 
       {/* Search row */}
       <div className="rs-mb-5">
-        <div style={{ position: 'relative' }}>
+        <div className="rs-relative">
           <input
-            type="text" className="rs-input"
+            type="text" className="rs-input rs-w-full rs-type-tiny"
             placeholder="Search symbol or company…"
             value={searchQ}
             onChange={e => { setSearchQ(e.target.value); setAddError('') }}
-            style={{ width: '100%', fontSize: 'var(--rs-fs-tiny)', boxSizing: 'border-box' }}
+            style={{ boxSizing: 'border-box' }}
           />
           {searchQ && (
             <button className="rs-icon-btn" onClick={() => { setSearchQ(''); setResults([]) }}
@@ -313,50 +312,55 @@ export default function StocksTab({ token, active }) {
             </button>
           )}
           {(searchResults.length > 0 || searching) && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, right: 0,
+            <div className="rs-mt-1 rs-clip" style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
               background: 'var(--md-surface-container-high)',
               border: '1px solid var(--md-outline-variant)',
-              borderRadius: 8, marginTop: 4, zIndex: 50, overflow: 'hidden',
+              borderRadius: 'var(--md-shape-sm)',
+              zIndex: 50,
             }}>
-              {searching && <div className="rs-card-meta" style={{ padding: '10px 16px', fontSize: 'var(--rs-fs-micro)' }}>Searching…</div>}
+              {searching && <div className="rs-card-meta rs-type-micro" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>Searching…</div>}
               {searchResults.slice(0, 5).map(r => (
-                <button key={r.ticker} onClick={() => addTicker(r.ticker)} style={{
-                  display: 'flex', width: '100%', gap: 12, padding: '10px 16px',
-                  background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                  alignItems: 'center', borderTop: '1px solid var(--md-outline-variant)',
+                <button key={r.ticker} onClick={() => addTicker(r.ticker)} className="rs-flex rs-w-full rs-gap-3 rs-items-center rs-pointer rs-text-left" style={{
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
+                  background: 'none',
+                  border: 'none',
+                  borderTop: '1px solid var(--md-outline-variant)',
                 }}>
-                  <span style={{ fontWeight: 800, fontSize: 'var(--rs-fs-tiny)', color: 'var(--primary)', minWidth: 52 }}>{r.ticker}</span>
-                  <span className="rs-card-meta" style={{ flex: 1, fontSize: 'var(--rs-fs-micro)' }}>{r.name}</span>
-                  <span className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>{r.region}</span>
+                  <span className="rs-type-tiny rs-fw-800 rs-c-accent" style={{ minWidth: 52 }}>{r.ticker}</span>
+                  <span className="rs-card-meta rs-grow rs-type-micro">{r.name}</span>
+                  <span className="rs-card-meta rs-muted rs-type-nano">{r.region}</span>
                 </button>
               ))}
             </div>
           )}
-          {addError && <div style={{ color: 'oklch(64% 0.17 22)', fontSize: 'var(--rs-fs-micro)', marginTop: 6, fontWeight: 600 }}>{addError}</div>}
+          {addError && <div className="rs-mt-2 rs-type-micro rs-fw-600" style={{ color: 'oklch(64% 0.17 22)' }}>{addError}</div>}
         </div>
       </div>
 
       {/* Column headers */}
       {quotes.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8, borderBottom: '1px solid var(--md-outline-variant)' }}>
+        <div className="rs-flex rs-items-center rs-gap-3" style={{ paddingBottom: 'var(--rs-space-2)', borderBottom: '1px solid var(--md-outline-variant)' }}>
           <div style={{ minWidth: 52 }}>{colHeader('SYMBOL')}</div>
           <div style={{ minWidth: 56 }}>{colHeader('TREND')}</div>
-          <div style={{ flex: 1, textAlign: 'right' }}>{colHeader('PRICE', 'right')}</div>
+          <div className="rs-grow rs-text-right">{colHeader('PRICE', 'right')}</div>
           <div style={{ minWidth: 80 }}>{colHeader('CHANGE', 'right')}</div>
           <div style={{ width: 28 }} />
         </div>
       )}
 
       {loading ? <StocksSkeleton /> : error ? (
-        <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2rem', opacity: 0.2, display: 'block', marginBottom: 8 }}>trending_flat</span>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
+          <span className="material-symbols-rounded rs-mb-2 rs-empty-glyph" style={{ fontSize: '2rem' }}>trending_flat</span>
           <div className="rs-card-meta rs-mb-3">{error}</div>
           <button className="rs-pill" onClick={fetchQuotes}>RETRY</button>
         </div>
       ) : quotes.length === 0 ? (
-        <div style={{ padding: '24px 0', textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', opacity: 0.2, display: 'block', marginBottom: 12 }}>candlestick_chart</span>
+        <div className="rs-text-center" style={{ padding: 'var(--rs-space-5) 0' }}>
+          <span className="material-symbols-rounded rs-mb-3 rs-empty-glyph" style={{ fontSize: '2.5rem' }}>candlestick_chart</span>
           <div className="rs-card-label rs-mb-2">EMPTY WATCHLIST</div>
           <div className="rs-card-meta">Search for a ticker symbol above to start tracking.</div>
         </div>
@@ -376,15 +380,15 @@ export default function StocksTab({ token, active }) {
       {/* Chart pane */}
       {settings?.show_charts && selectedTicker && (
         <div className="rs-mt-5">
-          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
+          <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">
             {selectedTicker} · 30-DAY CHART
           </div>
           {chartLoading ? (
-            <div style={{ height: 72, background: 'var(--md-outline-variant)', borderRadius: 8, opacity: 0.2 }} />
+            <div style={{ height: 72, background: 'var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)', opacity: 0.2 }} />
           ) : chart?.length ? (
             <LineChart data={chart} />
           ) : (
-            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Chart data unavailable (API limit may be reached).</div>
+            <div className="rs-card-meta rs-muted rs-type-micro">Chart data unavailable (API limit may be reached).</div>
           )}
         </div>
       )}
@@ -392,11 +396,11 @@ export default function StocksTab({ token, active }) {
       {/* News pane */}
       {settings?.show_news && selectedTicker && (
         <div className="rs-mt-5">
-          <div className="rs-card-label" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginBottom: 10 }}>
+          <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">
             {selectedTicker} · RECENT NEWS
           </div>
           {newsLoading ? (
-            <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-micro)' }}>Loading…</div>
+            <div className="rs-card-meta rs-muted rs-type-micro">Loading…</div>
           ) : (
             <NewsList items={news} />
           )}
@@ -410,18 +414,18 @@ function StocksSkeleton() {
   return (
     <div className="rs-flex rs-flex-col">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--md-outline-variant)', alignItems: 'center' }}>
-          <div style={{ minWidth: 52, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ height: 10, width: 40, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.4 }} />
-            <div style={{ height: 8, width: 32, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.25 }} />
+        <div key={i} className="rs-flex rs-gap-3 rs-items-center" style={{ padding: 'var(--rs-space-3) 0', borderBottom: '1px solid var(--md-outline-variant)' }}>
+          <div className="rs-flex rs-flex-col rs-gap-1" style={{ minWidth: 52 }}>
+            <div style={{ height: 10, width: 40, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.4 }} />
+            <div style={{ height: 8, width: 32, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.25 }} />
           </div>
-          <div style={{ height: 8, width: 56, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ height: 14, width: 64, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.35 }} />
+          <div style={{ height: 8, width: 56, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+          <div className="rs-grow rs-flex rs-justify-end">
+            <div style={{ height: 14, width: 64, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.35 }} />
           </div>
-          <div style={{ minWidth: 80, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-            <div style={{ height: 10, width: 48, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.3 }} />
-            <div style={{ height: 8, width: 36, borderRadius: 4, background: 'var(--md-outline-variant)', opacity: 0.2 }} />
+          <div className="rs-flex rs-flex-col rs-gap-1 rs-items-end" style={{ minWidth: 80 }}>
+            <div style={{ height: 10, width: 48, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.3 }} />
+            <div style={{ height: 8, width: 36, borderRadius: 'var(--md-shape-xs)', background: 'var(--md-outline-variant)', opacity: 0.2 }} />
           </div>
           <div style={{ width: 28 }} />
         </div>

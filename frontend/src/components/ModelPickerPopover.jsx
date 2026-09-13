@@ -211,7 +211,7 @@ export default function ModelPickerPopover({
         {pickerView === 'cloudModels' && <>
           <MpopBack label={providerLabel(cloudProvider)} onClick={() => { setCloudProvider(null); setPickerView('cloud'); }} />
           {activeGroup?.availableCount === 0 && (
-            <div style={{ padding: '10px 14px', margin: '4px 8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 'var(--rs-fs-micro)', color: 'var(--md-outline)' }}>
+            <div className="rs-type-micro" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', margin: 'var(--rs-space-1) var(--rs-space-2) var(--rs-space-3)', borderRadius: 'var(--md-shape-sm)', background: 'var(--rs-veil-1)', border: '1px solid var(--rs-hairline)', color: 'var(--md-outline)' }}>
               API key is not configured for {providerLabel(cloudProvider)}. Configure keys in Settings &gt; Admin Settings to enable these models.
             </div>
           )}

@@ -78,40 +78,27 @@ export default function PulseWidget({ token }) {
           badge={newsItems.length > 1 ? `${newsIdx + 1}/${newsItems.length}` : null}
         >
           <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              minWidth: 0,
+            className="rs-flex rs-items-center rs-gap-3 rs-min-w-0" style={{
               opacity: visible ? 1 : 0,
               transition: `opacity ${FADE_DURATION}ms ease`,
             }}
           >
-            <span style={{
-              flex: 1,
-              fontSize: 'var(--rs-fs-tiny)',
+            <span className="rs-grow rs-type-tiny rs-nowrap rs-clip rs-ellipsis" style={{
               fontWeight: 550,
               color: C.text,
               letterSpacing: '-0.01em',
               lineHeight: 1.35,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
             }}>
               {currentNews.headline || 'No headlines.'}
             </span>
             {currentNews.source && (
-              <span style={{
-                flexShrink: 0,
-                fontSize: 'var(--rs-fs-nano)',
-                fontWeight: 700,
+              <span className="rs-no-shrink rs-type-nano rs-nowrap rs-fw-700" style={{
                 letterSpacing: '0.07em',
                 textTransform: 'uppercase',
                 color: C.muted,
                 background: 'oklch(20% 0.01 265)',
                 padding: '2px 8px',
-                borderRadius: 4,
-                whiteSpace: 'nowrap',
+                borderRadius: 'var(--md-shape-xs)',
               }}>
                 {currentNews.source}
               </span>
@@ -130,23 +117,18 @@ export default function PulseWidget({ token }) {
             time={fmtTs(ts?.markets)}
           >
             {markets.error ? (
-              <span style={{ fontSize: 'var(--rs-fs-micro)', color: C.muted, fontStyle: 'italic' }}>
+              <span className="rs-type-micro" style={{ color: C.muted, fontStyle: 'italic' }}>
                 No data
               </span>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                <span style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--rs-fs-nano)',
-                  fontWeight: 600,
+              <div className="rs-flex rs-gap-3" style={{ alignItems: 'baseline' }}>
+                <span className="rs-mono rs-type-nano rs-fw-600" style={{
                   letterSpacing: '0.05em',
                   color: C.muted,
                 }}>
                   {markets.symbol}
                 </span>
-                <span style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--rs-fs-body)',
+                <span className="rs-mono rs-type-body" style={{
                   fontWeight: 750,
                   letterSpacing: '-0.02em',
                   color: C.text,
@@ -156,9 +138,7 @@ export default function PulseWidget({ token }) {
                     : '--'}
                 </span>
                 {markets.change != null && markets.change_pct != null && (
-                  <span style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--rs-fs-micro)',
+                  <span className="rs-mono rs-type-micro" style={{
                     fontWeight: 650,
                     letterSpacing: '-0.01em',
                     color: marketColor,
@@ -181,20 +161,15 @@ export default function PulseWidget({ token }) {
             label="OVERHEAD"
             time={fmtTs(ts?.flights)}
           >
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 'var(--rs-fs-body)',
-                fontWeight: 800,
+            <div className="rs-flex rs-gap-2" style={{ alignItems: 'baseline' }}>
+              <span className="rs-mono rs-type-body rs-fw-800" style={{
                 letterSpacing: '-0.04em',
                 lineHeight: 1,
                 color: C.sky,
               }}>
                 {flights.flights?.length ?? 0}
               </span>
-              <span style={{
-                fontSize: 'var(--rs-fs-micro)',
-                fontWeight: 500,
+              <span className="rs-type-micro rs-fw-500" style={{
                 color: C.muted,
                 letterSpacing: '0.01em',
               }}>
@@ -214,55 +189,44 @@ export default function PulseWidget({ token }) {
 function PulseRow({ icon, iconColor, label, time, badge, children }) {
   return (
     <div style={{ padding: '11px 0' }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
+      <div className="rs-flex rs-items-center rs-gap-2" style={{
         marginBottom: 7,
       }}>
         <span
-          className="material-symbols-rounded"
+          className="material-symbols-rounded rs-no-shrink"
           style={{
             fontSize: '0.9rem',
             lineHeight: 1,
             color: iconColor,
-            flexShrink: 0,
             transition: 'color 0.3s ease',
           }}
         >
           {icon}
         </span>
-        <span style={{
-          fontSize: 'var(--rs-fs-nano)',
-          fontWeight: 800,
+        <span className="rs-grow rs-type-nano rs-fw-800" style={{
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: C.dim,
-          flex: 1,
         }}>
           {label}
         </span>
         {badge && (
-          <span style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 'var(--rs-fs-nano)',
+          <span className="rs-mono rs-type-nano" style={{
             letterSpacing: '0.04em',
             color: C.dim,
-            marginRight: 4,
+            marginRight: 'var(--rs-space-1)',
           }}>
             {badge}
           </span>
         )}
-        <span style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--rs-fs-nano)',
+        <span className="rs-mono rs-type-nano" style={{
           letterSpacing: '0.04em',
           color: C.dim,
         }}>
           {time}
         </span>
       </div>
-      <div style={{ paddingLeft: 20, minWidth: 0 }}>
+      <div className="rs-min-w-0" style={{ paddingLeft: 'var(--rs-space-5)' }}>
         {children}
       </div>
     </div>
@@ -274,7 +238,7 @@ function PulseSkeleton() {
     <div style={{
       height: 9,
       width: w,
-      borderRadius: 5,
+      borderRadius: 'var(--md-shape-xs)',
       background: C.divider,
       opacity: 0.9,
     }} />
@@ -284,7 +248,7 @@ function PulseSkeleton() {
       {[0, 1, 2].map((i) => (
         <React.Fragment key={i}>
           {i > 0 && <div style={{ height: 1, background: C.divider }} />}
-          <div style={{ padding: '11px 0', display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div className="rs-flex rs-flex-col" style={{ padding: '11px 0', gap: 9 }}>
             {shimmer('35%')}
             {shimmer(i === 1 ? '55%' : '80%')}
           </div>

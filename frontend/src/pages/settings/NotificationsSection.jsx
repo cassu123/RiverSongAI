@@ -74,7 +74,7 @@ export default function NotificationsSection({ token }) {
   if (!serverEnabled) {
     return (
       <Section title="NOTIFICATIONS">
-        <p className="rs-card-meta" style={{ color: 'var(--md-error)' }}>
+        <p className="rs-card-meta rs-c-error">
           Push notifications are disabled in server config. Set <code>PUSH_NOTIFICATIONS_ENABLED=true</code> in <code>.env</code>.
         </p>
       </Section>
@@ -85,7 +85,7 @@ export default function NotificationsSection({ token }) {
     <Section title="NOTIFICATIONS">
       <div className="rs-flex rs-items-center rs-justify-between">
         <div>
-          <div style={{ fontWeight: 600 }}>PUSH NOTIFICATIONS</div>
+          <div className="rs-fw-600">PUSH NOTIFICATIONS</div>
           <p className="rs-card-meta">Receive proactive briefings and system alerts.</p>
         </div>
         <Toggle 
@@ -112,7 +112,7 @@ export default function NotificationsSection({ token }) {
           >
             {working ? 'SENDING…' : 'TEST NOTIFICATION'}
           </button>
-          {testResult && <span className="rs-card-label" style={{ color: 'var(--rs-status-nominal)' }}>{testResult}</span>}
+          {testResult && <span className="rs-card-label rs-c-nominal">{testResult}</span>}
         </div>
       )}
     </Section>

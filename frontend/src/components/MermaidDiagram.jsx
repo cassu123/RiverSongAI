@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import mermaid from 'mermaid'
 import DOMPurify from 'dompurify'
+import './MermaidDiagram.css'
 
 mermaid.initialize({
   startOnLoad: false,
@@ -53,8 +54,8 @@ export default function MermaidDiagram({ chart, className = '' }) {
 
   if (error) {
     return (
-      <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-xs text-red-300 font-mono overflow-x-auto my-2">
-        <div className="font-semibold mb-1 text-red-400">Diagram Render Error</div>
+      <div className="rs-mermaid-error">
+        <div className="rs-mermaid-error-title">Diagram Render Error</div>
         <pre>{chart}</pre>
       </div>
     )
@@ -63,8 +64,9 @@ export default function MermaidDiagram({ chart, className = '' }) {
   return (
     <div
       ref={containerRef}
-      className={`my-3 p-4 bg-slate-900/80 border border-slate-800 rounded-xl overflow-x-auto shadow-inner flex justify-center items-center ${className}`}
+      className={`rs-mermaid-container ${className}`}
       dangerouslySetInnerHTML={{ __html: svgContent }}
     />
   )
 }
+

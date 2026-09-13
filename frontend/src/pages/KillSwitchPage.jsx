@@ -88,11 +88,11 @@ export default function KillSwitchPage() {
           <div className="rs-card-head">
              <span className="rs-card-label">SYSTEM STATE</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '1.4rem', fontWeight: 600, letterSpacing: '0.1em' }}>
+          <div className="rs-flex rs-items-center rs-gap-4 rs-fw-600" style={{ fontSize: '1.4rem', letterSpacing: '0.1em' }}>
             {loading ? (
               <><span className="rs-status-dot" /> LOADING</>
             ) : active ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: '#ff3322' }}>
+              <div className="rs-flex rs-items-center rs-gap-4" style={{ color: '#ff3322' }}>
                 <span style={{ 
                   display: 'inline-block', 
                   width: 12, 
@@ -104,14 +104,14 @@ export default function KillSwitchPage() {
                 KILL ACTIVE
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: 'var(--secondary)' }}>
+              <div className="rs-flex rs-items-center rs-gap-4" style={{ color: 'var(--secondary)' }}>
                 <span className="rs-status-dot" style={{ background: 'var(--secondary)' }} />
                 NOMINAL
               </div>
             )}
           </div>
           {active && (
-            <p className="rs-card-meta" style={{ marginTop: 12, borderTop: '1px solid rgba(255, 51, 34, 0.15)', paddingTop: 12 }}>
+            <p className="rs-card-meta rs-mt-3" style={{ borderTop: '1px solid rgba(255, 51, 34, 0.15)', paddingTop: 'var(--rs-space-3)' }}>
               All conversation processing is blocked. Reset the kill switch and
               restart the server to resume normal operation.
             </p>
@@ -130,7 +130,7 @@ export default function KillSwitchPage() {
             </p>
             {confirm ? (
               <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
-                <span style={{ flex: '1 1 100%', marginBottom: 8, color: 'var(--warn)', fontSize: 'var(--rs-fs-tiny)', fontWeight: 600 }}>Are you sure? This cannot be undone remotely.</span>
+                <span className="rs-mb-2 rs-type-tiny rs-fw-600" style={{ flex: '1 1 100%', color: 'var(--warn)' }}>Are you sure? This cannot be undone remotely.</span>
                 <button
                   className="rs-btn-primary"
                   style={{ background: '#ff3322', color: 'white' }}
@@ -161,14 +161,13 @@ export default function KillSwitchPage() {
             </p>
             <form className="rs-flex rs-gap-3 rs-flex-wrap" onSubmit={handleReset}>
               <input
-                style={{ 
-                  flex: '1 1 200px', 
-                  background: 'var(--md-surface-container)', 
-                  border: '1px solid rgba(255, 51, 34, 0.3)', 
+                className="rs-c-fg" style={{
+                  flex: '1 1 200px',
+                  background: 'var(--md-surface-container)',
+                  border: '1px solid rgba(255, 51, 34, 0.3)',
                   borderRadius: 'var(--md-shape-xl)',
-                  color: 'var(--fg)',
-                  padding: '12px 16px',
-                  outline: 'none'
+                  padding: 'var(--rs-space-3) var(--rs-space-4)',
+                  outline: 'none',
                 }}
                 type="password"
                 placeholder="Admin password"
@@ -179,7 +178,7 @@ export default function KillSwitchPage() {
               <button
                 className="rs-btn-primary"
                 type="submit"
-                style={{ flex: '1 1 100px', padding: '12px' }}
+                style={{ flex: '1 1 100px', padding: 'var(--rs-space-3)' }}
                 disabled={resetting || !password}
               >
                 {resetting ? 'VERIFYING…' : '↺ RESET'}
@@ -187,14 +186,12 @@ export default function KillSwitchPage() {
             </form>
 
             {resetMsg && (
-              <div style={{ 
-                marginTop: 12, 
-                padding: '8px 16px', 
-                borderRadius: 'var(--md-shape-xl)', 
+              <div className="rs-mt-3 rs-type-tiny" style={{
+                padding: 'var(--rs-space-2) var(--rs-space-4)',
+                borderRadius: 'var(--md-shape-xl)',
                 border: '1px solid',
                 borderColor: resetMsg.includes('denied') || resetMsg.includes('failed') ? 'rgba(255,51,34,0.3)' : 'rgba(0,255,204,0.3)',
                 color: resetMsg.includes('denied') || resetMsg.includes('failed') ? '#ff6655' : 'var(--secondary)',
-                fontSize: 'var(--rs-fs-tiny)'
               }}>
                 {resetMsg}
               </div>
@@ -214,8 +211,8 @@ export default function KillSwitchPage() {
               "Reset requires the bcrypt password hash set in KILL_SWITCH_PASSWORD_HASH in your .env file.",
               "After reset, restart the server process to resume conversation handling."
             ].map((text, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, fontSize: 'var(--rs-fs-tiny)' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>0{i+1}</span>
+              <div key={i} className="rs-flex rs-gap-3 rs-type-tiny">
+                <span className="rs-muted rs-type-nano">0{i+1}</span>
                 <span className="rs-card-meta" style={{ color: 'inherit', opacity: 0.8 }}>{text}</span>
               </div>
             ))}

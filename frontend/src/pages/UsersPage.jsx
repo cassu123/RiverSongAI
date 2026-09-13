@@ -205,12 +205,12 @@ export default function UsersPage({ embedded = false }) {
 
   if (currentUser?.role !== 'admin') {
     return (
-      <div className="rs-card" style={{ textAlign: 'center', padding: '48px 24px', background: '#151c27', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24 }}>
-        <span className="material-symbols-rounded" style={{ fontSize: '3.2rem', color: 'var(--rs-status-critical)', marginBottom: 16, display: 'block' }}>
+      <div className="rs-card rs-text-center" style={{ padding: 'var(--rs-space-7) var(--rs-space-5)', background: '#151c27', border: '1px solid var(--rs-hairline-strong)', borderRadius: 24 }}>
+        <span className="material-symbols-rounded rs-mb-4 rs-c-critical" style={{ fontSize: '3.2rem', display: 'block' }}>
           admin_panel_settings
         </span>
-        <h3 style={{ margin: '0 0 10px', fontSize: '1.4rem', color: 'var(--fg)' }}>Administrator Clearance Required</h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-body)', margin: 0, maxWidth: 500, marginInline: 'auto' }}>
+        <h3 className="rs-c-fg" style={{ margin: '0 0 var(--rs-space-3)', fontSize: '1.4rem' }}>Administrator Clearance Required</h3>
+        <p className="rs-muted rs-type-body" style={{ margin: 0, maxWidth: 500, marginInline: 'auto' }}>
           Household member and user account administration is strictly restricted to administrator profiles.
         </p>
       </div>
@@ -228,22 +228,22 @@ export default function UsersPage({ embedded = false }) {
 
       <div className="rs-card-flow">
         {loading ? (
-          <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-body)', padding: '24px 0' }}>LOADING DIRECTORY...</div>
+          <div className="rs-card-meta rs-type-body" style={{ padding: 'var(--rs-space-5) 0' }}>LOADING DIRECTORY...</div>
         ) : (
           users.map(u => (
             <div key={u.id} className="rs-card">
               <div className="rs-card-head rs-mb-4">
-                <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', letterSpacing: '0.08em' }}>
-                  MEMBER {u.is_suspended && <span style={{ color: 'var(--md-error)', fontWeight: 700 }}>(SUSPENDED)</span>}
+                <span className="rs-card-label rs-type-tiny" style={{ letterSpacing: '0.08em' }}>
+                  MEMBER {u.is_suspended && <span className="rs-c-error rs-fw-700">(SUSPENDED)</span>}
                 </span>
                 {u.id === currentUser.id ? (
-                  <span className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`} style={{ fontSize: 'var(--rs-fs-tiny)', padding: '6px 14px' }}>
+                  <span className={`rs-pill rs-type-tiny ${u.role === 'admin' ? 'is-active' : ''}`} style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }}>
                     {u.role.toUpperCase()} (YOU)
                   </span>
                 ) : (
                   <select 
-                    className={`rs-pill ${u.role === 'admin' ? 'is-active' : ''}`}
-                    style={{ fontSize: 'var(--rs-fs-tiny)', padding: '6px 14px', outline: 'none', border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer', textAlign: 'center', background: '#1b2432', color: '#fff' }}
+                    className={`rs-pill rs-type-tiny rs-pointer rs-text-center ${u.role === 'admin' ? 'is-active' : ''}`}
+                    style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', outline: 'none', border: '1px solid var(--rs-hairline-strong)', background: '#1b2432', color: '#fff' }}
                     value={u.role}
                     onChange={(e) => updateRole(u, e.target.value)}
                   >
@@ -256,69 +256,69 @@ export default function UsersPage({ embedded = false }) {
                 )}
               </div>
               <div className="rs-flex rs-items-center rs-gap-4">
-                <div className="rs-status-dot" style={{ width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: '#0d1219', fontWeight: 900, fontSize: 'var(--rs-fs-h3)', animation: 'none' }}>
+                <div className="rs-status-dot rs-flex rs-items-center rs-justify-center rs-type-h3 rs-fw-900" style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--primary)', color: '#0d1219', animation: 'none' }}>
                   {u.display_name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div>
-                  <div className="rs-card-value" style={{ fontSize: 'var(--rs-fs-h3)', fontWeight: 700 }}>{u.display_name}</div>
-                  <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--text-muted)' }}>{u.email}</div>
+                  <div className="rs-card-value rs-type-h3 rs-fw-700">{u.display_name}</div>
+                  <div className="rs-card-meta rs-type-small rs-muted">{u.email}</div>
                 </div>
               </div>
               
               <div className="rs-mt-5 rs-flex rs-flex-col rs-gap-4">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                   <div>
-                    <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--fg)' }}>FORCE PASSWORD CHANGE</span>
-                    <span style={{ display: 'block', fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', marginTop: 2 }}>Requires changing password on next sign-in</span>
+                    <span className="rs-card-label rs-type-tiny rs-c-fg">FORCE PASSWORD CHANGE</span>
+                    <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>Requires changing password on next sign-in</span>
                   </div>
                   <button 
-                    className={`rs-pill ${u.force_password_change ? 'is-active' : ''}`}
+                    className={`rs-pill rs-justify-center rs-type-small ${u.force_password_change ? 'is-active' : ''}`}
                     onClick={() => toggleForceChange(u)}
-                    style={{ minWidth: 70, justifyContent: 'center', padding: '8px 16px', fontSize: 'var(--rs-fs-small)' }}
+                    style={{ minWidth: 70, padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                   >
                     {u.force_password_change ? 'ON' : 'OFF'}
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                   <div>
-                    <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--fg)' }}>SUSPEND ACCOUNT</span>
-                    <span style={{ display: 'block', fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', marginTop: 2 }}>Block sign-in and API access immediately</span>
+                    <span className="rs-card-label rs-type-tiny rs-c-fg">SUSPEND ACCOUNT</span>
+                    <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>Block sign-in and API access immediately</span>
                   </div>
                   <button 
-                    className={`rs-pill ${u.is_suspended ? 'is-active' : ''}`}
+                    className={`rs-pill rs-justify-center rs-type-small ${u.is_suspended ? 'is-active' : ''}`}
                     onClick={() => toggleSuspend(u)}
-                    style={{ minWidth: 70, justifyContent: 'center', padding: '8px 16px', fontSize: 'var(--rs-fs-small)' }}
+                    style={{ minWidth: 70, padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                   >
                     {u.is_suspended ? 'ON' : 'OFF'}
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rs-flex rs-justify-between rs-items-center" style={{ padding: 'var(--rs-space-2) 0', borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                   <div>
-                    <span className="rs-card-label" style={{ fontSize: 'var(--rs-fs-tiny)', color: 'var(--fg)' }}>
+                    <span className="rs-card-label rs-type-tiny rs-c-fg">
                       FREE MODELS ONLY
                     </span>
-                    <span style={{ display: 'block', fontSize: 'var(--rs-fs-tiny)', color: 'var(--text-muted)', marginTop: 2 }}>
+                    <span className="rs-type-tiny rs-muted" style={{ display: 'block', marginTop: 2 }}>
                       Restricts "Let River Decide" to local + free-tier models
                     </span>
                   </div>
                   <button
-                    className={`rs-pill ${u.free_models_only ? 'is-active' : ''}`}
+                    className={`rs-pill rs-justify-center rs-type-small ${u.free_models_only ? 'is-active' : ''}`}
                     onClick={() => toggleFreeModelsOnly(u)}
-                    style={{ minWidth: 70, justifyContent: 'center', padding: '8px 16px', fontSize: 'var(--rs-fs-small)' }}
+                    style={{ minWidth: 70, padding: 'var(--rs-space-2) var(--rs-space-4)' }}
                   >
                     {u.free_models_only ? 'ON' : 'OFF'}
                   </button>
                 </div>
 
                 <div className="rs-flex rs-gap-3 rs-flex-wrap rs-mt-2">
-                  <button className="rs-pill" style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-tiny)' }} onClick={() => { setResetTarget(u); setNewPassword(''); setResetError(''); }}>RESET PASSWORD</button>
-                  <button className="rs-pill" style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-tiny)' }} onClick={() => handleForceLogout(u)}>REVOKE SESSIONS</button>
+                  <button className="rs-pill rs-type-tiny" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }} onClick={() => { setResetTarget(u); setNewPassword(''); setResetError(''); }}>RESET PASSWORD</button>
+                  <button className="rs-pill rs-type-tiny" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }} onClick={() => handleForceLogout(u)}>REVOKE SESSIONS</button>
                   {u.id !== currentUser.id && (
                     <>
-                      <button className="rs-pill" style={{ padding: '8px 16px', fontSize: 'var(--rs-fs-tiny)' }} onClick={() => handleImpersonate(u)}>IMPERSONATE</button>
-                      <button className="rs-pill" style={{ color: 'var(--md-error)', padding: '8px 16px', fontSize: 'var(--rs-fs-tiny)' }} onClick={() => handleTerminate(u)}>DELETE USER</button>
+                      <button className="rs-pill rs-type-tiny" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }} onClick={() => handleImpersonate(u)}>IMPERSONATE</button>
+                      <button className="rs-pill rs-type-tiny rs-c-error" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)' }} onClick={() => handleTerminate(u)}>DELETE USER</button>
                     </>
                   )}
                 </div>
@@ -329,19 +329,18 @@ export default function UsersPage({ embedded = false }) {
       </div>
 
       <Sheet open={!!resetTarget} onClose={() => setResetTarget(null)} title={`Set Temporary Password: ${resetTarget?.display_name}`}>
-        <form onSubmit={handleResetPassword} style={{ padding: '0 16px 16px' }}>
+        <form onSubmit={handleResetPassword} style={{ padding: '0 var(--rs-space-4) var(--rs-space-4)' }}>
           <div className="rs-mb-5">
             <div className="rs-card-label rs-mb-2">NEW PASSWORD</div>
             <input 
               type="password"
-              className="rs-chat-textarea"
-              style={{ 
-                background: 'var(--md-surface-container-low)', 
+              className="rs-chat-textarea rs-w-full"
+              style={{
+                background: 'var(--md-surface-container-low)',
                 border: '1px solid var(--md-outline-variant)',
-                borderRadius: 12,
-                padding: '12px 16px',
-                width: '100%',
-                boxSizing: 'border-box'
+                borderRadius: 'var(--md-shape-md)',
+                padding: 'var(--rs-space-3) var(--rs-space-4)',
+                boxSizing: 'border-box',
               }}
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
@@ -350,8 +349,8 @@ export default function UsersPage({ embedded = false }) {
             />
           </div>
 
-          {resetError && <div style={{ color: 'var(--md-error)', fontSize: 'var(--rs-fs-tiny)', marginBottom: 16 }}>{resetError}</div>}
-          {resetSuccess && <div style={{ color: 'var(--rs-status-nominal)', fontSize: 'var(--rs-fs-tiny)', marginBottom: 16 }}>{resetSuccess}</div>}
+          {resetError && <div className="rs-mb-4 rs-type-tiny rs-c-error">{resetError}</div>}
+          {resetSuccess && <div className="rs-mb-4 rs-type-tiny rs-c-nominal">{resetSuccess}</div>}
 
           <div className="rs-flex rs-gap-3">
             <button type="submit" className="rs-btn-primary rs-grow">SET PASSWORD</button>

@@ -34,26 +34,26 @@ export function InlineSettingsSection({
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+        <div className="rs-flex rs-items-center rs-gap-2 rs-grow rs-min-w-0">
           {icon && (
             <span
-              className="material-symbols-rounded"
-              style={{ fontSize: '1rem', opacity: 0.55, flexShrink: 0 }}
+              className="material-symbols-rounded rs-no-shrink"
+              style={{ fontSize: '1rem', opacity: 0.55 }}
             >
               {icon}
             </span>
           )}
           <span
-            className="rs-card-label"
-            style={{ fontSize: 'var(--rs-fs-nano)', letterSpacing: '0.12em', whiteSpace: 'nowrap', flexShrink: 0 }}
+            className="rs-card-label rs-type-nano rs-nowrap rs-no-shrink"
+            style={{ letterSpacing: '0.12em' }}
           >
             {title}
           </span>
           {subtitle && (
             <span
-              className="rs-card-meta"
-              style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', marginLeft: 6,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
+              className="rs-card-meta rs-muted rs-type-nano rs-nowrap rs-clip rs-ellipsis rs-min-w-0"
+              style={{
+                marginLeft: 'var(--rs-space-2)',
               }}
             >
               {subtitle}
@@ -84,7 +84,7 @@ export function InlineSettingsSection({
 export function SettingsRow({ label, children }) {
   return (
     <div className="rs-mb-4">
-      <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 8 }}>
+      <div className="rs-mb-2 rs-muted rs-type-nano rs-fw-700" style={{ letterSpacing: '0.12em' }}>
         {label}
       </div>
       {children}
@@ -99,9 +99,9 @@ export function ToggleGroup({ options, value, onChange }) {
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          style={{
-            flex: 1, padding: '6px 0', borderRadius: 8, cursor: 'pointer',
-            fontSize: 'var(--rs-fs-nano)', fontWeight: 700,
+          className="rs-grow rs-pointer rs-type-nano rs-fw-700" style={{
+            padding: 'var(--rs-space-2) 0',
+            borderRadius: 'var(--md-shape-sm)',
             border: value === opt.value ? '1px solid var(--primary)' : '1px solid var(--md-outline-variant)',
             background: value === opt.value ? 'rgba(var(--primary-rgb,100,100,255),0.12)' : 'transparent',
             color: value === opt.value ? 'var(--primary)' : 'var(--md-on-surface-variant)',
@@ -117,13 +117,15 @@ export function ToggleGroup({ options, value, onChange }) {
 
 export function Toggle({ checked, onChange, label }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+    <label className="rs-flex rs-items-center rs-gap-3 rs-pointer">
       <div
         onClick={() => onChange(!checked)}
-        style={{
-          width: 36, height: 20, borderRadius: 10, position: 'relative',
+        className="rs-relative rs-no-shrink" style={{
+          width: 36,
+          height: 20,
+          borderRadius: 'var(--md-shape-sm)',
           background: checked ? 'var(--primary)' : 'var(--md-outline-variant)',
-          transition: 'background 0.2s', flexShrink: 0,
+          transition: 'background 0.2s',
         }}
       >
         <div style={{
@@ -132,7 +134,7 @@ export function Toggle({ checked, onChange, label }) {
           transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
         }} />
       </div>
-      {label && <span style={{ fontSize: 'var(--rs-fs-micro)' }}>{label}</span>}
+      {label && <span className="rs-type-micro">{label}</span>}
     </label>
   )
 }
@@ -150,19 +152,25 @@ export default function TabSettingsPanel({ open, onClose, panelRef, title = 'SET
   if (!open) return null
 
   return (
-    <div style={{
-      position: 'absolute', top: '100%', right: 0, zIndex: 100,
+    <div className="rs-mt-2" style={{
+      position: 'absolute',
+      top: '100%',
+      right: 0,
+      zIndex: 100,
       background: 'var(--md-surface-container)',
       border: '1px solid var(--md-outline-variant)',
-      borderRadius: 12, padding: '16px 18px', marginTop: 8,
+      borderRadius: 'var(--md-shape-md)',
+      padding: 'var(--rs-space-4) var(--rs-space-5)',
       boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
-      minWidth: 280, maxWidth: 340,
+      minWidth: 280,
+      maxWidth: 340,
     }}>
       <div className="rs-flex rs-items-center rs-justify-between rs-mb-4">
-        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)', fontWeight: 800, letterSpacing: '0.1em' }}>{title}</span>
-        <button onClick={onClose} style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-          color: 'var(--md-on-surface-variant)', display: 'flex',
+        <span className="rs-muted rs-type-nano rs-fw-800" style={{ letterSpacing: '0.1em' }}>{title}</span>
+        <button onClick={onClose} className="rs-p-1 rs-flex rs-pointer" style={{
+          background: 'none',
+          border: 'none',
+          color: 'var(--md-on-surface-variant)',
         }}>
           <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>close</span>
         </button>

@@ -114,29 +114,23 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         <div className="rs-flex rs-flex-wrap rs-items-center rs-justify-between rs-gap-3">
           <p className="rs-card-meta rs-m-0">
             Configure which skills, integrations, and tools River can access during voice and chat sessions.
-            {saving && <span style={{ marginLeft: 8, color: 'var(--primary)' }}>SAVING…</span>}
+            {saving && <span className="rs-c-accent" style={{ marginLeft: 'var(--rs-space-2)' }}>SAVING…</span>}
           </p>
           <div className="rs-flex rs-items-center rs-gap-2">
-            <span style={{
-              fontSize: 'var(--rs-fs-micro)',
-              fontWeight: 700,
+            <span className="rs-type-micro rs-fw-700 rs-c-nominal" style={{
               padding: '3px 10px',
-              borderRadius: 12,
+              borderRadius: 'var(--md-shape-md)',
               background: 'color-mix(in srgb, var(--rs-status-nominal) 15%, transparent)',
-              color: 'var(--rs-status-nominal)',
-              border: '1px solid color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)'
+              border: '1px solid color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)',
             }}>
               {enabledCount} ACTIVE
             </span>
             {disabledCount > 0 && (
-              <span style={{
-                fontSize: 'var(--rs-fs-micro)',
-                fontWeight: 700,
+              <span className="rs-type-micro rs-fw-700 rs-c-error" style={{
                 padding: '3px 10px',
-                borderRadius: 12,
+                borderRadius: 'var(--md-shape-md)',
                 background: 'color-mix(in srgb, var(--md-error) 15%, transparent)',
-                color: 'var(--md-error)',
-                border: '1px solid color-mix(in srgb, var(--md-error) 30%, transparent)'
+                border: '1px solid color-mix(in srgb, var(--md-error) 30%, transparent)',
               }}>
                 {disabledCount} DISABLED
               </span>
@@ -146,16 +140,12 @@ export default function ChatToolsSection({ data, token, onChanged }) {
 
         {/* Search & Bulk Action Bar */}
         <div className="rs-flex rs-flex-wrap rs-items-center rs-gap-3 rs-mt-1">
-          <div style={{
-            flex: 1,
+          <div className="rs-grow rs-flex rs-items-center rs-gap-2" style={{
             minWidth: 220,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 12px',
+            padding: 'var(--rs-space-2) var(--rs-space-3)',
             background: 'var(--md-surface-container)',
             border: '1px solid var(--md-outline-variant)',
-            borderRadius: 'var(--md-shape-sm)'
+            borderRadius: 'var(--md-shape-sm)',
           }}>
             <span className="material-symbols-rounded" style={{ fontSize: '1.1rem', color: 'var(--md-outline)' }}>search</span>
             <input
@@ -163,15 +153,13 @@ export default function ChatToolsSection({ data, token, onChanged }) {
               placeholder="Search chat & voice tools..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{
+              className="rs-w-full rs-type-tiny" style={{
                 all: 'unset',
-                width: '100%',
-                fontSize: 'var(--rs-fs-tiny)',
-                color: 'var(--md-on-surface)'
+                color: 'var(--md-on-surface)',
               }}
             />
             {search && (
-              <button onClick={() => setSearch('')} style={{ all: 'unset', cursor: 'pointer', opacity: 0.6 }}>
+              <button onClick={() => setSearch('')} className="rs-pointer" style={{ all: 'unset', opacity: 0.6 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>close</span>
               </button>
             )}
@@ -179,16 +167,16 @@ export default function ChatToolsSection({ data, token, onChanged }) {
 
           <button
             type="button"
-            className="rs-pill"
-            style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 12px' }}
+            className="rs-pill rs-type-micro"
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}
             onClick={() => handleToggleAll(true)}
           >
             ENABLE ALL
           </button>
           <button
             type="button"
-            className="rs-pill"
-            style={{ fontSize: 'var(--rs-fs-micro)', padding: '6px 12px' }}
+            className="rs-pill rs-type-micro"
+            style={{ padding: 'var(--rs-space-2) var(--rs-space-3)' }}
             onClick={() => handleToggleAll(false)}
           >
             DISABLE ALL
@@ -196,14 +184,14 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {/* Category Filter Chips */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBlock: 4 }}>
+        <div className="rs-flex rs-gap-2 rs-flex-wrap" style={{ marginBlock: 'var(--rs-space-1)' }}>
           {categories.map(cat => (
             <button
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`rs-pill ${selectedCategory === cat ? 'is-active' : ''}`}
-              style={{ fontSize: 'var(--rs-fs-micro)', padding: '4px 10px' }}
+              className={`rs-pill rs-type-micro ${selectedCategory === cat ? 'is-active' : ''}`}
+              style={{ padding: 'var(--rs-space-1) var(--rs-space-3)' }}
             >
               {cat}
             </button>
@@ -211,23 +199,18 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {/* Tool Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginTop: 4 }}>
+        <div className="rs-gap-3 rs-mt-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {filteredTools.map(tool => {
             const isEnabled = !disabledList.includes(tool.name)
             return (
               <div
                 key={tool.name}
-                style={{
+                className="rs-p-4 rs-flex rs-flex-col rs-justify-between rs-gap-3" style={{
                   background: isEnabled ? 'var(--md-surface-container-low)' : 'var(--md-surface-container-lowest)',
-                  padding: 14,
                   border: `1px solid ${isEnabled ? 'var(--md-outline-variant)' : 'color-mix(in srgb, var(--md-outline) 20%, transparent)'}`,
                   borderRadius: 'var(--md-shape-md)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: 10,
                   opacity: isEnabled ? 1 : 0.65,
-                  transition: 'all 0.15s ease'
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <div>
@@ -236,48 +219,40 @@ export default function ChatToolsSection({ data, token, onChanged }) {
                       <span className="material-symbols-rounded" style={{ fontSize: '1.25rem', color: isEnabled ? 'var(--primary)' : 'var(--md-outline)' }}>
                         {tool.icon || 'handyman'}
                       </span>
-                      <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)', color: 'var(--md-on-surface)' }}>
+                      <span className="rs-type-small rs-fw-600" style={{ color: 'var(--md-on-surface)' }}>
                         {tool.label}
                       </span>
                     </div>
-                    <span style={{
-                      fontSize: 'var(--rs-fs-nano)',
+                    <span className="rs-type-nano" style={{
                       fontFamily: 'var(--font-mono, monospace)',
                       padding: '2px 6px',
-                      borderRadius: 4,
+                      borderRadius: 'var(--md-shape-xs)',
                       background: 'var(--md-surface-container)',
-                      color: 'var(--md-outline)'
+                      color: 'var(--md-outline)',
                     }}>
                       {tool.category}
                     </span>
                   </div>
 
-                  <p style={{
-                    fontSize: 'var(--rs-fs-micro)',
+                  <p className="rs-m-0 rs-type-micro rs-clip" style={{
                     color: 'var(--md-on-surface-variant)',
-                    margin: 0,
                     lineHeight: 1.35,
                     display: '-webkit-box',
                     WebkitLineClamp: 3,
                     WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
                   }}>
                     {tool.description}
                   </p>
                 </div>
 
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingTop: 8,
-                  borderTop: '1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)'
+                <div className="rs-flex rs-items-center rs-justify-between" style={{
+                  paddingTop: 'var(--rs-space-2)',
+                  borderTop: '1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)',
                 }}>
-                  <span style={{
-                    fontSize: 'var(--rs-fs-micro)',
+                  <span className="rs-type-micro" style={{
                     fontFamily: 'var(--font-mono, monospace)',
                     color: 'var(--md-outline)',
-                    userSelect: 'all'
+                    userSelect: 'all',
                   }}>
                     {tool.name}
                   </span>
@@ -293,7 +268,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
         </div>
 
         {filteredTools.length === 0 && (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--md-outline)', fontSize: 'var(--rs-fs-tiny)' }}>
+          <div className="rs-p-5 rs-text-center rs-type-tiny" style={{ color: 'var(--md-outline)' }}>
             No tools found matching "{search}".
           </div>
         )}

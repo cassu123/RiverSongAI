@@ -226,22 +226,19 @@ export default function ShoppingListTab({ api, refreshKey }) {
     return (
       <div
         key={item.id}
-        className="rs-pill"
+        className="rs-pill rs-gap-3 rs-flex-wrap rs-relative"
         style={{
           justifyContent: 'flex-start',
-          gap: 10,
-          padding: '10px 14px',
+          padding: 'var(--rs-space-3) var(--rs-space-4)',
           opacity: item.checked ? 0.45 : 1,
           background: 'var(--md-surface-container-low)',
-          position: 'relative',
-          flexWrap: 'wrap',
         }}
       >
         <button
-          className="rs-pill"
+          className="rs-pill rs-p-1 rs-min-w-0"
           aria-label={item.checked ? `Uncheck ${item.name}` : `Check off ${item.name}`}
           aria-pressed={item.checked}
-          style={{ padding: 4, minWidth: 0, background: 'transparent' }}
+          style={{ background: 'transparent' }}
           disabled={busy}
           onClick={() => mutate(() => api.patch(`/grocery/${item.id}`, { checked: !item.checked }))}
         >
@@ -251,7 +248,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         </button>
 
         {(item.qty || item.unit) && (
-          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
+          <span className="rs-mono rs-nowrap rs-fw-800 rs-c-accent">
             {[item.qty, item.unit].filter(Boolean).join(' ')}
           </span>
         )}
@@ -261,18 +258,15 @@ export default function ShoppingListTab({ api, refreshKey }) {
         </span>
 
         {/* Store Tag / Quick Store Selector */}
-        <div style={{ position: 'relative' }}>
+        <div className="rs-relative">
           <button
             type="button"
-            className="rs-pill"
+            className="rs-pill rs-gap-1 rs-type-small rs-fw-700"
             style={{
               padding: '2px 8px',
-              fontSize: 'var(--rs-fs-small)',
-              fontWeight: 700,
-              gap: 4,
               border: `1px solid ${storeMeta ? storeMeta.color : 'rgba(255,255,255,0.18)'}`,
               color: storeMeta ? storeMeta.color : 'inherit',
-              background: storeMeta ? `color-mix(in srgb, ${storeMeta.color} 15%, transparent)` : 'rgba(255,255,255,0.05)',
+              background: storeMeta ? `color-mix(in srgb, ${storeMeta.color} 15%, transparent)` : 'var(--rs-veil-1)',
             }}
             title={item.store ? `Assigned to ${item.store} (click to change)` : 'Assign to a store'}
             onClick={() => setEditingStoreItemId(isEditingStore ? null : item.id)}
@@ -285,22 +279,20 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
           {isEditingStore && (
             <div
-              className="rs-mpop"
+              className="rs-mpop rs-mt-1 rs-p-1"
               style={{
                 position: 'absolute',
                 top: '100%',
                 right: 0,
-                marginTop: 4,
                 zIndex: 9995,
                 width: 200,
                 maxHeight: 240,
                 overflowY: 'auto',
-                padding: 4,
               }}
             >
               <button
-                className="rs-mpop-row"
-                style={{ padding: '6px 8px', fontSize: 'var(--rs-fs-small)' }}
+                className="rs-mpop-row rs-type-small"
+                style={{ padding: 'var(--rs-space-2) var(--rs-space-2)' }}
                 onClick={() => handleQuickStoreChange(item.id, null)}
               >
                 <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>remove_circle_outline</span>
@@ -311,8 +303,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
                 return (
                   <button
                     key={st}
-                    className="rs-mpop-row"
-                    style={{ padding: '6px 8px', fontSize: 'var(--rs-fs-small)' }}
+                    className="rs-mpop-row rs-type-small"
+                    style={{ padding: 'var(--rs-space-2) var(--rs-space-2)' }}
                     onClick={() => handleQuickStoreChange(item.id, st)}
                   >
                     <span className="material-symbols-rounded" style={{ fontSize: '0.9rem', color: meta.color }}>
@@ -327,17 +319,17 @@ export default function ShoppingListTab({ api, refreshKey }) {
         </div>
 
         <span
-          className="rs-card-label"
-          style={{ fontSize: 'var(--rs-fs-tiny)', whiteSpace: 'nowrap', color: SOURCE_COLORS[item.source] || 'inherit', opacity: 0.85 }}
+          className="rs-card-label rs-type-tiny rs-nowrap"
+          style={{ color: SOURCE_COLORS[item.source] || 'inherit', opacity: 0.85 }}
         >
           {SOURCE_LABELS[item.source] || item.source?.toUpperCase()}
           {item.added_by_name && !item.is_mine ? ` · ${item.added_by_name}` : ''}
         </span>
 
         <button
-          className="rs-pill"
+          className="rs-pill rs-p-1 rs-min-w-0"
           aria-label={`Remove ${item.name}`}
-          style={{ padding: 4, minWidth: 0, background: 'transparent' }}
+          style={{ background: 'transparent' }}
           disabled={busy}
           onClick={() => mutate(() => api.delete(`/grocery/${item.id}`))}
         >
@@ -350,14 +342,13 @@ export default function ShoppingListTab({ api, refreshKey }) {
   const exportStoreLabel = activeStoreFilter !== 'all' ? activeStoreFilter : (activeLinkStore ? (STORE_CONFIG[activeLinkStore]?.label || activeLinkStore.toUpperCase()) : 'WALMART')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 740, margin: '0 auto', width: '100%' }}>
+    <div className="rs-flex rs-flex-col rs-gap-4 rs-w-full" style={{ maxWidth: 740, margin: '0 auto' }}>
       {/* Store Filter Tabs */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+      <div className="rs-flex rs-gap-2" style={{ overflowX: 'auto', paddingBottom: 'var(--rs-space-1)', scrollbarWidth: 'none' }}>
         <button
-          className="rs-pill"
+          className="rs-pill rs-type-small"
           style={{
-            fontSize: 'var(--rs-fs-small)',
-            padding: '6px 12px',
+            padding: 'var(--rs-space-2) var(--rs-space-3)',
             background: activeStoreFilter === 'all' ? 'var(--primary)' : 'var(--md-surface-container-low)',
             color: activeStoreFilter === 'all' ? '#000' : 'inherit',
             fontWeight: activeStoreFilter === 'all' ? 800 : 500,
@@ -373,10 +364,9 @@ export default function ShoppingListTab({ api, refreshKey }) {
           return (
             <button
               key={st}
-              className="rs-pill"
+              className="rs-pill rs-type-small"
               style={{
-                fontSize: 'var(--rs-fs-small)',
-                padding: '6px 12px',
+                padding: 'var(--rs-space-2) var(--rs-space-3)',
                 gap: 5,
                 background: isActive ? (meta ? meta.color : 'var(--primary)') : 'var(--md-surface-container-low)',
                 color: isActive ? '#fff' : 'inherit',
@@ -404,29 +394,28 @@ export default function ShoppingListTab({ api, refreshKey }) {
           onChange={e => setName(e.target.value)}
         />
         <input
-          className="rs-pill"
-          style={{ width: 64, background: 'var(--md-surface-container-low)', border: 'none', textAlign: 'center' }}
+          className="rs-pill rs-text-center"
+          style={{ width: 64, background: 'var(--md-surface-container-low)', border: 'none' }}
           placeholder="Qty"
           aria-label="Quantity"
           value={qty}
           onChange={e => setQty(e.target.value)}
         />
         <input
-          className="rs-pill"
-          style={{ width: 68, background: 'var(--md-surface-container-low)', border: 'none', textAlign: 'center' }}
+          className="rs-pill rs-text-center"
+          style={{ width: 68, background: 'var(--md-surface-container-low)', border: 'none' }}
           placeholder="Unit"
           aria-label="Unit"
           value={unit}
           onChange={e => setUnit(e.target.value)}
         />
         <select
-          className="rs-pill"
+          className="rs-pill rs-fw-600"
           style={{
             minWidth: 110,
             background: 'var(--md-surface-container-low)',
             border: 'none',
             color: 'inherit',
-            fontWeight: 600,
           }}
           aria-label="Store destination"
           value={selectedStore}
@@ -454,7 +443,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
       </form>
 
       {error && (
-        <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{error}</div>
+        <div className="rs-card-meta rs-c-error">{error}</div>
       )}
 
       {loading ? (
@@ -493,8 +482,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
       {/* Cart Actions Bar */}
       <div className="rs-flex rs-gap-2 rs-flex-wrap rs-mt-2">
         <button
-          className="rs-btn-primary"
-          style={{ flex: 1, justifyContent: 'center', minWidth: 200 }}
+          className="rs-btn-primary rs-grow rs-justify-center"
+          style={{ minWidth: 200 }}
           disabled={exporting || unchecked.length === 0}
           onClick={runExport}
         >
@@ -509,10 +498,10 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
       {/* Store Cart Export Results */}
       {exportResult && (
-        <div className="rs-card" style={{ borderColor: exportResult.cart_url ? '#4ade80' : 'var(--md-outline-variant)' }}>
+        <div className="rs-card" style={{ borderColor: exportResult.cart_url ? 'var(--rs-status-nominal)' : 'var(--md-outline-variant)' }}>
           <div className="rs-card-inner rs-flex rs-flex-col rs-gap-3">
             <div className="rs-card-head">
-              <span className="rs-card-label" style={{ fontWeight: 800, color: 'var(--primary)' }}>
+              <span className="rs-card-label rs-fw-800 rs-c-accent">
                 {exportResult.store.toUpperCase()} CART EXPORT
               </span>
               <button className="rs-pill" onClick={() => setExportResult(null)}>
@@ -525,8 +514,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
                 href={exportResult.cart_url}
                 target="_blank"
                 rel="noreferrer"
-                className="rs-btn-primary"
-                style={{ justifyContent: 'center', textDecoration: 'none' }}
+                className="rs-btn-primary rs-justify-center"
+                style={{ textDecoration: 'none' }}
               >
                 OPEN {exportResult.store.toUpperCase()} CART ({exportResult.mapped_count} ITEM{exportResult.mapped_count === 1 ? '' : 'S'})
               </a>
@@ -546,8 +535,8 @@ export default function ShoppingListTab({ api, refreshKey }) {
                       href={link.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="rs-pill"
-                      style={{ textDecoration: 'none', gap: 6 }}
+                      className="rs-pill rs-gap-2"
+                      style={{ textDecoration: 'none' }}
                     >
                       <span>{link.name}</span>
                       <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>
@@ -589,7 +578,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
         <div className="rs-card">
           <div className="rs-card-inner rs-flex rs-flex-col rs-gap-4">
             <div className="rs-card-head">
-              <span className="rs-card-label" style={{ fontWeight: 900, color: 'var(--primary)' }}>STORE PRODUCT LINKS & MAPPINGS</span>
+              <span className="rs-card-label rs-fw-900 rs-c-accent">STORE PRODUCT LINKS & MAPPINGS</span>
               <button className="rs-pill" onClick={() => setShowStoreLinks(false)}>
                 <span className="material-symbols-rounded">close</span>
               </button>
@@ -599,7 +588,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
             </div>
 
             {/* Store Selection Tabs for Mapping */}
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+            <div className="rs-flex rs-gap-2" style={{ overflowX: 'auto', paddingBottom: 2 }}>
               {POPULAR_STORES.map(st => {
                 const key = st.toLowerCase().replace(/[^a-z0-9]/g, '')
                 const isSelected = activeLinkStore.replace(/[^a-z0-9]/g, '') === key
@@ -607,10 +596,9 @@ export default function ShoppingListTab({ api, refreshKey }) {
                 return (
                   <button
                     key={st}
-                    className="rs-pill"
+                    className="rs-pill rs-type-small"
                     style={{
-                      fontSize: 'var(--rs-fs-small)',
-                      padding: '4px 10px',
+                      padding: 'var(--rs-space-1) var(--rs-space-3)',
                       background: isSelected ? meta.color : 'var(--md-surface-container-low)',
                       color: isSelected ? '#fff' : 'inherit',
                       fontWeight: isSelected ? 800 : 500,
@@ -626,16 +614,16 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
             <form onSubmit={saveMapping} className="rs-flex rs-gap-2 rs-flex-wrap">
               <input
-                className="rs-pill"
-                style={{ flex: '1 1 160px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
+                className="rs-pill rs-min-w-0"
+                style={{ flex: '1 1 160px', background: 'var(--md-surface-container-low)', border: 'none' }}
                 placeholder="Ingredient / Item name"
                 aria-label="Ingredient name"
                 value={mapName}
                 onChange={e => setMapName(e.target.value)}
               />
               <input
-                className="rs-pill"
-                style={{ flex: '2 1 220px', minWidth: 0, background: 'var(--md-surface-container-low)', border: 'none' }}
+                className="rs-pill rs-min-w-0"
+                style={{ flex: '2 1 220px', background: 'var(--md-surface-container-low)', border: 'none' }}
                 placeholder={`${activeLinkStore.toUpperCase()} URL, SKU, or Product ID`}
                 aria-label="Store URL or Product ID"
                 value={mapId}
@@ -645,7 +633,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                 LINK
               </button>
             </form>
-            {mapError && <div className="rs-card-meta" style={{ color: 'var(--md-error)' }}>{mapError}</div>}
+            {mapError && <div className="rs-card-meta rs-c-error">{mapError}</div>}
 
             <div className="rs-flex rs-flex-col rs-gap-2">
               {mappings.length === 0 ? (
@@ -653,16 +641,16 @@ export default function ShoppingListTab({ api, refreshKey }) {
               ) : mappings.map(m => {
                 const meta = getStoreMeta(m.store)
                 return (
-                  <div key={m.id} className="rs-pill" style={{ justifyContent: 'flex-start', gap: 12 }}>
+                  <div key={m.id} className="rs-pill rs-gap-3" style={{ justifyContent: 'flex-start' }}>
                     <span className="material-symbols-rounded" style={{ color: meta?.color || 'inherit', fontSize: '1.1rem' }}>
                       {meta?.icon || 'store'}
                     </span>
-                    <span style={{ flex: 1, fontWeight: 600 }}>{m.ingredient_name}</span>
-                    <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--rs-fs-small)' }}>{m.store_item_id}</span>
+                    <span className="rs-grow rs-fw-600">{m.ingredient_name}</span>
+                    <span className="rs-muted rs-mono rs-type-small">{m.store_item_id}</span>
                     <button
-                      className="rs-pill"
+                      className="rs-pill rs-p-1 rs-min-w-0"
                       aria-label={`Unlink ${m.ingredient_name}`}
-                      style={{ padding: 4, minWidth: 0, background: 'transparent' }}
+                      style={{ background: 'transparent' }}
                       onClick={async () => {
                         await api.delete(`/store/mappings/${m.id}`)
                         loadMappings(activeLinkStore)

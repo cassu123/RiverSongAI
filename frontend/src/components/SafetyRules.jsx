@@ -133,7 +133,7 @@ export default function SafetyRules() {
       </div>
 
       {rules && rules.length === 0 && (
-        <p className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)' }}>
+        <p className="rs-card-meta rs-type-small">
           No alert rules yet. The built-in pack is created on startup once
           Home Assistant is configured.
         </p>
@@ -144,38 +144,41 @@ export default function SafetyRules() {
           const tone = SEVERITY_TONE[rule.severity] || SEVERITY_TONE.info
           const showing = result && result.ruleId === rule.id
           return (
-            <div key={rule.id} style={{
-              border: '1px solid var(--border)', borderLeft: `3px solid ${tone}`,
-              borderRadius: 10, padding: 14,
+            <div key={rule.id} className="rs-p-4" style={{
+              border: '1px solid var(--border)',
+              borderLeft: `3px solid ${tone}`,
+              borderRadius: 'var(--md-shape-sm)',
               opacity: rule.enabled ? 1 : 0.55,
             }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 'var(--rs-fs-body)', fontWeight: 700 }}>{rule.name}</span>
-                <span style={{ fontSize: 'var(--rs-fs-tiny)', color: tone, fontWeight: 700,
-                               letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <div className="rs-flex rs-gap-3 rs-flex-wrap" style={{ alignItems: 'baseline' }}>
+                <span className="rs-type-body rs-fw-700">{rule.name}</span>
+                <span className="rs-type-tiny rs-fw-700" style={{
+                  color: tone,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}>
                   {rule.severity}
                 </span>
                 {rule.builtin && (
-                  <span className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}>BUILT-IN</span>
+                  <span className="rs-pill rs-type-tiny">BUILT-IN</span>
                 )}
                 <div className="rs-grow" />
-                <button className={rule.enabled ? 'rs-pill is-active' : 'rs-pill'}
-                        style={{ fontSize: 'var(--rs-fs-tiny)' }}
+                <button className={`${rule.enabled ? 'rs-pill is-active' : 'rs-pill'} rs-type-tiny`}
                         onClick={() => toggle(rule)} disabled={busy === rule.id}>
                   {rule.enabled ? 'ON' : 'MUTED'}
                 </button>
               </div>
 
-              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', marginTop: 6 }}>
+              <div className="rs-card-meta rs-mt-2 rs-type-small">
                 Watches {watching(rule)}.
               </div>
 
               <div className="rs-flex rs-gap-2 rs-mt-3 rs-flex-wrap">
-                <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}
+                <button className="rs-pill rs-type-tiny"
                         onClick={() => test(rule, false)} disabled={busy === rule.id}>
                   TEST
                 </button>
-                <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }}
+                <button className="rs-pill rs-type-tiny"
                         onClick={() => test(rule, true)} disabled={busy === rule.id}
                         title="Fires the real alert, including push">
                   SEND FOR REAL
@@ -183,31 +186,31 @@ export default function SafetyRules() {
               </div>
 
               {showing && (
-                <div style={{
-                  marginTop: 10, padding: 12, borderRadius: 8,
-                  background: 'rgba(0,0,0,0.22)', fontSize: 'var(--rs-fs-small)',
+                <div className="rs-mt-3 rs-p-3 rs-type-small" style={{
+                  borderRadius: 'var(--md-shape-sm)',
+                  background: 'var(--rs-scrim-1)',
                   border: `1px solid ${result.ok ? 'var(--secondary)' : 'var(--warn)'}`,
                 }}>
-                  <div style={{ fontWeight: 700, color: result.ok ? 'var(--secondary)' : 'var(--warn)' }}>
+                  <div className="rs-fw-700" style={{ color: result.ok ? 'var(--secondary)' : 'var(--warn)' }}>
                     {result.ok
                       ? (result.delay
                           ? `Would fire, after ${Math.round(result.delay / 60)} min held`
                           : 'Would fire')
                       : 'Would not fire'}
                   </div>
-                  <div style={{ opacity: 0.85, marginTop: 4 }}>{result.reason}</div>
+                  <div className="rs-mt-1" style={{ opacity: 0.85 }}>{result.reason}</div>
                   {result.delivered && (
-                    <div style={{ marginTop: 6, color: 'var(--md-primary)' }}>
+                    <div className="rs-mt-2 rs-c-primary">
                       Sent for real — check your phone. Quiet hours still apply
                       unless this rule is critical.
                     </div>
                   )}
                   {result.others.length > 0 && (
-                    <div style={{ marginTop: 6, opacity: 0.8 }}>
+                    <div className="rs-mt-2" style={{ opacity: 0.8 }}>
                       Also matched: {result.others.join(', ')}
                     </div>
                   )}
-                  <div style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 'var(--rs-fs-tiny)' }}>
+                  <div className="rs-mt-2 rs-muted rs-type-tiny">
                     Local time {result.localTime}
                   </div>
                 </div>
@@ -219,10 +222,10 @@ export default function SafetyRules() {
 
       {error && (
         <div className="rs-mt-3 rs-flex rs-gap-3 rs-items-center rs-flex-wrap">
-          <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-small)', color: 'var(--md-error)' }}>
+          <span className="rs-card-meta rs-type-small rs-c-error">
             {error}
           </span>
-          <button className="rs-pill" style={{ fontSize: 'var(--rs-fs-tiny)' }} onClick={load}>
+          <button className="rs-pill rs-type-tiny" onClick={load}>
             RETRY
           </button>
         </div>

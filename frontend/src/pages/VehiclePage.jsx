@@ -186,17 +186,17 @@ export default function VehiclePage({ setAction, onNavigate }) {
         <div className="rs-card is-wide is-elev" style={{ borderTop: '2px solid var(--primary)' }}>
           <div className="rs-card-inner">
             <div className="rs-card-head rs-mb-5">
-              <span className="rs-card-label" style={{ color: 'var(--primary)' }}>ASSET SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
+              <span className="rs-card-label rs-c-accent">ASSET SPECIFICATIONS &amp; HARDWARE TELEMETRY</span>
             </div>
 
             {newError && (
-              <div className="mp-error" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(255,139,139,0.1)', color: 'var(--rs-status-critical, #ff8b8b)', border: '1px solid rgba(255,139,139,0.3)' }}>
+              <div className="mp-error rs-mb-4" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)', borderRadius: 'var(--md-shape-sm)', background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)', color: 'var(--rs-status-critical, #ff8b8b)', border: '1px solid color-mix(in srgb, var(--rs-status-critical) 30%, transparent)' }}>
                 {newError}
               </div>
             )}
 
             <form onSubmit={handleCreateVehicle}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+              <div className="rs-gap-4 rs-mb-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
                 <div className="cockpit-input-box">
                   <span className="card-metric-label">MAKE *</span>
                   <input
@@ -248,16 +248,16 @@ export default function VehiclePage({ setAction, onNavigate }) {
                 <div className="cockpit-input-box">
                   <span className="card-metric-label">TYPE</span>
                   <select
-                    className="cockpit-input-raw"
-                    style={{ background: 'transparent', cursor: 'pointer' }}
+                    className="cockpit-input-raw rs-pointer"
+                    style={{ background: 'transparent' }}
                     value={newVehicle.vehicle_type}
                     onChange={e => setNewVehicle({ ...newVehicle, vehicle_type: e.target.value })}
                   >
-                    <option value="moto" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>Motorcycle</option>
-                    <option value="auto" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>Automobile</option>
-                    <option value="truck" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>Truck</option>
-                    <option value="atv" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>ATV / UTV</option>
-                    <option value="other" style={{ background: 'var(--bg-base)', color: 'var(--fg)' }}>Other</option>
+                    <option value="moto" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>Motorcycle</option>
+                    <option value="auto" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>Automobile</option>
+                    <option value="truck" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>Truck</option>
+                    <option value="atv" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>ATV / UTV</option>
+                    <option value="other" className="rs-c-fg" style={{ background: 'var(--bg-base)' }}>Other</option>
                   </select>
                 </div>
                 <div className="cockpit-input-box">
@@ -280,7 +280,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rs-flex rs-gap-3 rs-justify-end" style={{ paddingTop: 'var(--rs-space-4)', borderTop: '1px solid var(--rs-hairline)' }}>
                 <button type="button" className="rs-pill" onClick={() => setSelectedVehicleId(null)}>
                   CANCEL
                 </button>
@@ -325,7 +325,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
       {/* Hangar Header with Primary Actions */}
       <div className="rs-foyer-head hangar-header">
         <div>
-          <div className="rs-card-label" style={{ letterSpacing: '0.2em', marginBottom: 8, color: 'var(--primary)', opacity: 0.9 }}>
+          <div className="rs-card-label rs-mb-2 rs-c-accent" style={{ letterSpacing: '0.2em', opacity: 0.9 }}>
             SECTOR GARAGE · FLEET TELEMETRY
           </div>
           <h1 className="rs-greeting">The Hangar</h1>
@@ -402,14 +402,14 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
       {/* Sector Vehicles Grid */}
       <div className="rs-flex rs-justify-between rs-items-center rs-mt-3 rs-mb-2">
-        <span className="card-metric-label" style={{ fontSize: 'var(--rs-fs-micro)', letterSpacing: '0.12em' }}>
+        <span className="card-metric-label rs-type-micro" style={{ letterSpacing: '0.12em' }}>
           SECTOR VEHICLES ({vehicles.length})
         </span>
       </div>
 
       {loading && vehicles.length === 0 ? (
-        <div className="rs-card is-wide" style={{ padding: 64, textAlign: 'center' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '3rem', color: 'var(--primary)', opacity: 0.6, animation: 'spin 2s linear infinite' }}>sync</span>
+        <div className="rs-card is-wide rs-text-center" style={{ padding: 64 }}>
+          <span className="material-symbols-rounded rs-c-accent" style={{ fontSize: '3rem', opacity: 0.6, animation: 'spin 2s linear infinite' }}>sync</span>
           <div className="card-metric-label rs-mt-4">SCANNING HANGAR TRANSPONDERS...</div>
         </div>
       ) : (
@@ -451,12 +451,12 @@ export default function VehiclePage({ setAction, onNavigate }) {
                     className="hangar-status-badge"
                     style={isDue ? {
                       color: 'var(--rs-status-critical, #ff8b8b)',
-                      borderColor: 'rgba(255,139,139,0.3)',
-                      background: 'rgba(255,139,139,0.1)'
+                      borderColor: 'color-mix(in srgb, var(--rs-status-critical) 30%, transparent)',
+                      background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)'
                     } : {
                       color: 'var(--rs-status-nominal, #4ade80)',
-                      borderColor: 'rgba(74,222,128,0.3)',
-                      background: 'rgba(74,222,128,0.1)'
+                      borderColor: 'color-mix(in srgb, var(--rs-status-nominal) 30%, transparent)',
+                      background: 'color-mix(in srgb, var(--rs-status-nominal) 10%, transparent)'
                     }}
                   >
                     <span
@@ -474,7 +474,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
                       {odo > 0 ? (
                         <>{odo.toLocaleString()} <span className="card-metric-unit">{unit}</span></>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-small)' }}>Not set</span>
+                        <span className="rs-muted rs-type-small">Not set</span>
                       )}
                     </div>
                   </div>
@@ -488,7 +488,7 @@ export default function VehiclePage({ setAction, onNavigate }) {
 
                 <div className="hangar-card-footer">
                   <span className="hangar-card-scope-hint">
-                    <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--primary)' }}>tune</span>
+                    <span className="material-symbols-rounded rs-c-accent" style={{ fontSize: '1rem' }}>tune</span>
                     <span>{checkPoints.length} Checkpoints Configured</span>
                   </span>
                   <span className="hangar-card-inspect-btn">

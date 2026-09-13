@@ -141,9 +141,9 @@ export default function Programs() {
 
       <div className="rs-card">
         <div className="rs-table-wrap">
-          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="rs-w-full rs-text-left" style={{ borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <tr style={{ borderBottom: '1px solid var(--rs-hairline)' }}>
                 <th className="rs-p-3">Name</th>
                 <th className="rs-p-3">Unit</th>
                 <th className="rs-p-3">Zones</th>
@@ -157,7 +157,7 @@ export default function Programs() {
                 let zIds = p.zone_ids || []
                 if (typeof zIds === 'string') { try { zIds = JSON.parse(zIds) } catch(e){} }
                 return (
-                  <tr key={p.program_id || p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <tr key={p.program_id || p.id} style={{ borderBottom: '1px solid var(--rs-hairline-soft)' }}>
                     <td className="rs-p-3">{p.name}</td>
                     <td className="rs-p-3">{u ? u.name : 'Unassigned'}</td>
                     <td className="rs-p-3">{zIds.length} zone(s)</td>
@@ -177,11 +177,11 @@ export default function Programs() {
       </div>
 
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div className="rs-flex rs-items-center rs-justify-center" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--rs-scrim-3)', zIndex: 1000 }}>
           <div className="rs-card" style={{ width: 600, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3>{editingId ? 'Edit Program' : 'Create Program'}</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 rs-gap-4 rs-mt-4">
               <div>
                 <label>Name</label><br/>
                 <input type="text" className="rs-input rs-w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
@@ -196,9 +196,9 @@ export default function Programs() {
 
               <div style={{ gridColumn: '1 / span 2' }}>
                 <label>Zones</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 5 }}>
+                <div className="rs-flex rs-flex-wrap rs-gap-3" style={{ marginTop: 5 }}>
                   {zones.map(z => (
-                    <label key={z.zone_id || z.id} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: 4 }}>
+                    <label key={z.zone_id || z.id} className="rs-flex rs-items-center" style={{ gap: 5, background: 'var(--rs-veil-1)', padding: '5px 10px', borderRadius: 'var(--md-shape-xs)' }}>
                       <input type="checkbox" checked={formData.zone_ids.includes(z.zone_id || z.id)} onChange={() => toggleZone(z.zone_id || z.id)} />
                       {z.name}
                     </label>
@@ -238,7 +238,7 @@ export default function Programs() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+            <div className="rs-flex rs-gap-3 rs-mt-5 rs-justify-end">
               <button className="rs-btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="rs-btn-primary" onClick={handleSave}>Save</button>
             </div>

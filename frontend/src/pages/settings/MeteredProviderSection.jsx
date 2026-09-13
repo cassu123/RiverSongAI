@@ -172,7 +172,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           {enabled ? 'paid' : 'cloud_off'}
         </span>
         <div className="rs-grow">
-          <div style={{ fontWeight: 600, fontSize: 'var(--rs-fs-small)' }}>{meta.tagline}</div>
+          <div className="rs-type-small rs-fw-600">{meta.tagline}</div>
           <div className="rs-card-meta">
             {enabled
               ? 'Connected · billed per token'
@@ -182,13 +182,11 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           </div>
         </div>
         <span
-          className="rs-pill"
+          className="rs-pill rs-type-nano rs-no-shrink"
           style={{
-            fontSize: 'var(--rs-fs-nano)',
             background: `color-mix(in srgb, ${statusColor} 15%, transparent)`,
             color: statusColor,
             border: `1px solid ${statusColor}`,
-            flexShrink: 0,
           }}
         >
           {statusLabel}
@@ -198,11 +196,11 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
       {error && (
         <div
           role="alert"
-          style={{
-            display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 10,
+          className="rs-flex rs-gap-2 rs-type-micro" style={{
+            padding: 'var(--rs-space-3) var(--rs-space-3)',
+            borderRadius: 'var(--md-shape-sm)',
             background: 'color-mix(in srgb, var(--md-error) 14%, transparent)',
             border: '1px solid color-mix(in srgb, var(--md-error) 45%, transparent)',
-            fontSize: 'var(--rs-fs-micro)',
           }}
         >
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>error</span>
@@ -213,11 +211,9 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
       {/* Cost warning — this is the one thing that separates these two panels
           from every other provider section. */}
       <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          padding: '10px 12px',
-          borderRadius: 10,
+        className="rs-flex rs-gap-2" style={{
+          padding: 'var(--rs-space-3) var(--rs-space-3)',
+          borderRadius: 'var(--md-shape-sm)',
           background: 'color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent)',
           border: '1px solid color-mix(in srgb, var(--md-sys-color-tertiary) 40%, transparent)',
         }}
@@ -225,7 +221,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
         <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>
           info
         </span>
-        <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', lineHeight: 1.5 }}>
+        <div className="rs-card-meta rs-type-nano" style={{ lineHeight: 1.5 }}>
           Every message sent to {meta.label} is billed to your account.{' '}
           {meta.freeAlternative}
         </div>
@@ -256,14 +252,11 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
 
       {/* Spend tracker */}
       <div
-        style={{
-          padding: '14px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
+        className="rs-flex rs-flex-col rs-gap-3" style={{
+          padding: 'var(--rs-space-4) var(--rs-space-4)',
           background: 'var(--md-surface-container-low)',
           border: '1px solid var(--md-outline-variant)',
-          borderRadius: 12,
+          borderRadius: 'var(--md-shape-md)',
         }}
       >
         <div className="rs-flex rs-justify-between rs-items-center rs-gap-2 rs-flex-wrap">
@@ -271,7 +264,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>
               savings
             </span>
-            <span style={{ fontWeight: 600, fontSize: 'var(--rs-fs-tiny)', letterSpacing: '0.06em' }}>
+            <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.06em' }}>
               SPEND TRACKER
             </span>
           </div>
@@ -280,11 +273,9 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
               <button
                 key={d}
                 onClick={() => setDays(d)}
-                className="rs-pill"
+                className="rs-pill rs-type-nano rs-pointer"
                 style={{
-                  fontSize: 'var(--rs-fs-nano)',
                   padding: '2px 10px',
-                  cursor: 'pointer',
                   background:
                     days === d ? 'color-mix(in srgb, var(--primary) 20%, transparent)' : 'transparent',
                   color: days === d ? 'var(--primary)' : 'inherit',
@@ -297,7 +288,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 rs-gap-2">
           {[
             { value: totals.calls.toLocaleString(), label: 'requests', icon: 'bolt' },
             { value: fmtTokens(totals.tokens), label: 'tokens', icon: 'token' },
@@ -308,15 +299,13 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
               color: totals.cost > 0 ? 'var(--md-sys-color-tertiary)' : 'inherit',
             },
           ].map(({ value, label, icon, color }) => (
-            <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div key={label} className="rs-flex rs-flex-col" style={{ gap: 2 }}>
               <div className="rs-flex rs-items-center rs-gap-1">
                 <span className="material-symbols-rounded" style={{ fontSize: '0.8rem', opacity: 0.6 }}>
                   {icon}
                 </span>
                 <span
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 'var(--rs-fs-body)',
+                  className="rs-type-body rs-fw-700" style={{
                     fontVariantNumeric: 'tabular-nums',
                     color: color || 'inherit',
                   }}
@@ -324,7 +313,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
                   {value}
                 </span>
               </div>
-              <div className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)' }}>
+              <div className="rs-card-meta rs-type-nano">
                 {label}
               </div>
             </div>
@@ -334,11 +323,8 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
         {/* Per-model breakdown — which model is actually costing the money */}
         {rows.length > 0 && (
           <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-              paddingTop: 8,
+            className="rs-flex rs-flex-col rs-gap-2" style={{
+              paddingTop: 'var(--rs-space-2)',
               borderTop: '1px solid var(--md-sys-color-outline-variant)',
             }}
           >
@@ -348,12 +334,12 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
               .map((r) => (
                 <div
                   key={r.model}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}
+                  className="rs-flex rs-justify-between rs-gap-2" style={{ alignItems: 'baseline' }}
                 >
-                  <span style={{ fontSize: 'var(--rs-fs-micro)', fontFamily: 'monospace', opacity: 0.85 }}>
+                  <span className="rs-type-micro" style={{ fontFamily: 'monospace', opacity: 0.85 }}>
                     {r.model}
                   </span>
-                  <span className="rs-card-meta" style={{ fontSize: 'var(--rs-fs-nano)', whiteSpace: 'nowrap' }}>
+                  <span className="rs-card-meta rs-type-nano rs-nowrap">
                     {fmtTokens(r.input_tokens + r.output_tokens)} ·{' '}
                     <strong style={{ color: 'var(--md-sys-color-tertiary)' }}>
                       {fmtUsd(r.estimated_cost_usd || 0)}
@@ -364,7 +350,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           </div>
         )}
 
-        <div className="rs-card-meta" style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>
+        <div className="rs-card-meta rs-muted rs-type-nano">
           Token counts are reported by {meta.label}. Dollar figures are estimates from the
           rate table in the model registry — check {meta.console} for the authoritative bill.
         </div>
@@ -375,11 +361,11 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
         {meta.models.map(({ name, tag }) => (
           <div
             key={name}
-            className="rs-pill"
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--rs-fs-nano)', padding: '3px 10px' }}
+            className="rs-pill rs-flex rs-items-center rs-gap-1 rs-type-nano"
+            style={{ padding: '3px 10px' }}
           >
             <span style={{ fontFamily: 'monospace' }}>{name}</span>
-            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-nano)' }}>· {tag}</span>
+            <span className="rs-muted rs-type-nano">· {tag}</span>
           </div>
         ))}
       </div>

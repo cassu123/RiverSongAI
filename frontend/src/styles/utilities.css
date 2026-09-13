@@ -65,3 +65,81 @@
 .rs-p-5.rs-p-5 { padding: var(--rs-space-5); }
 .rs-p-6.rs-p-6 { padding: var(--rs-space-6); }
 .rs-p-7.rs-p-7 { padding: var(--rs-space-7); }
+
+/* --- Type roles -----------------------------------------------------------
+   The size rungs from chrome-shell.css, named so a component can ask for a
+   role instead of repeating the token. Alignment keeps the .rs-text-* prefix
+   it already had; sizes are .rs-type-* so the two never read as one family. */
+.rs-type-h3.rs-type-h3       { font-size: var(--rs-fs-h3); }
+.rs-type-body.rs-type-body   { font-size: var(--rs-fs-body); }
+.rs-type-small.rs-type-small { font-size: var(--rs-fs-small); }
+.rs-type-tiny.rs-type-tiny   { font-size: var(--rs-fs-tiny); }
+.rs-type-micro.rs-type-micro { font-size: var(--rs-fs-micro); }
+.rs-type-nano.rs-type-nano   { font-size: var(--rs-fs-nano); }
+
+.rs-muted.rs-muted           { color: var(--text-muted); }
+.rs-mono.rs-mono             { font-family: var(--font-mono); }
+
+.rs-text-left.rs-text-left   { text-align: left; }
+.rs-text-right.rs-text-right { text-align: right; }
+
+/* --- The rest of the repeated one-liners ---------------------------------- */
+.rs-nowrap.rs-nowrap         { white-space: nowrap; }
+.rs-ellipsis.rs-ellipsis     { text-overflow: ellipsis; }
+.rs-clip.rs-clip             { overflow: hidden; }
+.rs-no-shrink.rs-no-shrink   { flex-shrink: 0; }
+.rs-pointer.rs-pointer       { cursor: pointer; }
+.rs-relative.rs-relative     { position: relative; }
+.rs-h-full.rs-h-full         { height: 100%; }
+.rs-min-w-0.rs-min-w-0       { min-width: 0; }
+
+/* --- Semantic colour and weight -------------------------------------------
+   Named after the token each one carries, not after a meaning invented here:
+   --md-error and --rs-status-critical are two different reds that both exist,
+   and a class called .rs-danger would hide which one an element is using. */
+.rs-c-fg.rs-c-fg             { color: var(--fg); }
+.rs-c-accent.rs-c-accent     { color: var(--primary); }
+.rs-c-primary.rs-c-primary   { color: var(--md-primary); }
+.rs-c-error.rs-c-error       { color: var(--md-error); }
+.rs-c-critical.rs-c-critical { color: var(--rs-status-critical); }
+.rs-c-nominal.rs-c-nominal   { color: var(--rs-status-nominal); }
+.rs-c-warning.rs-c-warning   { color: var(--rs-status-warning); }
+
+.rs-fw-400.rs-fw-400 { font-weight: 400; }
+.rs-fw-500.rs-fw-500 { font-weight: 500; }
+.rs-fw-600.rs-fw-600 { font-weight: 600; }
+.rs-fw-700.rs-fw-700 { font-weight: 700; }
+.rs-fw-800.rs-fw-800 { font-weight: 800; }
+.rs-fw-900.rs-fw-900 { font-weight: 900; }
+
+.rs-justify-end.rs-justify-end { justify-content: flex-end; }
+.rs-items-end.rs-items-end     { align-items: flex-end; }
+.rs-items-stretch.rs-items-stretch { align-items: stretch; }
+
+/* --- Grid utilities --------------------------------------------------------
+   Use minmax(0, ...) tracks, never a bare fr: an fr track's automatic minimum
+   is min-content, which prevents columns from shrinking below child content. */
+.rs-grid.rs-grid                 { display: grid; }
+.rs-grid-cols-1.rs-grid-cols-1   { grid-template-columns: minmax(0, 1fr); }
+.rs-grid-cols-2.rs-grid-cols-2   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+@media (min-width: 480px) {
+  .rs-sm-grid-cols-3.rs-sm-grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .rs-md-grid-cols-2.rs-md-grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rs-md-grid-cols-4.rs-md-grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .rs-md-p-6.rs-md-p-6,
+  .rs-md-p-8.rs-md-p-8 {
+    padding: var(--rs-space-6);
+  }
+}
+
+

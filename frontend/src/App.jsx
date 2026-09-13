@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth }        from '@context/AuthContext.jsx'
-import { setupFcm }       from './utils/fcm.js'
 import Shell              from '@/chrome/Shell.jsx'
 import Drawer             from '@/chrome/Drawer.jsx'
 import ErrorBoundary      from '@components/ErrorBoundary.jsx'
@@ -255,12 +254,6 @@ export default function App() {
     return () => document.body.classList.remove('rs-stage-active')
   }, [])
 
-  // Capacitor native shell registers for FCM once an auth token is present.
-  // No-op in the browser build — Web Push covers that path.
-  useEffect(() => {
-    if (token) setupFcm(token)
-  }, [token])
-
   // URL is the source of truth, but we mirror the page key into localStorage
   // so a user who returns to the root '/' lands on their last-used page.
   // The action slot resets every page change.
@@ -482,8 +475,8 @@ export default function App() {
   const shellMode = (currentPage === 'dashboard' || currentPage === 'briefing') ? 'foyer' : 'workshop'
 
   const impersonationBanner = isAdminImpersonating ? (
-    <div style={{ background: '#f59e0b', color: '#000', padding: '8px', textAlign: 'center', fontWeight: 'bold', zIndex: 9999, position: 'relative' }}>
-      ⚠️ Viewing as {user?.display_name || 'User'} — <button onClick={revertImpersonation} style={{ background: 'transparent', border: 'none', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'bold', padding: 0, color: 'inherit' }}>Return to Admin</button>
+    <div className="rs-text-center rs-relative" style={{ background: '#f59e0b', color: '#000', padding: 'var(--rs-space-2)', fontWeight: 'bold', zIndex: 9999 }}>
+      ⚠️ Viewing as {user?.display_name || 'User'} — <button onClick={revertImpersonation} className="rs-pointer" style={{ background: 'transparent', border: 'none', textDecoration: 'underline', fontWeight: 'bold', padding: 0, color: 'inherit' }}>Return to Admin</button>
     </div>
   ) : null;
 

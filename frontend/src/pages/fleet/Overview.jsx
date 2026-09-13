@@ -92,9 +92,9 @@ export default function Overview({ setAction }) {
   return (
     <div>
       <h2>Overview</h2>
-      <div className="grid grid-cols-1 rail:grid-cols-[3fr_2fr] gap-5">
+      <div className="rs-grid rs-grid-cols-1 rs-fleet-overview-rail-grid rs-gap-5">
         <div className="rs-map">
-          <MapContainer center={[0, 0]} zoom={2} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[0, 0]} zoom={2} className="rs-w-full rs-h-full">
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               attribution="Tiles &copy; Esri"
@@ -117,13 +117,13 @@ export default function Overview({ setAction }) {
           </MapContainer>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '600px', overflowY: 'auto' }}>
+        <div className="rs-flex rs-flex-col rs-gap-4" style={{ maxHeight: '600px', overflowY: 'auto' }}>
           {units.map(u => (
               <div key={u.unit_id} className="rs-card">
                 <h3><Link to={`/fleet/vector/units/${u.unit_id}`}>{u.name || u.unit_id}</Link></h3>
                 <p>Platform: {u.platform} | Status: {u.online ? 'Online' : 'Offline'}</p>
                 <div className="rs-flex rs-gap-3 rs-mt-3 rs-items-center">
-                  <span style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.1)' }}>{u.operating_mode || 'idle'}</span>
+                  <span style={{ padding: 'var(--rs-space-1) var(--rs-space-2)', borderRadius: 'var(--md-shape-xs)', background: 'var(--rs-veil-3)' }}>{u.operating_mode || 'idle'}</span>
                   <span><span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: '-2px' }}>battery_full</span> {u.last_battery_pct ?? '--'}%</span>
                 </div>
                 <div className="rs-flex rs-gap-2 rs-mt-4">

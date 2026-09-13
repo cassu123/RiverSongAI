@@ -101,25 +101,25 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
   const missingByLoc = groupByLocation(audit?.missing);
 
   return (
-    <div className="barcode-scanner-modal" role="dialog" style={{ backgroundColor: 'var(--md-background)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, overflowY: 'auto', padding: 24 }}>
-      <div style={{ width: '100%', maxWidth: 1000, position: 'relative' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 0, right: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--md-on-background)' }}>
+    <div className="barcode-scanner-modal rs-flex rs-items-start rs-justify-center rs-p-5" role="dialog" style={{ backgroundColor: 'var(--md-background)', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, overflowY: 'auto' }}>
+      <div className="rs-w-full rs-relative" style={{ maxWidth: 1000 }}>
+        <button onClick={onClose} className="rs-pointer" style={{ position: 'absolute', top: 0, right: 0, background: 'none', border: 'none', color: 'var(--md-on-background)' }}>
           <span className="material-symbols-rounded">close</span>
         </button>
         
-        <h2 style={{ marginTop: 0, marginBottom: 8, fontSize: '2rem' }}>Sector Audit</h2>
+        <h2 className="rs-mb-2" style={{ marginTop: 0, fontSize: '2rem' }}>Sector Audit</h2>
         <p className="rs-card-meta">Verify physical presence of operational assets.</p>
 
-        {error && <div style={{ color: 'var(--rs-status-critical)', padding: 8, background: 'rgba(248,113,113,0.1)', marginBottom: 16 }}>{error}</div>}
+        {error && <div className="rs-p-2 rs-mb-4 rs-c-critical" style={{ background: 'color-mix(in srgb, var(--rs-status-critical) 10%, transparent)' }}>{error}</div>}
 
         {loading ? (
           <div>INITIALIZING AUDIT SUBSYSTEM...</div>
         ) : !audit || audit.status === 'completed' || audit.status === 'abandoned' ? (
-          <div style={{ textAlign: 'center', padding: '64px 0' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '4rem', opacity: 0.2, marginBottom: 16 }}>fact_check</span>
+          <div className="rs-text-center" style={{ padding: '64px 0' }}>
+            <span className="material-symbols-rounded rs-mb-4" style={{ fontSize: '4rem', opacity: 0.2 }}>fact_check</span>
             {audit && audit.status === 'completed' && (
               <div className="rs-mb-6">
-                <div style={{ color: 'var(--rs-status-nominal)', fontSize: 'var(--rs-fs-h3)', marginBottom: 16 }}>AUDIT COMPLETED SUCCESSFULLY</div>
+                <div className="rs-mb-4 rs-type-h3 rs-c-nominal">AUDIT COMPLETED SUCCESSFULLY</div>
                 <div className="rs-flex rs-gap-4 rs-justify-center">
                   <button className="rs-btn-primary" onClick={() => downloadDiscrepancy(false)} style={{ background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)' }}>
                     <span className="material-symbols-rounded">picture_as_pdf</span>
@@ -142,19 +142,19 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
           <div>
             <div className="rs-flex rs-justify-between rs-mb-2">
               <div className="rs-status-strip">
-                <span className="rs-status-dot" style={{ background: '#facc15' }} />
+                <span className="rs-status-dot" style={{ background: 'var(--rs-status-warning)' }} />
                 <span>AUDIT IN PROGRESS</span>
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)' }}>
+              <div className="rs-mono">
                 {audit.scanned_count} / {audit.total_items} VERIFIED
               </div>
             </div>
-            <div style={{ width: '100%', height: 8, background: 'var(--md-surface-container-highest)', borderRadius: 4, marginBottom: 24, overflow: 'hidden' }}>
-              <div style={{ width: `${audit.total_items > 0 ? (audit.scanned_count / audit.total_items) * 100 : 0}%`, height: '100%', background: '#4ade80', transition: 'width 0.3s ease' }} />
+            <div className="rs-w-full rs-mb-5 rs-clip" style={{ height: 8, background: 'var(--md-surface-container-highest)', borderRadius: 'var(--md-shape-xs)' }}>
+              <div className="rs-h-full" style={{ width: `${audit.total_items > 0 ? (audit.scanned_count / audit.total_items) * 100 : 0}%`, background: 'var(--rs-status-nominal)', transition: 'width 0.3s ease' }} />
             </div>
 
             <div className="rs-mb-6">
-              <button className="rs-btn-primary" onClick={() => setScannerOpen(true)} style={{ width: '100%', justifyContent: 'center', height: 64, fontSize: 'var(--rs-fs-h3)' }}>
+              <button className="rs-btn-primary rs-w-full rs-justify-center rs-type-h3" onClick={() => setScannerOpen(true)} style={{ height: 64 }}>
                 <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>barcode_scanner</span>
                 SCAN ASSET
               </button>
@@ -162,34 +162,34 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
 
             <div className="rs-flex rs-gap-6 rs-flex-wrap">
               <div style={{ flex: '1 1 400px' }}>
-                <h3 style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--rs-status-nominal)', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <h3 className="rs-mb-4 rs-flex rs-justify-between rs-type-body rs-c-nominal">
                   <span>SCANNED</span>
                   <span>({audit.scanned?.length || 0})</span>
                 </h3>
                 {Object.keys(scannedByLoc).sort().map(loc => (
                   <div key={loc} className="rs-mb-4">
-                    <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{loc}</div>
+                    <div className="rs-mb-2 rs-muted rs-type-tiny" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>{loc}</div>
                     {scannedByLoc[loc].map(i => (
-                      <div key={i.id} style={{ padding: '8px 12px', background: 'rgba(74,222,128,0.05)', borderRadius: 4, marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'color-mix(in srgb, var(--rs-status-nominal) 5%, transparent)', borderRadius: 'var(--md-shape-xs)' }}>
                         <span>{i.name}</span>
-                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', fontFamily: 'var(--font-mono)' }}>{i.ein}</span>
+                        <span className="rs-muted rs-type-tiny rs-mono">{i.ein}</span>
                       </div>
                     ))}
                   </div>
                 ))}
               </div>
               <div style={{ flex: '1 1 400px' }}>
-                <h3 style={{ fontSize: 'var(--rs-fs-body)', color: 'var(--rs-status-critical)', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <h3 className="rs-mb-4 rs-flex rs-justify-between rs-type-body rs-c-critical">
                   <span>MISSING</span>
                   <span>({audit.missing?.length || 0})</span>
                 </h3>
                 {Object.keys(missingByLoc).sort().map(loc => (
                   <div key={loc} className="rs-mb-4">
-                    <div style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{loc}</div>
+                    <div className="rs-mb-2 rs-muted rs-type-tiny" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>{loc}</div>
                     {missingByLoc[loc].map(i => (
-                      <div key={i.id} style={{ padding: '8px 12px', background: 'rgba(248,113,113,0.05)', borderRadius: 4, marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                      <div key={i.id} className="rs-mb-1 rs-flex rs-justify-between" style={{ padding: 'var(--rs-space-2) var(--rs-space-3)', background: 'color-mix(in srgb, var(--rs-status-critical) 5%, transparent)', borderRadius: 'var(--md-shape-xs)' }}>
                         <span>{i.name}</span>
-                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--rs-fs-tiny)', fontFamily: 'var(--font-mono)' }}>{i.ein}</span>
+                        <span className="rs-muted rs-type-tiny rs-mono">{i.ein}</span>
                       </div>
                     ))}
                   </div>
@@ -197,15 +197,15 @@ export default function HomeAuditModal({ homeId, token, onClose }) {
               </div>
             </div>
 
-            <div style={{ marginTop: 32, padding: 24, background: 'var(--md-surface-container)', borderRadius: 12 }}>
+            <div className="rs-mt-6 rs-p-5" style={{ background: 'var(--md-surface-container)', borderRadius: 'var(--md-shape-md)' }}>
               <textarea 
-                className="rs-chat-input"
-                style={{ width: '100%', height: 80, padding: 12, marginBottom: 16, borderRadius: 8, background: 'var(--md-surface-container-high)', border: 'none', color: 'var(--fg)' }}
+                className="rs-chat-input rs-w-full rs-p-3 rs-mb-4 rs-c-fg"
+                style={{ height: 80, borderRadius: 'var(--md-shape-sm)', background: 'var(--md-surface-container-high)', border: 'none' }}
                 placeholder="Audit completion notes (optional)..."
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
               />
-              <button className="rs-btn-primary" onClick={completeAudit} disabled={completing} style={{ width: '100%', justifyContent: 'center', height: 56, background: 'rgba(74,222,128,0.2)', color: 'var(--rs-status-nominal)' }}>
+              <button className="rs-btn-primary rs-w-full rs-justify-center rs-c-nominal" onClick={completeAudit} disabled={completing} style={{ height: 56, background: 'color-mix(in srgb, var(--rs-status-nominal) 20%, transparent)' }}>
                 <span className="material-symbols-rounded">done_all</span>
                 {completing ? 'FINALIZING...' : 'FINALIZE AUDIT'}
               </button>
