@@ -170,7 +170,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
         </div>
 
         {/* Today's stats — 3-column grid with tabular nums */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ paddingTop: 'var(--rs-space-1)', borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
+        <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 gap-2" style={{ paddingTop: 'var(--rs-space-1)', borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
           {[
             { value: day.calls.toLocaleString(), label: 'requests today',  icon: 'bolt' },
             { value: `${(day.tokens / 1000).toFixed(1)}K`, label: 'tokens today', icon: 'token' },

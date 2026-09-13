@@ -346,7 +346,7 @@ function AddDataModal({ platform, onClose, onSave }) {
               onChange={e => setDate(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 gap-6">
             {(p.metrics || []).map(m => (
               <div key={m} className="rs-flex rs-flex-col rs-gap-2">
                 <label className="rs-card-label" style={{ border: 'none', padding: 0 }}>{metricLabel(m).toUpperCase()}</label>

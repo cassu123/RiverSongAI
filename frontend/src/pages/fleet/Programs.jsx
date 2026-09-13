@@ -181,7 +181,7 @@ export default function Programs() {
           <div className="rs-card" style={{ width: 600, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3>{editingId ? 'Edit Program' : 'Create Program'}</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 gap-4 mt-4">
               <div>
                 <label>Name</label><br/>
                 <input type="text" className="rs-input rs-w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />

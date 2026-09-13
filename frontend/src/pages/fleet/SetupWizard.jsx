@@ -274,7 +274,7 @@ export default function SetupWizard() {
             {formData.hardware.sensors.gps === 'rtk' && (
               <div className="rs-p-4 rs-mb-4" style={{ background: 'var(--rs-veil-1)', borderRadius: 'var(--md-shape-sm)' }}>
                 <h4>RTK NTRIP Config</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 gap-4">
                   <div><label>Host</label><input type="text" className="rs-input" value={formData.hardware.rtk.ntrip_host} onChange={e => updateField('hardware.rtk.ntrip_host', e.target.value)} /></div>
                   <div><label>Port</label><input type="number" className="rs-input" value={formData.hardware.rtk.port} onChange={e => updateField('hardware.rtk.port', Number(e.target.value))} /></div>
                   <div><label>Mountpoint</label><input type="text" className="rs-input" value={formData.hardware.rtk.mountpoint} onChange={e => updateField('hardware.rtk.mountpoint', e.target.value)} /></div>
@@ -284,7 +284,7 @@ export default function SetupWizard() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rs-mb-4">
+            <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 gap-4 rs-mb-4">
               <div><label><input type="checkbox" checked={formData.hardware.sensors.imu} onChange={e => updateField('hardware.sensors.imu', e.target.checked)} /> IMU Installed</label></div>
               <div>
                 <label className="rs-mb-1 rs-type-small" style={{ display: 'block' }}>Obstacle Sensors</label>

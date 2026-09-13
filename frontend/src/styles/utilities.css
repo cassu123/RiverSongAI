@@ -115,3 +115,26 @@
 .rs-justify-end.rs-justify-end { justify-content: flex-end; }
 .rs-items-end.rs-items-end     { align-items: flex-end; }
 .rs-items-stretch.rs-items-stretch { align-items: stretch; }
+
+/* --- Grid utilities --------------------------------------------------------
+   Use minmax(0, ...) tracks, never a bare fr: an fr track's automatic minimum
+   is min-content, which prevents columns from shrinking below child content. */
+.rs-grid.rs-grid                 { display: grid; }
+.rs-grid-cols-1.rs-grid-cols-1   { grid-template-columns: minmax(0, 1fr); }
+.rs-grid-cols-2.rs-grid-cols-2   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+@media (min-width: 480px) {
+  .rs-sm-grid-cols-3.rs-sm-grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .rs-md-grid-cols-2.rs-md-grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rs-md-grid-cols-4.rs-md-grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+

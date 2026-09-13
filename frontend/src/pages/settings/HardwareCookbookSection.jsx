@@ -15,7 +15,7 @@ export default function HardwareCookbookSection({ hardwareCookbook }) {
           </p>
 
           {/* Detected hardware row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rs-mb-4">
+          <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 gap-2 rs-mb-4">
             <div className="rs-card rs-p-3">
               <div className="rs-card-label rs-mb-1 rs-type-nano">GPU</div>
               {hardwareCookbook.hardware.gpus.length === 0 ? (

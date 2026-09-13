@@ -230,7 +230,7 @@ export default function ChronosPage({ setAction }) {
   }, [])
 
   return (
-    <div className="grid grid-cols-1 rail:grid-cols-[260px_1fr_260px] h-full gap-4">
+    <div className="rs-grid rs-grid-cols-1 rs-chronos-rail-grid h-full gap-4">
       
       {/* Search Modal */}
       {showQuickSwitcher && (

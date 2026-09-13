@@ -275,7 +275,7 @@ function RecipeDetailModal({ recipe, onClose, onSave, onDelete, onCook, api }) {
                   <div className="rs-chat-input-container" style={{ background: 'var(--md-surface-container-low)' }}>
                      <input className="rs-chat-input" value={edited.title} onChange={e => setEdited({ ...edited, title: e.target.value })} placeholder="RECIPE TITLE" style={{ lineHeight: 1.7 }} />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="rs-grid rs-grid-cols-1 rs-md-grid-cols-2 gap-5">
                      <input className="rs-pill" value={edited.tags_str || ''} onChange={e => setEdited({ ...edited, tags_str: e.target.value, tags: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })} placeholder="DIETARY TAGS (e.g. keto, low-sodium)" style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: 'var(--rs-space-3) var(--rs-space-4)', gridColumn: '1 / -1' }} />
                      <select className="rs-pill" value={edited.meal_type} onChange={e => setEdited({ ...edited, meal_type: e.target.value })} style={{ border: 'none', background: 'var(--md-surface-container-low)', padding: 'var(--rs-space-3) var(--rs-space-4)' }}>
                         {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert', 'Other'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}

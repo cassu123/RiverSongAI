@@ -288,7 +288,7 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="rs-grid rs-grid-cols-1 rs-sm-grid-cols-3 gap-2">
           {[
             { value: totals.calls.toLocaleString(), label: 'requests', icon: 'bolt' },
             { value: fmtTokens(totals.tokens), label: 'tokens', icon: 'token' },

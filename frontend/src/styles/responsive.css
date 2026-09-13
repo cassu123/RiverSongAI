@@ -76,3 +76,14 @@
   .rs-flights-row .rs-flight-country,
   .rs-flights-row .rs-flight-hdg { display: none; }
 }
+
+/* ── Chronos 3-pane rail layout (ChronosPage) ───────────────────────────────
+   File tree (260px) | editor/graph (minmax(0, 1fr)) | backlinks (260px).
+   Stacks to single column below xl (1200px); 3-pane rail at xl.              */
+@media (min-width: 1200px) {
+  .rs-chronos-rail-grid.rs-chronos-rail-grid,
+  .rs-grid.rs-chronos-rail-grid.rs-chronos-rail-grid {
+    grid-template-columns: 260px minmax(0, 1fr) 260px;
+  }
+}
+
