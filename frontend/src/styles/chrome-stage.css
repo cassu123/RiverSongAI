@@ -158,9 +158,31 @@
     .rs-pulse, .rs-blink,
     .rs-worm, .rs-thopter, .rs-thopter-wings, .rs-holo, .rs-av { animation: none !important; }
   }
-  /* Existing per-scene vignette suppressed — PreviewGrade now owns the
-     vignette layer so it can layer with grain + haze consistently. */
-  .rs-stage::after { content: none; }
+  /* ── READABILITY SCRIM ──────────────────────────────────────────────────
+     The backdrop is a photograph, and the content sits straight on top of it.
+     The vignette below is transparent through the middle 42% — precisely the
+     band the page occupies — so muted text was landing on a bright pavilion,
+     cherry blossom or open sky with nothing between them, and the people and
+     buildings in the photo read as part of the interface.
+
+     One flat wash fixes both: text gets a consistent ground to sit on, and
+     the photo drops back to being atmosphere. Heavier at the top and bottom,
+     where the header and the dock need to separate from the scene without
+     drawing a line to do it. */
+  .rs-stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;            /* above the scene and the grade layers (z-index 1) */
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      rgba(8, 10, 14, 0.74) 0%,
+      rgba(8, 10, 14, 0.52) 20%,
+      rgba(8, 10, 14, 0.48) 55%,
+      rgba(8, 10, 14, 0.62) 82%,
+      rgba(8, 10, 14, 0.80) 100%);
+  }
 
   /* ── FILM GRADE LAYERS (sit above scene, below chrome) ────────────────── */
   .rs-grade {

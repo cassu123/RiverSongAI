@@ -21,7 +21,6 @@
 
 .chat-empty-icon {
   color: var(--text-muted);
-  opacity: 0.5;
   margin-bottom: 4px;
 }
 
@@ -34,8 +33,10 @@
 }
 
 .chat-empty-sub {
-  font-size: 0.68rem;
-  color: var(--text-muted);
+  /* Was 0.68rem — under the 11px floor, in --text-muted, on a photograph. */
+  font-size: var(--rs-fs-micro);
+  color: var(--fg);
+  opacity: 0.85;
   margin: 0;
 }
 
