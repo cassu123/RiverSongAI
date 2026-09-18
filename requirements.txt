@@ -147,7 +147,7 @@ reportlab==5.0.1                     # PDF label/report generation
 # Utilities
 # -----------------------------------------------------------------------------
 httpx==0.28.1                        # Async HTTP client
-feedparser==6.0.12                   # RSS/Atom feed parsing
+feedparser==6.0.14                   # RSS/Atom feed parsing
 pydub>=0.25.1                        # MP3 decode for lip-sync
 pymavlink>=2.4.41                    # MAVLink telemetry for ArduRover
 
