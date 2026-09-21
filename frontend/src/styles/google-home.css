@@ -116,12 +116,9 @@
 .gh-chips-bar {
   display: flex;
   gap: 10px;
-  overflow-x: auto;
   padding-bottom: 12px;
   margin-bottom: 20px;
-  scrollbar-width: none;
 }
-.gh-chips-bar::-webkit-scrollbar { display: none; }
 
 .gh-chip {
   all: unset;
@@ -561,12 +558,9 @@
 .gh-scenes-row {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
   padding-bottom: 12px;
   margin-bottom: 20px;
-  scrollbar-width: none;
 }
-.gh-scenes-row::-webkit-scrollbar { display: none; }
 
 .gh-scene-chip {
   all: unset;
@@ -741,12 +735,6 @@
   border-radius: 0;
   box-shadow: none;
   margin-bottom: 20px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.gh-kitchen-nav-bar::-webkit-scrollbar {
-  display: none;
 }
 
 .gh-kitchen-nav-btn {
@@ -965,17 +953,6 @@
   border-radius: 0;
   box-shadow: none;
   margin-bottom: 20px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--rs-hairline) transparent;
-  -webkit-overflow-scrolling: touch;
-}
-.gh-settings-nav-bar::-webkit-scrollbar {
-  height: 4px;
-}
-.gh-settings-nav-bar::-webkit-scrollbar-thumb {
-  background: var(--rs-hairline);
-  border-radius: 999px;
 }
 
 .gh-settings-nav-btn {

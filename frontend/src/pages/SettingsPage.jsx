@@ -753,12 +753,7 @@ export default function SettingsPage({
       {(activeHubTab === 'assistant' || activeHubTab === 'admin') && (
         <nav
           aria-label="Settings sub-categories"
-          className="rs-flex rs-gap-2 rs-mb-5" style={{
-            overflowX: 'auto',
-            paddingBottom: 'var(--rs-space-1)',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'var(--rs-hairline) transparent',
-          }}
+          className="rs-flex rs-gap-2 rs-mb-5 rs-hscroll"
         >
           {currentSubGroups.map(g => (
             <button

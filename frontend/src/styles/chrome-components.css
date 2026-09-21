@@ -775,3 +775,98 @@
   display: block;
   opacity: 0.2;
 }
+
+/* --- Horizontal scrollers -------------------------------------------------
+   Seven rows in this app scroll sideways — settings tabs, feed tabs, chips,
+   scenes, the kitchen and hangar decks — and each had grown its own scrollbar
+   rule, or none. The shared failure was not the scrollbar: on a phone every
+   scrollbar is an overlay that fades out, so at rest the row was a pill sliced
+   flat at the container edge with nothing to say more existed.
+
+   The edge fade is the affordance. It is driven by the row's own scroll
+   position, so an edge is only soft when there is something behind it: at
+   rest only the end fades, at the end only the start does, and a row that
+   fits — every one of these at 1440px — is not masked at all.
+
+   Measured at 390px before this: .gh-settings-nav-bar 342 wide / 772 of
+   content, .rs-feeds-tabs 246 / 606, the settings sub-rail 342 / 996, each
+   with one child sliced flat at an edge. At 1440px all three fit exactly
+   (overflow 0), which is why the fade has to be conditional rather than
+   painted on.
+
+   Browsers without scroll-driven timelines keep both stops at 0: the mask is
+   fully opaque and the row behaves exactly as it did before.
+
+   This block is the only place these rows get their overflow, scrollbar and
+   fade. Each row's own rule keeps its spacing and snapping. */
+@property --rs-hscroll-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --rs-hscroll-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+.rs-hscroll,
+.gh-settings-nav-bar,
+.gh-kitchen-nav-bar,
+.gh-chips-bar,
+.gh-scenes-row,
+.rs-feeds-tabs,
+.hangar-tabs-deck,
+.interval-chips-bar {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rs-hairline) transparent;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--rs-hscroll-start),
+    #000 calc(100% - var(--rs-hscroll-end)),
+    transparent 100%
+  );
+}
+
+.rs-hscroll { padding-bottom: var(--rs-space-1); } /* gutter for the thin bar */
+
+:is(.rs-hscroll, .gh-settings-nav-bar, .gh-kitchen-nav-bar, .gh-chips-bar,
+    .gh-scenes-row, .rs-feeds-tabs, .hangar-tabs-deck,
+    .interval-chips-bar)::-webkit-scrollbar { height: var(--rs-space-1); }
+:is(.rs-hscroll, .gh-settings-nav-bar, .gh-kitchen-nav-bar, .gh-chips-bar,
+    .gh-scenes-row, .rs-feeds-tabs, .hangar-tabs-deck,
+    .interval-chips-bar)::-webkit-scrollbar-track { background: transparent; }
+:is(.rs-hscroll, .gh-settings-nav-bar, .gh-kitchen-nav-bar, .gh-chips-bar,
+    .gh-scenes-row, .rs-feeds-tabs, .hangar-tabs-deck,
+    .interval-chips-bar)::-webkit-scrollbar-thumb {
+  background: var(--rs-hairline);
+  border-radius: var(--md-shape-full);
+}
+
+@supports (animation-timeline: scroll()) {
+  .rs-hscroll,
+  .gh-settings-nav-bar,
+  .gh-kitchen-nav-bar,
+  .gh-chips-bar,
+  .gh-scenes-row,
+  .rs-feeds-tabs,
+  .hangar-tabs-deck,
+  .interval-chips-bar {
+    animation: rs-hscroll-edges linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+/* Each edge reaches full softness within the first / last tenth of the
+   scroll range and holds, so mid-scroll both edges read as "more". This is
+   state, not motion — the timeline is the scroll position — so it is left
+   on under prefers-reduced-motion. */
+@keyframes rs-hscroll-edges {
+  from { --rs-hscroll-start: 0px;                --rs-hscroll-end: var(--rs-space-6); }
+  10%  { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: var(--rs-space-6); }
+  90%  { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: var(--rs-space-6); }
+  to   { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: 0px; }
+}
