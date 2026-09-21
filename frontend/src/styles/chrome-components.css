@@ -767,8 +767,8 @@
    glass or texture — they are plain containers, which is why they kept being
    written by hand instead of reaching for the card. */
 .rs-panel {
-  background: var(--md-surface-container-low);
-  border: 1px solid var(--md-outline-variant);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: var(--md-shape-md);
 }
 
@@ -876,4 +876,11 @@
   10%  { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: var(--rs-space-6); }
   90%  { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: var(--rs-space-6); }
   to   { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: 0px; }
+}
+
+/* Surfaces that sit inside a surface take one step up and no frame, the same
+   rule as a card inside a card. The odometer banner sits in the vehicle view;
+   a plain panel is usually inside a card. */
+:is(.rs-card, .hangar-vehicle-card) :is(.rs-panel, .cockpit-odometer-banner) {
+  background: var(--rs-veil-2);
 }

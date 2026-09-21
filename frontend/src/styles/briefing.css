@@ -25,18 +25,16 @@
 /* --- Hero (Google Assistant / Nest Hub Morning Glance) ------------------- */
 
 .rs-briefing-hero {
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: clamp(16px, 3vw, 28px);
   padding: 24px 28px;
-  background: color-mix(in srgb, var(--bg-base) 72%, transparent);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: var(--card-radius, 1.25rem);
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.15));
   margin-bottom: 8px;
   position: relative;
   overflow: hidden;

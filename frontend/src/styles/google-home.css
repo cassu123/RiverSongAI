@@ -4,17 +4,15 @@
 
 /* ── 1. Living AI Glance Bar ─────────────────────────────────────────────── */
 .gh-glance-bar {
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 16px 20px;
-  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: var(--card-radius, 1.25rem);
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.15));
   margin-bottom: 20px;
   position: relative;
   overflow: hidden;
@@ -175,14 +173,12 @@
 
 /* ── 4. Tactile Device Tile ──────────────────────────────────────────────── */
 .gh-tile {
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
   position: relative;
   border-radius: 24px;
-  background: color-mix(in srgb, var(--bg-base) 62%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   padding: 18px;
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
   transition: background-color 0.22s cubic-bezier(0.2, 0, 0, 1), border-color 0.22s cubic-bezier(0.2, 0, 0, 1), color 0.22s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s cubic-bezier(0.2, 0, 0, 1);
   display: flex;
   flex-direction: column;
@@ -192,9 +188,8 @@
 }
 
 .gh-tile:hover {
-  border-color: rgba(255, 255, 255, 0.18);
   transform: translateY(-2px);
-  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  background: linear-gradient(var(--rs-veil-2), var(--rs-veil-2)), var(--md-surface-container-highest);
 }
 
 /* Light Active State: Warm Golden Illumination */
@@ -593,15 +588,13 @@
 
 /* ── 8. Media Player Tile ────────────────────────────────────────────────── */
 .gh-media-tile {
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
   grid-column: 1 / -1;
-  background: color-mix(in srgb, var(--bg-base) 66%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: 24px;
   padding: 20px;
   margin-top: 12px;
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
 }
 
 .gh-media-main {
