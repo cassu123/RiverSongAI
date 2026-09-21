@@ -184,10 +184,9 @@
    when only one fits, and the surplus collapses into a ~46px sliver with a card
    crushed inside it. Guard the span on the space actually available.
 
-   This must be a container query, not a media query: from 768px up the nav rail
-   takes 88px and page padding takes more, so the viewport width is not what the
-   grid gets. At 834px the grid is 646px wide — one column — and a viewport rule
-   confidently spanned two. */
+   This must be a container query, not a media query: page padding and container
+   constraints mean the viewport width is not what the grid gets. At 834px the grid
+   can be narrower than two columns — and a viewport rule confidently spanned two. */
 @container (min-width: 680px) {
   .rs-briefing-grid > .rs-span-2 { grid-column: span 2; }
 }
@@ -381,7 +380,7 @@
 .rs-headline-link:hover .rs-headline-title { text-decoration: underline; }
 .rs-headline-source {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.68rem;
+  font-size: var(--rs-fs-nano);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.5;

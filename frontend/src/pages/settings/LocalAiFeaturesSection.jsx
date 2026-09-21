@@ -42,9 +42,9 @@ export default function LocalAiFeaturesSection({ aiFeatures, saveAiFeature }) {
                 checked={!!aiFeatures.IMAGE_GENERATION_ENABLED}
                 onChange={v => saveAiFeature('IMAGE_GENERATION_ENABLED', v)}
               />
-              <div className="rs-flex rs-items-center rs-gap-2 rs-mt-2">
+              <div className="rs-flex rs-items-center rs-flex-wrap rs-gap-2 rs-mt-2">
                 <p className="rs-card-meta rs-m-0">Local product/recipe visuals</p>
-                <span className="rs-card-label rs-type-nano rs-c-error">GPU REQ</span>
+                <span className="rs-card-label rs-type-nano rs-c-error" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>GPU REQ</span>
               </div>
             </div>
 

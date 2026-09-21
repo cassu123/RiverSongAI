@@ -21,7 +21,6 @@
 
 .chat-empty-icon {
   color: var(--text-muted);
-  opacity: 0.5;
   margin-bottom: 4px;
 }
 
@@ -34,8 +33,10 @@
 }
 
 .chat-empty-sub {
-  font-size: 0.68rem;
-  color: var(--text-muted);
+  /* Was 0.68rem — under the 11px floor, in --text-muted, on a photograph. */
+  font-size: var(--rs-fs-micro);
+  color: var(--fg);
+  opacity: 0.85;
   margin: 0;
 }
 
@@ -72,7 +73,7 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-size: 0.45rem;
+  font-size: var(--rs-fs-nano);
   font-weight: 700;
   letter-spacing: 0.05em;
   margin-bottom: 2px;
@@ -221,7 +222,7 @@
 
 .thinking-label {
   font-family: var(--font-display);
-  font-size: 0.48rem;
+  font-size: var(--rs-fs-nano);
   letter-spacing: 0.2em;
   color: var(--primary);
   text-shadow: var(--glow-sm);
@@ -229,7 +230,7 @@
 
 .thinking-timer {
   font-family: var(--font-display);
-  font-size: 0.55rem;
+  font-size: var(--rs-fs-nano);
   letter-spacing: 0.1em;
   color: var(--secondary);
   text-shadow: var(--glow-teal);
@@ -265,7 +266,7 @@
   align-items: center;
   gap: 7px;
   font-family: var(--font-display);
-  font-size: 0.46rem;
+  font-size: var(--rs-fs-nano);
   letter-spacing: 0.14em;
   color: var(--text-dim);
 }
@@ -313,7 +314,7 @@
 
 .tool-tag {
   font-family: var(--font-display);
-  font-size: 0.55rem;
+  font-size: var(--rs-fs-nano);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--primary);

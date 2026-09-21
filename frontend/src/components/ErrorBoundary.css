@@ -23,7 +23,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-display);
-  font-size: 0.44rem;
+  font-size: var(--rs-fs-nano);
   letter-spacing: 0.16em;
   color: rgba(255, 100, 100, 0.7);
 }

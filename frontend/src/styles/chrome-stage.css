@@ -158,9 +158,48 @@
     .rs-pulse, .rs-blink,
     .rs-worm, .rs-thopter, .rs-thopter-wings, .rs-holo, .rs-av { animation: none !important; }
   }
-  /* Existing per-scene vignette suppressed — PreviewGrade now owns the
-     vignette layer so it can layer with grain + haze consistently. */
-  .rs-stage::after { content: none; }
+  /* ── READABILITY SCRIM ──────────────────────────────────────────────────
+     The backdrop is a photograph, and the content sits straight on top of it.
+     The vignette below is transparent through the middle 42% — precisely the
+     band the page occupies — so muted text was landing on a bright pavilion,
+     cherry blossom or open sky with nothing between them.
+
+     Responsive scrim layer ensures legibility across all backgrounds and
+     pushes back background photo details appropriately per viewport. */
+  :root {
+    --rs-scrim-top: 0.70;
+    --rs-scrim-mid: 0.55;
+    --rs-scrim-bot: 0.82;
+  }
+  @media (min-width: 768px) {
+    :root {
+      --rs-scrim-top: 0.65;
+      --rs-scrim-mid: 0.48;
+      --rs-scrim-bot: 0.78;
+    }
+  }
+  @media (min-width: 1200px) {
+    :root {
+      --rs-scrim-top: 0.60;
+      --rs-scrim-mid: 0.45;
+      --rs-scrim-bot: 0.75;
+    }
+  }
+
+  .rs-stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, var(--rs-scrim-top)) 0%,
+      rgba(0, 0, 0, var(--rs-scrim-mid)) 45%,
+      rgba(0, 0, 0, var(--rs-scrim-mid)) 65%,
+      rgba(0, 0, 0, var(--rs-scrim-bot)) 100%
+    );
+  }
 
   /* ── FILM GRADE LAYERS (sit above scene, below chrome) ────────────────── */
   .rs-grade {

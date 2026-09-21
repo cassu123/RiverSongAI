@@ -36,9 +36,9 @@ export function useMediaQuery(query) {
 
 /**
  * Semantic breakpoint flags aligned to the shell:
- *   isPhone   < 768   (off-canvas drawer)
+ *   isPhone   < 768   (compact viewport)
  *   isTablet  768–1199
- *   isDesktop >= 1200 (permanent rail)
+ *   isDesktop >= 1200 (expanded canvas)
  * For a one-off custom size, call useMediaQuery(...) directly at the top level
  * of your component (never conditionally — Rules of Hooks).
  */

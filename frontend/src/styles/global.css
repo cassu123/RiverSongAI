@@ -35,6 +35,11 @@
   inline-size: 1em;
   block-size: 1em;
   flex: 0 0 auto;
+  /* The box is a fixed 1em square. If the Material Symbols stylesheet or font
+     fails to load, the span renders its ligature name as literal text —
+     `radio_button_unchecked` — and with nowrap and no containment that runs
+     straight across whatever sits beside it. Clipped to the box, a missing
+     font costs a blank square instead of a broken page. */
   overflow: hidden;
   line-height: 1;
   /* Ligature names are lowercase words with underscores; never let one wrap. */

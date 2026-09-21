@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: var(--rs-fs-nano);
   font-weight: 800;
   letter-spacing: 0.08em;
   padding: 3px 8px;

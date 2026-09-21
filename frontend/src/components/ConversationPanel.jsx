@@ -63,11 +63,14 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
             'Add milk to grocery list'
           ].map((chip, idx) => (
             <button key={idx} className="rs-type-tiny rs-pointer" style={{
-              background: 'var(--rs-veil-1)',
+              /* A 4% white veil is invisible against a bright photograph, which
+                 left these chips as floating unreadable text. They need a real
+                 surface to sit on. */
+              background: 'var(--md-surface-container-high)',
               border: '1px solid var(--rs-hairline)',
               borderRadius: 'var(--md-shape-xl)',
               padding: 'var(--rs-space-3) var(--rs-space-4)',
-              color: 'var(--md-on-surface-variant)',
+              color: 'var(--fg)',
               transition: 'all 0.2s',
               backdropFilter: 'blur(10px)',
               animation: `slideUpFade 0.4s ease-out ${idx * 0.1 + 0.2}s both`,
@@ -75,13 +78,15 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
               const e = new CustomEvent('rs-chip-click', { detail: chip });
               window.dispatchEvent(e);
             }} onMouseOver={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.background = 'var(--rs-veil-3)';
               e.currentTarget.style.color = 'var(--primary)';
               e.currentTarget.style.borderColor = 'var(--primary)';
             }} onMouseOut={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              e.currentTarget.style.color = 'var(--md-on-surface-variant)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+              // Must restore the resting values above, not the ones they
+              // replaced — otherwise one hover leaves the chip unreadable.
+              e.currentTarget.style.background = 'var(--md-surface-container-high)';
+              e.currentTarget.style.color = 'var(--fg)';
+              e.currentTarget.style.borderColor = 'var(--rs-hairline)';
             }}>
               {chip}
             </button>

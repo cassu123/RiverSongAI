@@ -263,7 +263,7 @@
 .rs-drawer-footer {
   flex-shrink: 0;
   padding-block-start: 12px;
-  border-block-start: 1px solid var(--md-outline-variant);
+  border-block-start: 1px solid var(--rs-hairline-soft);
   margin-block-end: 0;
 }
 
@@ -310,7 +310,7 @@
   -webkit-backdrop-filter: blur(56px) saturate(180%) brightness(1.08);
 
   /* Specular top edge + depth shadow */
-  border-block-start: 1px solid rgba(255, 255, 255, 0.22);
+  border-block-start: 1px solid var(--rs-hairline-strong);
   box-shadow:
     0 -1px 0 rgba(255, 255, 255, 0.12) inset,
     0 -12px 60px rgba(0, 0, 0, 0.45);
@@ -434,7 +434,7 @@
   border-radius: 4px;
   background: var(--primary);
   color: var(--bg-base);
-  font-size: 0.6rem;
+  font-size: var(--rs-fs-nano);
   font-weight: 800;
   letter-spacing: 0.05em;
 }
@@ -574,7 +574,6 @@
 /* ── GHOST BUTTON ────────────────────────────────────────────────────────────── */
 
 .rs-btn-ghost {
-  all: unset;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -583,7 +582,7 @@
   font-weight: 700;
   color: var(--md-on-surface);
   background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
-  border: 1px solid var(--md-outline-variant);
+  border: 1px solid var(--rs-hairline);
   border-radius: var(--md-shape-full);
   cursor: pointer;
   transition: background var(--rs-motion-fast) var(--rs-motion-curve),
@@ -616,6 +615,7 @@
 }
 
 /* ── Google Spaces Launcher Sheet ────────────────────────────────────────── */
+
 .rs-spaces-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -642,7 +642,7 @@
   padding: 10px 4px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--rs-hairline);
   transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
   text-align: center;
   user-select: none;
