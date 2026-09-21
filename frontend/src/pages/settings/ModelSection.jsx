@@ -29,7 +29,6 @@ function ModelCard({ model, isSelected, isDisabled, onSelect }) {
       style={{
         flex: '1 1 200px',
         padding: 'var(--rs-space-4)',
-        borderColor: isSelected ? 'var(--primary)' : undefined,
         opacity: isDisabled ? 0.5 : 1
       }}
     >
@@ -105,10 +104,6 @@ export default function ModelSection({
           style={{
             padding: 'var(--rs-space-4)',
             marginBottom: 'var(--rs-space-5)',
-            borderColor: autoSelected ? 'var(--primary)' : undefined,
-            background: autoSelected
-              ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
-              : 'color-mix(in srgb, var(--md-tertiary) 6%, transparent)',
           }}
         >
           <div className="rs-flex rs-items-center rs-gap-3">

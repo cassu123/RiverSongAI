@@ -486,7 +486,6 @@ export default function ProfilePage({
               <div 
                 key={u.key} 
                 className={`rs-card is-tappable ${universe === u.key ? 'is-elev' : ''}`}
-                style={{ borderColor: universe === u.key ? 'var(--primary)' : undefined }}
                 onClick={() => onUniverseChange(u.key)}
               >
                 <div className="rs-card-value rs-type-body" style={{ letterSpacing: '0.06em' }}>{u.label}</div>

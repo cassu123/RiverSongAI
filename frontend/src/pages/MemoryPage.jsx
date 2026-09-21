@@ -14,7 +14,7 @@ export default function MemoryPage({ setAction }) {
   // Add-fact / add-pref forms are a single row on desktop; stack them into a
   // column on phones so the inputs don't collapse to unusable circles.
   const addFormStyle = {
-    background: 'var(--md-surface-container-high)', marginBottom: 24,
+    marginBottom: 24,
     display: 'flex', gap: 12,
     flexDirection: isPhone ? 'column' : 'row',
     alignItems: isPhone ? 'stretch' : 'center',
