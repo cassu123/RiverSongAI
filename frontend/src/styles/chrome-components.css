@@ -32,6 +32,17 @@
               border-color var(--rs-motion-fast) var(--rs-motion-curve),
               transform var(--rs-motion-fast) var(--rs-motion-curve),
               box-shadow var(--rs-motion-fast) var(--rs-motion-curve);
+  /* This is what clips children to the rounded corner. A thumbnail, a tab
+     strip or any child with its own background squares the corner off
+     without it.
+
+     It also hides anything that overflows, which is why text was being
+     sliced mid-glyph — but removing it does not fix that. A card whose
+     height is constrained still constrains it; the content just spills over
+     whatever sits below instead of being hidden. The real fix is to find and
+     remove the height constraints, which needs the app running, and is not
+     done. */
+  overflow: hidden;
   min-width: 0;
   /* `overflow-wrap` breaks long strings if they cannot fit without shattering layout */
   overflow-wrap: break-word;

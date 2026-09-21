@@ -18,6 +18,9 @@
    ============================================================================= */
 
 .rs-feeds {
+  /* Same reason as .rs-card: the tab strip and the thumbnails carry their own
+     backgrounds and need clipping to the panel's radius. */
+  overflow: hidden;
   padding: 0;
   /* Opaque enough that body text holds against any Stage wallpaper. The rest
      of the glass grammar (bezel, blur, radius) still comes from .rs-card. */
