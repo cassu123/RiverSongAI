@@ -1023,6 +1023,29 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent) !important;
 }
 
+/* Settings is a form, not a bento. The shared flow's auto-fill grid gave it
+   three 410px columns at 1440, and a wide card spans two — so every wide card
+   that landed alone on a row left the third column empty (measured: 3 such
+   rows on Profile, 5 on Admin, AI MODEL on Assistant, 451px each). Two
+   columns from tablet up makes a wide card always the full row and lets the
+   narrow cards pair.
+
+   Only when the grid holds a wide card. Family & Users is a list of member
+   cards, all narrow, and those fill three columns at 1440 exactly — two
+   columns left one member alone beside a 676px hole. Without :has() (Safari
+   before 15.4) the grid keeps the shared auto-fill, as before.
+
+   The shared flow also sets `min-height: 100%` on its cards, which stretches
+   every card to its row neighbour: ATMOSPHERIC MOOD carried 240px of nothing
+   under its content beside VISUAL THEME. Here cards take their own height. */
+.gh-settings-stage .rs-card-flow { align-items: start; }
+.gh-settings-stage .rs-card-flow > .rs-card { min-height: 0; }
+
+@media (min-width: 768px) {
+  .gh-settings-stage .rs-card-flow:has(.rs-card.is-wide) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gh-settings-stage .rs-card-flow > .rs-card.is-wide { grid-column: 1 / -1; }
+}
+
 .gh-settings-stage .rs-card-label {
   font-size: 0.82rem !important;
   letter-spacing: 0.07em !important;
