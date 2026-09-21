@@ -174,7 +174,7 @@ export default function VoiceSection({ voiceSettings, token, user, elevenLabsSet
                         key={v.voice_id}
                         className={`rs-card is-tappable ${v.active ? 'is-elev' : ''} ${!v.installed ? 'is-disabled' : ''}`}
                         onClick={() => v.installed && !v.active && handleSelect(v.voice_id)}
-                        style={{ opacity: v.installed ? 1 : 0.5, borderColor: v.active ? 'var(--primary)' : undefined }}
+                        style={{ opacity: v.installed ? 1 : 0.5 }}
                       >
                         <div className="rs-card-value rs-mb-2 rs-type-body rs-fw-600">
                           {v.display_name}

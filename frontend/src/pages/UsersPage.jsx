@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@context/AuthContext'
 import Sheet from '../chrome/Sheet'
+import { PageHead } from './settings/shared.jsx'
 
 /**
  * UsersPage — Admin user management
  */
 
-export default function UsersPage({ embedded = false }) {
+export default function UsersPage() {
   const { token, user: currentUser, impersonate } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -218,13 +219,10 @@ export default function UsersPage({ embedded = false }) {
   }
 
   return (
-    <div className={`rs-foyer animate-fade-in ${embedded ? 'embedded-users' : ''}`}>
-      {!embedded && (
-        <div className="rs-foyer-head">
-          <h1 className="rs-greeting">Family & Household</h1>
-          <div className="rs-greeting-sub">Manage authorized members, security clearances, and model permissions.</div>
-        </div>
-      )}
+    <div className="gh-settings-stage animate-fade-in">
+      <PageHead icon="group" eyebrow="HOUSEHOLD MANAGEMENT" title="Family & Household">
+        Household member roster, access clearances, model quotas, and session controls.
+      </PageHead>
 
       <div className="rs-card-flow">
         {loading ? (

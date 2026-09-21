@@ -61,16 +61,14 @@
 }
 
 .cockpit-stat-tile {
-  background: color-mix(in srgb, var(--md-surface-container) calc(var(--glass-opacity, 0.4) * 100%), transparent);
-  backdrop-filter: var(--glass-blur, blur(24px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(24px));
-  border: 1px solid var(--rs-hairline-strong);
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: var(--inner-radius, 1rem);
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
   transition: background-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), border-color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), color var(--rs-motion-fast, 180ms) var(--rs-motion-curve), box-shadow var(--rs-motion-fast, 180ms) var(--rs-motion-curve), transform var(--rs-motion-fast, 180ms) var(--rs-motion-curve), opacity var(--rs-motion-fast, 180ms) var(--rs-motion-curve);
   position: relative;
   overflow: hidden;
@@ -86,10 +84,8 @@
 }
 
 .cockpit-stat-tile:hover {
-  background: color-mix(in srgb, var(--md-surface-container-high) 75%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  background: linear-gradient(var(--rs-veil-2), var(--rs-veil-2)), var(--md-surface-container-highest);
   transform: translateY(-2px);
-  box-shadow: 0 14px 32px -6px rgba(0, 0, 0, 0.6), inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.18));
 }
 
 .cockpit-stat-tile-head {
@@ -148,13 +144,11 @@
 }
 
 .hangar-vehicle-card {
-  background: color-mix(in srgb, var(--md-surface-container-low) calc(var(--glass-opacity, 0.45) * 100%), transparent);
-  backdrop-filter: var(--glass-blur, blur(28px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(28px));
-  border: 1px solid var(--rs-hairline-strong);
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: var(--card-radius, 1.25rem);
   padding: 22px 24px;
-  box-shadow: inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.14));
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -175,10 +169,8 @@
 }
 
 .hangar-vehicle-card:hover {
-  background: color-mix(in srgb, var(--md-surface-container) 82%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  background: linear-gradient(var(--rs-veil-2), var(--rs-veil-2)), var(--md-surface-container-highest);
   transform: translateY(-3px);
-  box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.7), 0 0 24px -4px color-mix(in srgb, var(--primary) 25%, transparent), inset 0 1px 0 var(--inner-refraction, rgba(255, 255, 255, 0.22));
 }
 
 .hangar-vehicle-card:focus-visible {
@@ -282,13 +274,13 @@
 }
 
 .hangar-card-metrics {
+  /* Inside the vehicle card: one surface step up, not a recessed box with its own frame. */
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  background: color-mix(in srgb, var(--bg-base) 45%, transparent);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--rs-veil-2);
+  border: 1px solid transparent;
   border-radius: var(--inner-radius, 12px);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
   padding: 13px 16px;
 }
 
@@ -359,8 +351,9 @@
 }
 
 .add-vehicle-card {
-  border: 2px dashed color-mix(in srgb, var(--primary) 30%, rgba(255, 255, 255, 0.15));
-  background: color-mix(in srgb, var(--md-surface-container-low) 25%, transparent);
+  /* A real control, so a real surface: primary-tinted ground, not a dashed placeholder outline. */
+  border: 1px solid transparent;
+  background: linear-gradient(color-mix(in srgb, var(--primary) 8%, transparent), color-mix(in srgb, var(--primary) 8%, transparent)), var(--md-surface-container-highest);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -372,17 +365,15 @@
 }
 
 .add-vehicle-card:hover {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  background: linear-gradient(color-mix(in srgb, var(--primary) 14%, transparent), color-mix(in srgb, var(--primary) 14%, transparent)), var(--md-surface-container-highest);
   transform: translateY(-3px);
-  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.65), 0 0 20px -4px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .add-vehicle-icon-ring {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  border: 1px dashed color-mix(in srgb, var(--primary) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
   display: grid;
   place-items: center;
   color: var(--primary);
@@ -448,10 +439,9 @@
 
 /* Odometer Banner & Delta */
 .cockpit-odometer-banner {
-  background: color-mix(in srgb, var(--md-surface-container-low) 70%, transparent);
-  backdrop-filter: var(--glass-blur, blur(24px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(24px));
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 40%, rgba(255, 255, 255, 0.08));
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: var(--card-radius, 1.25rem);
   padding: 24px 28px;
   margin-bottom: 24px;
@@ -521,8 +511,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   padding-bottom: 6px;
   margin-bottom: 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -605,18 +593,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--rs-hairline) transparent;
   margin-top: 14px;
   padding-bottom: 4px;
-}
-.interval-chips-bar::-webkit-scrollbar {
-  height: 4px;
-}
-.interval-chips-bar::-webkit-scrollbar-thumb {
-  background: var(--rs-hairline);
-  border-radius: 999px;
 }
 
 .interval-chip {
@@ -681,11 +659,19 @@
 
 /* Fasteners Grid */
 
-/* Bottom Action Clearance to prevent clipping across all mobile & tablet viewports */
-.rs-hangar-page,
-.rs-mode-hangar,
-.rs-mode-workshop {
-  padding-bottom: max(160px, calc(120px + env(safe-area-inset-bottom))) !important;
+/* Bottom clearance so the floating dock never covers the end of a page.
+   Scoped to page content inside the scroller, and that scoping is the whole
+   point: `rs-mode-hangar` / `rs-mode-workshop` are not only page-wrapper
+   classes, they are also written onto .rs-shell itself (Shell.jsx). The shell
+   is the 100svh grid. Unscoped, this padding came off the grid's content box,
+   the `1fr` main track lost 160px, and .rs-content — the scroller — ended 160px
+   above the fold, slicing whichever card crossed that line. Clearance has to
+   sit inside the scroller (see .rs-content in chrome-shell.css), never on the
+   element whose height defines the viewport. */
+.rs-content .rs-hangar-page,
+.rs-content .rs-mode-hangar,
+.rs-content .rs-mode-workshop {
+  padding-bottom: max(160px, calc(120px + env(safe-area-inset-bottom)));
   box-sizing: border-box;
 }
 
@@ -694,8 +680,9 @@
    ----------------------------------------------------------------------------- */
 
 .staging-card {
-  background: color-mix(in srgb, var(--bg-base) 40%, transparent);
-  border: 1px solid var(--rs-hairline-strong);
+  /* Sits inside a card: one surface step up, no frame of its own. */
+  background: var(--rs-veil-2);
+  border: 1px solid transparent;
   border-radius: var(--inner-radius, 14px);
   padding: 16px 20px;
   min-width: 0;

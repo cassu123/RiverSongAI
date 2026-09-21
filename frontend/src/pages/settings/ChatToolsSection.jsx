@@ -205,9 +205,7 @@ export default function ChatToolsSection({ data, token, onChanged }) {
             return (
               <div
                 key={tool.name}
-                className="rs-p-4 rs-flex rs-flex-col rs-justify-between rs-gap-3" style={{
-                  background: isEnabled ? 'var(--md-surface-container-low)' : 'var(--md-surface-container-lowest)',
-                  border: `1px solid ${isEnabled ? 'var(--md-outline-variant)' : 'color-mix(in srgb, var(--md-outline) 20%, transparent)'}`,
+                className="rs-panel rs-p-4 rs-flex rs-flex-col rs-justify-between rs-gap-3" style={{
                   borderRadius: 'var(--md-shape-md)',
                   opacity: isEnabled ? 1 : 0.65,
                   transition: 'all 0.15s ease',

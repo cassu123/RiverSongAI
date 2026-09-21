@@ -527,29 +527,12 @@ export default function App() {
               {currentPage === 'routines'   && <RoutinesPage  setAction={setPageAction} />}
               {currentPage === 'proactive'  && <ProactivePage />}
               {currentPage === 'home'       && <HomeNodePage setAction={setPageAction} />}
-              {currentPage === 'users'      && (
-                <SettingsPage
-                  initialHubTab="users"
-                  onFeaturesChanged={refreshFeatures}
-                  setAction={setPageAction}
-                  profile={profile}
-                  onSaveProfile={setProfile}
-                  universe={universe}
-                  environment={environment}
-                  mood={mood}
-                  onUniverseChange={setUniverseSafe}
-                  onEnvironmentChange={setEnvironmentSafe}
-                  onMoodChange={setMood}
-                />
-              )}
+              {currentPage === 'users'      && <UsersPage />}
               {currentPage === 'killswitch' && <KillSwitchPage setAction={setPageAction} />}
               {currentPage === 'profile'    && (
-                <SettingsPage
-                  initialHubTab="profile"
-                  onFeaturesChanged={refreshFeatures}
-                  setAction={setPageAction}
+                <ProfilePage
                   profile={profile}
-                  onSaveProfile={setProfile}
+                  onSave={setProfile}
                   universe={universe}
                   environment={environment}
                   mood={mood}
@@ -559,34 +542,13 @@ export default function App() {
                 />
               )}
               {currentPage === 'settings'   && (
-                <SettingsPage
-                  initialHubTab="assistant"
-                  onFeaturesChanged={refreshFeatures}
-                  setAction={setPageAction}
-                  profile={profile}
-                  onSaveProfile={setProfile}
-                  universe={universe}
-                  environment={environment}
-                  mood={mood}
-                  onUniverseChange={setUniverseSafe}
-                  onEnvironmentChange={setEnvironmentSafe}
-                  onMoodChange={setMood}
-                />
+                <SettingsPage onFeaturesChanged={refreshFeatures} setAction={setPageAction} />
               )}
               {currentPage === 'admin_settings' && (
                 <SettingsPage
-                  initialHubTab="admin"
                   viewMode="admin"
                   onFeaturesChanged={refreshFeatures}
                   setAction={setPageAction}
-                  profile={profile}
-                  onSaveProfile={setProfile}
-                  universe={universe}
-                  environment={environment}
-                  mood={mood}
-                  onUniverseChange={setUniverseSafe}
-                  onEnvironmentChange={setEnvironmentSafe}
-                  onMoodChange={setMood}
                 />
               )}
               {currentPage === 'feeds'      && <FeedsPage setAction={setPageAction} />}

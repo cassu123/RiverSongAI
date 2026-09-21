@@ -4,30 +4,25 @@
    Hardened Spatial v2.0 Architecture.
    ============================================================================= */
 
-/* --- Glass card (Double-Bezel Architecture) ------------------------------ */
+/* --- Card: a surface in the scene (DESIGN.md §1) ------------------------- */
 .rs-card {
   container-type: inline-size;
   position: relative;
-  /* Tinted from the environment's own ground rather than a fixed navy, so a
-     card reads as part of the page it sits on instead of a window laid over
-     it. Same density as before — only the hue now follows the theme. */
-  background: color-mix(in srgb, var(--bg-base, #0e121c) 65%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  /* --rs-hairline-strong, not --card-border-alpha raw. The raw token runs
-     0.12 / 0.18 / 0.25 across the three environment tiers, and at 0.25 over
-     the near-black tactical grounds every card perimeter drew a crisp white
-     rectangle — the framed-window look, arriving on the one element large
-     enough to make it the whole page's character. The hairline rung carries
-     the same ordering at 0.106 / 0.124 / 0.145, so tactical stays the
-     crispest without outlining. */
-  border: 1px solid var(--rs-hairline-strong);
+  /* A ground, not a pane. The environment's own base at 92%, lifted one veil
+     step so it still reads as a surface where there is no photograph behind
+     it (Settings, Profile). The card used to be 65% base with a 24px blur, a
+     hairline frame and a white top-edge highlight — the three cues of glass.
+     Over a photograph that let 35–40% of the scene through body text; on a
+     flat ground it drew a window frame around every block. Trialled on
+     Settings and Feeds, approved, and now the default. */
+  background:
+    linear-gradient(var(--rs-veil-1), var(--rs-veil-1)),
+    var(--md-surface-container-highest);
+  /* Transparent, not removed: the 1px keeps every card's geometry identical
+     to what it was, and a state that needs an edge can colour it. */
+  border: 1px solid transparent;
   border-radius: var(--card-radius, 1.25rem);
   padding: clamp(18px, 4cqi, 28px);
-  /* Enough lift to separate from the ground, not so much that the card looks
-     like a window hovering over it. The inset highlight follows the
-     environment's refraction token. */
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.14));
   transition: background var(--rs-motion-fast) var(--rs-motion-curve),
               border-color var(--rs-motion-fast) var(--rs-motion-curve),
               transform var(--rs-motion-fast) var(--rs-motion-curve),
@@ -36,12 +31,12 @@
      strip or any child with its own background squares the corner off
      without it.
 
-     It also hides anything that overflows, which is why text was being
-     sliced mid-glyph — but removing it does not fix that. A card whose
-     height is constrained still constrains it; the content just spills over
-     whatever sits below instead of being hidden. The real fix is to find and
-     remove the height constraints, which needs the app running, and is not
-     done. */
+     The cards sliced mid-glyph on every page were not clipped here. Measured
+     live, every card's scrollHeight equalled its clientHeight: the cut was
+     .rs-content, the scroller, ending 160px above the fold because a
+     page-wrapper padding rule also matched .rs-shell (see hangar.css, "Bottom
+     clearance"). Do not remove this to chase a clipped card — check the
+     ancestor scroller's bottom edge first. */
   overflow: hidden;
   min-width: 0;
   /* `overflow-wrap` breaks long strings if they cannot fit without shattering layout */
@@ -67,22 +62,34 @@
   border-block-start: none;
 }
 
+/* Raised: one more surface step, still no frame. */
 .rs-card.is-elev {
-  background: color-mix(in srgb, var(--bg-base) 72%, transparent);
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.2));
+  background:
+    linear-gradient(var(--rs-veil-2), var(--rs-veil-2)),
+    var(--md-surface-container-highest);
 }
 
 .rs-card.is-tappable { cursor: pointer; }
 .rs-card.is-tappable:active { transform: scale(0.985); }
 @media (pointer: fine) {
   .rs-card.is-tappable:hover {
-    background: color-mix(in srgb, var(--bg-base) 76%, transparent);
-    border-color: color-mix(in srgb, var(--primary) 35%, transparent);
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent),
-      inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.22));
+    background:
+      linear-gradient(var(--rs-veil-2), var(--rs-veil-2)),
+      var(--md-surface-container-highest);
   }
+}
+
+/* A card inside a card is not a second window. No frame, no texture: one
+   surface step above its parent, and spacing does the rest. Selection is a
+   primary tint — state, not structure. These come after the rules above so
+   a nested selected card keeps its tint on hover. */
+.rs-card .rs-card { background: var(--rs-veil-2); }
+.rs-card .rs-card::before { content: none; }
+.rs-card .rs-card.is-elev {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+@media (pointer: fine) {
+  .rs-card .rs-card.is-tappable:not(.is-elev):hover { background: var(--rs-veil-3); }
 }
 
 /* --- Card Grammar -------------------------------------------------------- */
@@ -760,8 +767,8 @@
    glass or texture — they are plain containers, which is why they kept being
    written by hand instead of reaching for the card. */
 .rs-panel {
-  background: var(--md-surface-container-low);
-  border: 1px solid var(--md-outline-variant);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: var(--md-shape-md);
 }
 
@@ -774,4 +781,106 @@
 .rs-empty-glyph {
   display: block;
   opacity: 0.2;
+}
+
+/* --- Horizontal scrollers -------------------------------------------------
+   Seven rows in this app scroll sideways — settings tabs, feed tabs, chips,
+   scenes, the kitchen and hangar decks — and each had grown its own scrollbar
+   rule, or none. The shared failure was not the scrollbar: on a phone every
+   scrollbar is an overlay that fades out, so at rest the row was a pill sliced
+   flat at the container edge with nothing to say more existed.
+
+   The edge fade is the affordance. It is driven by the row's own scroll
+   position, so an edge is only soft when there is something behind it: at
+   rest only the end fades, at the end only the start does, and a row that
+   fits — every one of these at 1440px — is not masked at all.
+
+   Measured at 390px before this: .gh-settings-nav-bar 342 wide / 772 of
+   content, .rs-feeds-tabs 246 / 606, the settings sub-rail 342 / 996, each
+   with one child sliced flat at an edge. At 1440px all three fit exactly
+   (overflow 0), which is why the fade has to be conditional rather than
+   painted on.
+
+   Browsers without scroll-driven timelines keep both stops at 0: the mask is
+   fully opaque and the row behaves exactly as it did before.
+
+   This block is the only place these rows get their overflow, scrollbar and
+   fade. Each row's own rule keeps its spacing and snapping. */
+@property --rs-hscroll-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --rs-hscroll-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+.rs-hscroll,
+.gh-settings-nav-bar,
+.gh-kitchen-nav-bar,
+.gh-chips-bar,
+.gh-scenes-row,
+.rs-feeds-tabs,
+.hangar-tabs-deck,
+.interval-chips-bar {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rs-hairline) transparent;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--rs-hscroll-start),
+    #000 calc(100% - var(--rs-hscroll-end)),
+    transparent 100%
+  );
+}
+
+.rs-hscroll { padding-bottom: var(--rs-space-1); } /* gutter for the thin bar */
+
+:is(.rs-hscroll, .gh-settings-nav-bar, .gh-kitchen-nav-bar, .gh-chips-bar,
+    .gh-scenes-row, .rs-feeds-tabs, .hangar-tabs-deck,
+    .interval-chips-bar)::-webkit-scrollbar { height: var(--rs-space-1); }
+:is(.rs-hscroll, .gh-settings-nav-bar, .gh-kitchen-nav-bar, .gh-chips-bar,
+    .gh-scenes-row, .rs-feeds-tabs, .hangar-tabs-deck,
+    .interval-chips-bar)::-webkit-scrollbar-track { background: transparent; }
+:is(.rs-hscroll, .gh-settings-nav-bar, .gh-kitchen-nav-bar, .gh-chips-bar,
+    .gh-scenes-row, .rs-feeds-tabs, .hangar-tabs-deck,
+    .interval-chips-bar)::-webkit-scrollbar-thumb {
+  background: var(--rs-hairline);
+  border-radius: var(--md-shape-full);
+}
+
+@supports (animation-timeline: scroll()) {
+  .rs-hscroll,
+  .gh-settings-nav-bar,
+  .gh-kitchen-nav-bar,
+  .gh-chips-bar,
+  .gh-scenes-row,
+  .rs-feeds-tabs,
+  .hangar-tabs-deck,
+  .interval-chips-bar {
+    animation: rs-hscroll-edges linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+/* Each edge reaches full softness within the first / last tenth of the
+   scroll range and holds, so mid-scroll both edges read as "more". This is
+   state, not motion — the timeline is the scroll position — so it is left
+   on under prefers-reduced-motion. */
+@keyframes rs-hscroll-edges {
+  from { --rs-hscroll-start: 0px;                --rs-hscroll-end: var(--rs-space-6); }
+  10%  { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: var(--rs-space-6); }
+  90%  { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: var(--rs-space-6); }
+  to   { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: 0px; }
+}
+
+/* Surfaces that sit inside a surface take one step up and no frame, the same
+   rule as a card inside a card. The odometer banner sits in the vehicle view;
+   a plain panel is usually inside a card. */
+:is(.rs-card, .hangar-vehicle-card) :is(.rs-panel, .cockpit-odometer-banner) {
+  background: var(--rs-veil-2);
 }

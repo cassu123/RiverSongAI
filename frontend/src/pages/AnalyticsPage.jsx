@@ -699,7 +699,7 @@ export default function AnalyticsPage() {
         )}
 
         {/* AI Business Report Card */}
-        <div className="rs-card is-wide is-elev rs-p-7" style={{ border: '1px solid var(--md-outline-variant)' }}>
+        <div className="rs-card is-wide is-elev rs-p-7">
           <div className="rs-card-head" style={{ border: 'none' }}>
             <span className="rs-card-label rs-type-tiny">AI STRATEGIC DEBRIEF</span>
             <button 

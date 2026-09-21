@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@context/AuthContext'
-import { API_BASE, Section, Toggle } from './settings/shared.jsx'
+import { API_BASE, PageHead, Section, Toggle } from './settings/shared.jsx'
 import NimSection from './settings/NimSection.jsx'
 import MeteredProviderSection from './settings/MeteredProviderSection.jsx'
 import ProviderSwitchesSection from './settings/ProviderSwitchesSection.jsx'
@@ -39,8 +39,6 @@ import TokenUsageSection from './settings/TokenUsageSection.jsx'
 import VoiceIDSection from './settings/VoiceIDSection.jsx'
 import CapabilityFlagsSection from './settings/CapabilityFlagsSection.jsx'
 import ChatToolsSection from './settings/ChatToolsSection.jsx'
-import ProfilePage from './ProfilePage.jsx'
-import UsersPage from './UsersPage.jsx'
 
 const TTL_LABELS = {
   short:    '7 days',
@@ -107,53 +105,21 @@ const ADMIN_GROUPS = [
 // ---------------------------------------------------------------------------
 
 export default function SettingsPage({
-  initialHubTab = 'assistant',
-  viewMode = 'user',  // 'user' or 'admin'
+  viewMode = 'user',  // 'user' → /settings (assistant), 'admin' → /admin/settings
   onFeaturesChanged,
-  profile,
-  onSaveProfile,
-  universe,
-  environment,
-  mood,
-  onUniverseChange,
-  onEnvironmentChange,
-  onMoodChange,
   setAction,
 }) {
   const { user, token } = useAuth()
   const isAdmin = user?.role === 'admin'
 
-  const [activeHubTab, setActiveHubTab] = useState(() => {
-    if (initialHubTab === 'users' || initialHubTab === 'admin') {
-      return isAdmin ? initialHubTab : 'profile'
-    }
-    if (viewMode === 'admin') {
-      return isAdmin ? 'admin' : 'profile'
-    }
-    return initialHubTab || 'assistant'
-  })
-
-  // Synchronize with external navigation changes
-  useEffect(() => {
-    if (initialHubTab === 'users' || initialHubTab === 'admin') {
-      setActiveHubTab(isAdmin ? initialHubTab : 'profile')
-    } else if (initialHubTab) {
-      setActiveHubTab(initialHubTab)
-    }
-  }, [initialHubTab, isAdmin])
-
-  useEffect(() => {
-    if (viewMode === 'admin') {
-      setActiveHubTab(isAdmin ? 'admin' : 'profile')
-    }
-  }, [viewMode, isAdmin])
-
-  // STRICT SECURITY GUARD: non-admin can NEVER access admin or users tabs
-  useEffect(() => {
-    if (!isAdmin && (activeHubTab === 'users' || activeHubTab === 'admin')) {
-      setActiveHubTab('profile')
-    }
-  }, [isAdmin, activeHubTab])
+  // This page used to be four tabs behind four routes (/profile, /settings,
+  // /users, /admin/settings), with its Family and Admin tabs gated on role
+  // while every other admin surface is gated on Admin Mode. Profile and
+  // Family & Users are their own pages now. What remains is one view per
+  // route: the assistant, or the admin console. /admin/settings is gated on
+  // Admin Mode by the router (ADMIN_PAGES); the role check here keeps a
+  // non-admin who reaches it from seeing admin sections.
+  const activeHubTab = viewMode === 'admin' && isAdmin ? 'admin' : 'assistant'
 
   const showUser = activeHubTab === 'assistant'
   const showAdmin = activeHubTab === 'admin' && isAdmin
@@ -679,15 +645,6 @@ export default function SettingsPage({
   const currentProvider = llmSettings?.provider || 'ollama'
   const currentModel    = llmSettings?.model    || ''
 
-  const HUB_TABS = [
-    { id: 'profile',   label: 'Profile & Account', icon: 'account_circle' },
-    { id: 'assistant', label: 'Assistant & Voice', icon: 'auto_awesome' },
-    ...(isAdmin ? [
-      { id: 'users',   label: 'Family & Users',    icon: 'group' },
-      { id: 'admin',   label: 'Admin & System',    icon: 'shield_person' },
-    ] : []),
-  ]
-
   return (
     <div className="gh-settings-stage animate-fade-in">
       {/* CSS for recommended strip and persona textarea */}
@@ -713,52 +670,21 @@ export default function SettingsPage({
         }
       `}</style>
 
-      <header className="rs-foyer-head rs-mb-5">
-        <div className="rs-card-label rs-mb-2 rs-flex rs-items-center rs-gap-2 rs-c-accent">
-          <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
-            {activeHubTab === 'admin' ? 'shield_person' : activeHubTab === 'users' ? 'group' : activeHubTab === 'profile' ? 'account_circle' : 'tune'}
-          </span>
-          {activeHubTab === 'admin' ? 'ADMINISTRATOR CONSOLE' : activeHubTab === 'users' ? 'HOUSEHOLD MANAGEMENT' : activeHubTab === 'profile' ? 'PERSONAL IDENTITY' : 'ASSISTANT & HARDWARE'}
-        </div>
-        <h1 className="rs-greeting rs-fw-700" style={{ fontSize: '2.2rem', margin: '0 0 var(--rs-space-2)' }}>
-          {activeHubTab === 'admin' ? 'Admin & System Control' : activeHubTab === 'users' ? 'Family & Household' : activeHubTab === 'profile' ? 'Identity & Account' : 'Assistant & Voice Settings'}
-        </h1>
-        <div className="rs-greeting-sub rs-type-body rs-muted">
-          {activeHubTab === 'admin'
-            ? 'Global backend daemons, provider API routing, tool gating, and capability flags.'
-            : activeHubTab === 'users'
-            ? 'Household member roster, access clearances, model quotas, and session controls.'
-            : activeHubTab === 'profile'
-            ? 'Your display name, visual theme calibration, push alerts, and two-factor authentication.'
-            : 'Select your preferred local or cloud AI models, speech synthesis, and retention.'}
-        </div>
-      </header>
-
-      {/* 4-Pillar Hub Navigation Bar */}
-      <nav className="gh-settings-nav-bar" aria-label="Settings Hub Sections">
-        {HUB_TABS.map(tab => (
-          <button
-            key={tab.id}
-            className={`gh-settings-nav-btn ${activeHubTab === tab.id ? 'is-active' : ''}`}
-            onClick={() => setActiveHubTab(tab.id)}
-            type="button"
-          >
-            <span className="material-symbols-rounded">{tab.icon}</span>
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </nav>
+      {activeHubTab === 'admin' ? (
+        <PageHead icon="shield_person" eyebrow="ADMINISTRATOR CONSOLE" title="Admin & System Control">
+          Global backend daemons, provider API routing, tool gating, and capability flags.
+        </PageHead>
+      ) : (
+        <PageHead icon="tune" eyebrow="ASSISTANT & HARDWARE" title="Assistant & Voice Settings">
+          Select your preferred local or cloud AI models, speech synthesis, and retention.
+        </PageHead>
+      )}
 
       {/* Sub-group category rail for Assistant and Admin */}
       {(activeHubTab === 'assistant' || activeHubTab === 'admin') && (
         <nav
           aria-label="Settings sub-categories"
-          className="rs-flex rs-gap-2 rs-mb-5" style={{
-            overflowX: 'auto',
-            paddingBottom: 'var(--rs-space-1)',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'var(--rs-hairline) transparent',
-          }}
+          className="rs-flex rs-gap-2 rs-mb-5 rs-hscroll"
         >
           {currentSubGroups.map(g => (
             <button
@@ -833,24 +759,6 @@ export default function SettingsPage({
               ERROR{saveErrorDetail ? ` — ${saveErrorDetail}` : ' — CHECK CONSOLE'}</>
           )}
         </div>
-      )}
-
-      {activeHubTab === 'profile' && (
-        <ProfilePage
-          embedded={true}
-          profile={profile}
-          onSave={onSaveProfile}
-          universe={universe}
-          environment={environment}
-          mood={mood}
-          onUniverseChange={onUniverseChange}
-          onEnvironmentChange={onEnvironmentChange}
-          onMoodChange={onMoodChange}
-        />
-      )}
-
-      {activeHubTab === 'users' && (
-        <UsersPage embedded={true} />
       )}
 
       {(activeHubTab === 'assistant' || activeHubTab === 'admin') && (

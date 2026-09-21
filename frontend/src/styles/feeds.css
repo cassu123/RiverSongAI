@@ -22,9 +22,9 @@
      backgrounds and need clipping to the panel's radius. */
   overflow: hidden;
   padding: 0;
-  /* Opaque enough that body text holds against any Stage wallpaper. The rest
-     of the glass grammar (bezel, blur, radius) still comes from .rs-card. */
-  background: color-mix(in srgb, var(--md-surface-container-low) 92%, transparent);
+  /* The surface comes from .rs-card. This used to set its own "opaque"
+     background — 92% of a token that is itself 65% opaque, which measured
+     0.598: forty percent of the cliff showed through the headlines. */
 }
 
 /* --- Tab bar --------------------------------------------------------------- */
@@ -43,14 +43,10 @@
   gap: 6px;
   flex: 1;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
   /* Tabs run off the edge on a phone; let them scroll rather than wrap into a
      second row that shifts the whole body down. */
   scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
 }
-.rs-feeds-tabs::-webkit-scrollbar { display: none; }
 .rs-feeds-tabs > .rs-pill { flex-shrink: 0; scroll-snap-align: start; }
 
 .rs-feeds-manage { position: relative; flex-shrink: 0; }

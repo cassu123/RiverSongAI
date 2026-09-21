@@ -4,17 +4,15 @@
 
 /* ── 1. Living AI Glance Bar ─────────────────────────────────────────────── */
 .gh-glance-bar {
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 16px 20px;
-  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: var(--card-radius, 1.25rem);
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.15));
   margin-bottom: 20px;
   position: relative;
   overflow: hidden;
@@ -116,12 +114,9 @@
 .gh-chips-bar {
   display: flex;
   gap: 10px;
-  overflow-x: auto;
   padding-bottom: 12px;
   margin-bottom: 20px;
-  scrollbar-width: none;
 }
-.gh-chips-bar::-webkit-scrollbar { display: none; }
 
 .gh-chip {
   all: unset;
@@ -178,14 +173,12 @@
 
 /* ── 4. Tactile Device Tile ──────────────────────────────────────────────── */
 .gh-tile {
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
   position: relative;
   border-radius: 24px;
-  background: color-mix(in srgb, var(--bg-base) 62%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   padding: 18px;
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
   transition: background-color 0.22s cubic-bezier(0.2, 0, 0, 1), border-color 0.22s cubic-bezier(0.2, 0, 0, 1), color 0.22s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s cubic-bezier(0.2, 0, 0, 1);
   display: flex;
   flex-direction: column;
@@ -195,9 +188,8 @@
 }
 
 .gh-tile:hover {
-  border-color: rgba(255, 255, 255, 0.18);
   transform: translateY(-2px);
-  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  background: linear-gradient(var(--rs-veil-2), var(--rs-veil-2)), var(--md-surface-container-highest);
 }
 
 /* Light Active State: Warm Golden Illumination */
@@ -561,12 +553,9 @@
 .gh-scenes-row {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
   padding-bottom: 12px;
   margin-bottom: 20px;
-  scrollbar-width: none;
 }
-.gh-scenes-row::-webkit-scrollbar { display: none; }
 
 .gh-scene-chip {
   all: unset;
@@ -599,15 +588,13 @@
 
 /* ── 8. Media Player Tile ────────────────────────────────────────────────── */
 .gh-media-tile {
+  /* Same surface as .rs-card (DESIGN.md §1): a ground, not a pane of glass. */
   grid-column: 1 / -1;
-  background: color-mix(in srgb, var(--bg-base) 66%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(var(--rs-veil-1), var(--rs-veil-1)), var(--md-surface-container-highest);
+  border: 1px solid transparent;
   border-radius: 24px;
   padding: 20px;
   margin-top: 12px;
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.12));
 }
 
 .gh-media-main {
@@ -741,12 +728,6 @@
   border-radius: 0;
   box-shadow: none;
   margin-bottom: 20px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.gh-kitchen-nav-bar::-webkit-scrollbar {
-  display: none;
 }
 
 .gh-kitchen-nav-btn {
@@ -965,17 +946,6 @@
   border-radius: 0;
   box-shadow: none;
   margin-bottom: 20px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--rs-hairline) transparent;
-  -webkit-overflow-scrolling: touch;
-}
-.gh-settings-nav-bar::-webkit-scrollbar {
-  height: 4px;
-}
-.gh-settings-nav-bar::-webkit-scrollbar-thumb {
-  background: var(--rs-hairline);
-  border-radius: 999px;
 }
 
 .gh-settings-nav-btn {
@@ -1046,6 +1016,29 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent) !important;
 }
 
+/* Settings is a form, not a bento. The shared flow's auto-fill grid gave it
+   three 410px columns at 1440, and a wide card spans two — so every wide card
+   that landed alone on a row left the third column empty (measured: 3 such
+   rows on Profile, 5 on Admin, AI MODEL on Assistant, 451px each). Two
+   columns from tablet up makes a wide card always the full row and lets the
+   narrow cards pair.
+
+   Only when the grid holds a wide card. Family & Users is a list of member
+   cards, all narrow, and those fill three columns at 1440 exactly — two
+   columns left one member alone beside a 676px hole. Without :has() (Safari
+   before 15.4) the grid keeps the shared auto-fill, as before.
+
+   The shared flow also sets `min-height: 100%` on its cards, which stretches
+   every card to its row neighbour: ATMOSPHERIC MOOD carried 240px of nothing
+   under its content beside VISUAL THEME. Here cards take their own height. */
+.gh-settings-stage .rs-card-flow { align-items: start; }
+.gh-settings-stage .rs-card-flow > .rs-card { min-height: 0; }
+
+@media (min-width: 768px) {
+  .gh-settings-stage .rs-card-flow:has(.rs-card.is-wide) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gh-settings-stage .rs-card-flow > .rs-card.is-wide { grid-column: 1 / -1; }
+}
+
 .gh-settings-stage .rs-card-label {
   font-size: 0.82rem !important;
   letter-spacing: 0.07em !important;
@@ -1082,19 +1075,6 @@
   font-weight: 650 !important;
 }
 
-/* Embedded components inside hub */
-.embedded-profile,
-.embedded-users {
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-  background: transparent !important;
-}
-
-.embedded-profile .rs-foyer-head,
-.embedded-users .rs-foyer-head {
-  display: none !important;
-}
 
 
 

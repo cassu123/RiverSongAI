@@ -252,11 +252,9 @@ export default function MeteredProviderSection({ provider, enabled, token }) {
 
       {/* Spend tracker */}
       <div
-        className="rs-flex rs-flex-col rs-gap-3" style={{
+        className="rs-flex rs-flex-col rs-gap-3 rs-panel" style={{
           padding: 'var(--rs-space-4) var(--rs-space-4)',
-          background: 'var(--md-surface-container-low)',
-          border: '1px solid var(--md-outline-variant)',
-          borderRadius: 'var(--md-shape-md)',
+          borderRadius: 'var(--md-shape-md)'
         }}
       >
         <div className="rs-flex rs-justify-between rs-items-center rs-gap-2 rs-flex-wrap">

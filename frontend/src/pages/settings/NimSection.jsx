@@ -130,7 +130,7 @@ export default function NimSection({ enabled, token, llmRoutingFlags, saveLlmRou
       </p>
 
       {/* Rate monitor */}
-      <div className="rs-flex rs-flex-col rs-gap-3" style={{ padding: 'var(--rs-space-4) var(--rs-space-4)', background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+      <div className="rs-flex rs-flex-col rs-gap-3 rs-panel" style={{ padding: 'var(--rs-space-4) var(--rs-space-4)', borderRadius: 'var(--md-shape-md)' }}>
         <div className="rs-flex rs-justify-between rs-items-center">
           <div className="rs-flex rs-items-center rs-gap-2">
             <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>monitoring</span>

@@ -47,7 +47,7 @@ export default function AdminFeatureSection({ featureVis, token, onChanged }) {
       </p>
       <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
         {(featureVis.all_features || []).map(f => (
-          <div key={f.key} className="rs-p-3" style={{ background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-sm)' }}>
+          <div key={f.key} className="rs-p-3 rs-panel" style={{ borderRadius: 'var(--md-shape-sm)' }}>
             <Toggle
               id={`feat-vis-${f.key}`}
               label={f.label}
