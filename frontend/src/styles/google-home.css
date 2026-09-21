@@ -966,11 +966,16 @@
   box-shadow: none;
   margin-bottom: 20px;
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rs-hairline) transparent;
   -webkit-overflow-scrolling: touch;
 }
 .gh-settings-nav-bar::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+.gh-settings-nav-bar::-webkit-scrollbar-thumb {
+  background: var(--rs-hairline);
+  border-radius: 999px;
 }
 
 .gh-settings-nav-btn {
@@ -984,9 +989,9 @@
   border-radius: 999px;
   font-size: 0.95rem;
   font-weight: 650;
-  color: rgba(220, 230, 245, 0.75);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--md-on-surface-variant);
+  background: var(--rs-veil-1);
+  border: 1px solid var(--rs-hairline);
   transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
   white-space: nowrap;
   flex-shrink: 0;
@@ -997,9 +1002,9 @@
 }
 
 .gh-settings-nav-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--md-on-surface);
+  background: var(--rs-veil-2);
+  border-color: var(--rs-hairline-strong);
 }
 
 .gh-settings-nav-btn.is-active {

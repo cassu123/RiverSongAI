@@ -120,7 +120,7 @@
 
 .rsb-hint {
   font-family: var(--font-display);
-  font-size: 0.65rem;
+  font-size: var(--rs-fs-nano);
   letter-spacing: 0.2em;
   color: var(--md-on-surface-variant);
   text-transform: uppercase;

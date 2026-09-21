@@ -756,7 +756,8 @@ export default function SettingsPage({
           className="rs-flex rs-gap-2 rs-mb-5" style={{
             overflowX: 'auto',
             paddingBottom: 'var(--rs-space-1)',
-            scrollbarWidth: 'none',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'var(--rs-hairline) transparent',
           }}
         >
           {currentSubGroups.map(g => (

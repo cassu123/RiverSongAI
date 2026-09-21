@@ -35,7 +35,7 @@
   inline-size: 1em;
   block-size: 1em;
   flex: 0 0 auto;
-  overflow: hidden;
+  overflow: visible;
   line-height: 1;
   /* Ligature names are lowercase words with underscores; never let one wrap. */
   white-space: nowrap;

@@ -125,6 +125,8 @@
 /* --- Header --------------------------------------------------------------- */
 .rs-header {
   grid-area: header;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -142,10 +144,20 @@
   z-index: 100;
 }
 
-.rs-header-left, .rs-header-right {
+.rs-header-left {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+}
+
+.rs-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .rs-header-sep {
@@ -153,6 +165,7 @@
   font-weight: 300;
   font-size: 1.1rem;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .rs-header-title {
@@ -160,12 +173,18 @@
   font-weight: 600;
   color: var(--md-on-surface, #e2e8f0);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .rs-header-context {
   font-size: 0.82rem;
   color: var(--text-muted, rgba(255, 255, 255, 0.5));
   font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .rs-header-center {
@@ -355,7 +374,7 @@
   overscroll-behavior-y: contain;
   padding-inline: var(--rs-content-pad-i);
   padding-block: var(--rs-content-pad-b);
-  padding-bottom: 120px;
+  padding-bottom: calc(64px + max(18px, env(safe-area-inset-bottom, 18px)) + 24px);
   display: flex;
   flex-direction: column;
 }
@@ -386,7 +405,7 @@
   padding-inline: var(--rs-content-pad-i);
   padding-block-start: 16px;
   padding-block-end: max(16px, env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--bg-base) 60%, transparent);
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg-base) 60%, transparent));
   backdrop-filter: var(--glass-blur-sm);
   -webkit-backdrop-filter: var(--glass-blur-sm);
   /* --md-outline-variant is an opaque grey. Over a photographic backdrop it
@@ -455,7 +474,7 @@
   background: var(--md-surface-container-highest);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-inline-end: 1px solid var(--md-outline-variant);
+  border-inline-end: 1px solid var(--rs-hairline);
   padding: max(env(safe-area-inset-top), 16px) 20px max(env(safe-area-inset-bottom), 16px);
   transform: translateX(-100%);
   transition: transform var(--rs-motion-mid) var(--rs-motion-curve);
@@ -485,17 +504,6 @@
   .rs-card.is-wide { grid-column: span 2; }
 }
 
-/* ── Tablet / resized-laptop nav rail (768px – 1199px) ──────────────────────
-   Previously everything below 1200px got the phone treatment: an off-canvas
-   overlay drawer behind a hamburger. A tablet, and a laptop window that was
-   not close to maximized, therefore rendered as a stretched-out phone — the
-   "known gap" called out in DESIGN.md §8.
-
-   This is the missing middle size class. Following the standard adaptive
-   ladder (compact → drawer, medium → rail, expanded → permanent drawer), the
-   nav becomes a persistent icon-plus-label rail: always visible, no scrim, no
-   hamburger, and it costs 88px instead of 260px. The markup is unchanged —
-   the same Drawer component simply lays out differently.                     */
 /* ── Google Home App Layout: Full-Width Canvas & Off-Canvas Drawer ────────
    The persistent rail has been removed so that mobile, tablet, and desktop
    screens enjoy a 100% full-width immersive canvas without a cramped sidebar.
@@ -533,7 +541,7 @@
   background: color-mix(in srgb, var(--bg-base) 92%, transparent) !important;
   backdrop-filter: blur(32px) !important;
   -webkit-backdrop-filter: blur(32px) !important;
-  border-inline-end: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-inline-end: 1px solid var(--rs-hairline) !important;
   box-shadow: 12px 0 48px rgba(0, 0, 0, 0.8), inset -1px 0 0 0 rgba(255, 255, 255, 0.08) !important;
   padding: max(env(safe-area-inset-top), 20px) 16px max(env(safe-area-inset-bottom), 20px) !important;
   transform: translateX(-100%) !important;
@@ -579,7 +587,7 @@
     grid-area: sidebar;
     background: color-mix(in srgb, var(--bg-base) 45%, transparent);
     backdrop-filter: var(--glass-blur);
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
+    border-inline-end: 1px solid var(--rs-hairline);
     box-shadow: 20px 0 60px -20px rgba(0, 0, 0, 0.7);
     z-index: 140;
     padding-top: var(--rs-header-h);
@@ -600,7 +608,7 @@
 }
 
 .rs-chat-sidebar-title {
-  font-size: 0.68rem;
+  font-size: var(--rs-fs-nano);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -660,7 +668,7 @@
   background: color-mix(in srgb, var(--bg-base) 80%, transparent);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--rs-hairline);
   box-shadow: 0 16px 44px -8px rgba(0, 0, 0, 0.85), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   z-index: 250;
@@ -683,7 +691,7 @@
   height: 82%;
   border-radius: 999px;
   color: rgba(220, 230, 245, 0.65);
-  font-size: 0.68rem;
+  font-size: var(--rs-fs-nano);
   font-weight: 500;
   transition: background-color 0.18s cubic-bezier(0.2, 0, 0, 1), border-color 0.18s cubic-bezier(0.2, 0, 0, 1), color 0.18s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.18s cubic-bezier(0.2, 0, 0, 1), transform 0.18s cubic-bezier(0.2, 0, 0, 1), opacity 0.18s cubic-bezier(0.2, 0, 0, 1);
   user-select: none;

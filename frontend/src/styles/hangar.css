@@ -117,7 +117,7 @@
 }
 
 .cockpit-stat-tile .stat-unit {
-  font-size: 0.68rem;
+  font-size: var(--rs-fs-nano);
   font-weight: 700;
   color: var(--md-on-surface-variant);
   margin-left: 4px;
@@ -270,7 +270,9 @@
   padding: 5px 12px;
   border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: var(--rs-fs-nano);
+  min-width: fit-content;
+  overflow: visible;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -299,7 +301,7 @@
 
 .card-metric-label {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--rs-fs-nano);
   color: var(--md-on-surface-variant);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -317,7 +319,7 @@
 }
 
 .card-metric-unit {
-  font-size: 0.68rem;
+  font-size: var(--rs-fs-nano);
   font-weight: 600;
   opacity: 0.72;
   margin-left: 3px;
@@ -604,8 +606,17 @@
   align-items: center;
   gap: 8px;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rs-hairline) transparent;
   margin-top: 14px;
   padding-bottom: 4px;
+}
+.interval-chips-bar::-webkit-scrollbar {
+  height: 4px;
+}
+.interval-chips-bar::-webkit-scrollbar-thumb {
+  background: var(--rs-hairline);
+  border-radius: 999px;
 }
 
 .interval-chip {
@@ -614,8 +625,8 @@
   box-sizing: border-box;
   padding: 6px 14px;
   border-radius: var(--md-shape-full, 999px);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--rs-veil-1);
+  border: 1px solid var(--rs-hairline);
   color: var(--md-on-surface-variant);
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -626,7 +637,7 @@
 }
 
 .interval-chip:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--rs-veil-2);
   color: var(--fg);
 }
 

@@ -133,7 +133,7 @@
 .rs-fleet-total { opacity: 0.45; }
 
 .rs-fleet-word {
-  font-size: 0.6rem;
+  font-size: var(--rs-fs-nano);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.5;

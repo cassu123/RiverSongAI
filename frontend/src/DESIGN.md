@@ -202,9 +202,7 @@ windows. Every screen must hold up from ~360px to ultra-wide. Tokens live in
   and `useBreakpoint.js` in sync.
 - **The three zones adapt:**
   - *Header:* stays fixed; holds the hamburger on phones.
-  - *Nav:* off-canvas drawer + scrim below `xl`; a permanent 260px rail at
-    `xl`. **Known gap:** `md–xl` (tablet, resized laptop) still gets the
-    phone drawer.
+  - *Nav:* primary navigation is handled by the floating bottom pill bar across all viewports; spaces and system tools live in the slide-over drawer sheet.
   - *Content:* single column on phone.
   - *Action bar:* full-width and thumb-reachable on phone.
 - **Touch targets ≥ 44px** (`--rs-tap`). Assume no hover on phone or tablet —

@@ -162,26 +162,43 @@
      The backdrop is a photograph, and the content sits straight on top of it.
      The vignette below is transparent through the middle 42% — precisely the
      band the page occupies — so muted text was landing on a bright pavilion,
-     cherry blossom or open sky with nothing between them, and the people and
-     buildings in the photo read as part of the interface.
+     cherry blossom or open sky with nothing between them.
 
-     One flat wash fixes both: text gets a consistent ground to sit on, and
-     the photo drops back to being atmosphere. Heavier at the top and bottom,
-     where the header and the dock need to separate from the scene without
-     drawing a line to do it. */
+     Responsive scrim layer ensures legibility across all backgrounds and
+     pushes back background photo details appropriately per viewport. */
+  :root {
+    --rs-scrim-top: 0.70;
+    --rs-scrim-mid: 0.55;
+    --rs-scrim-bot: 0.82;
+  }
+  @media (min-width: 768px) {
+    :root {
+      --rs-scrim-top: 0.65;
+      --rs-scrim-mid: 0.48;
+      --rs-scrim-bot: 0.78;
+    }
+  }
+  @media (min-width: 1200px) {
+    :root {
+      --rs-scrim-top: 0.60;
+      --rs-scrim-mid: 0.45;
+      --rs-scrim-bot: 0.75;
+    }
+  }
+
   .rs-stage::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
-    z-index: 2;            /* above the scene and the grade layers (z-index 1) */
     pointer-events: none;
+    z-index: 2;
     background: linear-gradient(
       to bottom,
-      rgba(8, 10, 14, 0.74) 0%,
-      rgba(8, 10, 14, 0.52) 20%,
-      rgba(8, 10, 14, 0.48) 55%,
-      rgba(8, 10, 14, 0.62) 82%,
-      rgba(8, 10, 14, 0.80) 100%);
+      rgba(0, 0, 0, var(--rs-scrim-top)) 0%,
+      rgba(0, 0, 0, var(--rs-scrim-mid)) 45%,
+      rgba(0, 0, 0, var(--rs-scrim-mid)) 65%,
+      rgba(0, 0, 0, var(--rs-scrim-bot)) 100%
+    );
   }
 
   /* ── FILM GRADE LAYERS (sit above scene, below chrome) ────────────────── */
