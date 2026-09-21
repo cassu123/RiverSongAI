@@ -22,9 +22,9 @@
      backgrounds and need clipping to the panel's radius. */
   overflow: hidden;
   padding: 0;
-  /* Opaque enough that body text holds against any Stage wallpaper. The rest
-     of the glass grammar (bezel, blur, radius) still comes from .rs-card. */
-  background: color-mix(in srgb, var(--md-surface-container-low) 92%, transparent);
+  /* The surface comes from .rs-card. This used to set its own "opaque"
+     background — 92% of a token that is itself 65% opaque, which measured
+     0.598: forty percent of the cliff showed through the headlines. */
 }
 
 /* --- Tab bar --------------------------------------------------------------- */

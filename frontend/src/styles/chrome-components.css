@@ -4,30 +4,25 @@
    Hardened Spatial v2.0 Architecture.
    ============================================================================= */
 
-/* --- Glass card (Double-Bezel Architecture) ------------------------------ */
+/* --- Card: a surface in the scene (DESIGN.md §1) ------------------------- */
 .rs-card {
   container-type: inline-size;
   position: relative;
-  /* Tinted from the environment's own ground rather than a fixed navy, so a
-     card reads as part of the page it sits on instead of a window laid over
-     it. Same density as before — only the hue now follows the theme. */
-  background: color-mix(in srgb, var(--bg-base, #0e121c) 65%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  /* --rs-hairline-strong, not --card-border-alpha raw. The raw token runs
-     0.12 / 0.18 / 0.25 across the three environment tiers, and at 0.25 over
-     the near-black tactical grounds every card perimeter drew a crisp white
-     rectangle — the framed-window look, arriving on the one element large
-     enough to make it the whole page's character. The hairline rung carries
-     the same ordering at 0.106 / 0.124 / 0.145, so tactical stays the
-     crispest without outlining. */
-  border: 1px solid var(--rs-hairline-strong);
+  /* A ground, not a pane. The environment's own base at 92%, lifted one veil
+     step so it still reads as a surface where there is no photograph behind
+     it (Settings, Profile). The card used to be 65% base with a 24px blur, a
+     hairline frame and a white top-edge highlight — the three cues of glass.
+     Over a photograph that let 35–40% of the scene through body text; on a
+     flat ground it drew a window frame around every block. Trialled on
+     Settings and Feeds, approved, and now the default. */
+  background:
+    linear-gradient(var(--rs-veil-1), var(--rs-veil-1)),
+    var(--md-surface-container-highest);
+  /* Transparent, not removed: the 1px keeps every card's geometry identical
+     to what it was, and a state that needs an edge can colour it. */
+  border: 1px solid transparent;
   border-radius: var(--card-radius, 1.25rem);
   padding: clamp(18px, 4cqi, 28px);
-  /* Enough lift to separate from the ground, not so much that the card looks
-     like a window hovering over it. The inset highlight follows the
-     environment's refraction token. */
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.14));
   transition: background var(--rs-motion-fast) var(--rs-motion-curve),
               border-color var(--rs-motion-fast) var(--rs-motion-curve),
               transform var(--rs-motion-fast) var(--rs-motion-curve),
@@ -67,22 +62,34 @@
   border-block-start: none;
 }
 
+/* Raised: one more surface step, still no frame. */
 .rs-card.is-elev {
-  background: color-mix(in srgb, var(--bg-base) 72%, transparent);
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.2));
+  background:
+    linear-gradient(var(--rs-veil-2), var(--rs-veil-2)),
+    var(--md-surface-container-highest);
 }
 
 .rs-card.is-tappable { cursor: pointer; }
 .rs-card.is-tappable:active { transform: scale(0.985); }
 @media (pointer: fine) {
   .rs-card.is-tappable:hover {
-    background: color-mix(in srgb, var(--bg-base) 76%, transparent);
-    border-color: color-mix(in srgb, var(--primary) 35%, transparent);
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent),
-      inset 0 1px 0 0 var(--inner-refraction, rgba(255, 255, 255, 0.22));
+    background:
+      linear-gradient(var(--rs-veil-2), var(--rs-veil-2)),
+      var(--md-surface-container-highest);
   }
+}
+
+/* A card inside a card is not a second window. No frame, no texture: one
+   surface step above its parent, and spacing does the rest. Selection is a
+   primary tint — state, not structure. These come after the rules above so
+   a nested selected card keeps its tint on hover. */
+.rs-card .rs-card { background: var(--rs-veil-2); }
+.rs-card .rs-card::before { content: none; }
+.rs-card .rs-card.is-elev {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+@media (pointer: fine) {
+  .rs-card .rs-card.is-tappable:not(.is-elev):hover { background: var(--rs-veil-3); }
 }
 
 /* --- Card Grammar -------------------------------------------------------- */
@@ -869,60 +876,4 @@
   10%  { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: var(--rs-space-6); }
   90%  { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: var(--rs-space-6); }
   to   { --rs-hscroll-start: var(--rs-space-6); --rs-hscroll-end: 0px; }
-}
-
-/* --- Surface trial: /settings and /feeds only ------------------------------
-   DESIGN.md §1: a card is a surface sitting in the scene, not a window laid
-   over it. This block tries that on two pages before it goes anywhere else —
-   the Settings page (no photograph; it also serves /profile, /users and
-   /admin/settings, which are the same component) and the Feeds panel (over a
-   photograph). If it is approved it moves into .rs-card itself; if not, this
-   block is the whole change and it comes out cleanly.
-
-   What the window look was made of, measured on the live pages at 390px:
-     - the Feeds panel resolved to alpha 0.598 — its 92% mix is of a token
-       that is itself only 65% opaque — so 40% of the cliff showed through
-       body text;
-     - every top-level card drew a 1px hairline frame, a 24px backdrop blur
-       and a white inset highlight: the three cues of a pane of glass;
-     - every nested card on Settings drew all three again, inside the first.
-
-   The treatment:
-     - top-level: an opaque ground (surface-container-highest, 92% of the
-       environment's own base) lifted one veil step, no frame, no glass
-       highlight, no blur — at that opacity the blur only costs GPU. Without
-       the lift a 92% card over the same base vanished entirely on the
-       photo-less Settings page: content with no surface under it;
-     - nested: no frame at all. One more surface step (veil-2) separates it;
-       spacing does the rest. Selection is a primary tint, which is state,
-       not structure.
-   The !important on nested cards is for the trial only: Settings sets their
-   border and background inline (ModelSection.jsx). A rollout moves that
-   state into classes instead. */
-.gh-settings-stage .rs-card,
-.rs-card.rs-feeds {
-  background:
-    linear-gradient(var(--rs-veil-1), var(--rs-veil-1)),
-    var(--md-surface-container-highest);
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.gh-settings-stage .rs-card .rs-card {
-  background: var(--rs-veil-2) !important;
-  border-color: transparent !important;
-}
-.gh-settings-stage .rs-card .rs-card::before { content: none; }
-
-.gh-settings-stage .rs-card .rs-card.is-elev {
-  background: color-mix(in srgb, var(--primary) 14%, transparent) !important;
-}
-
-@media (pointer: fine) {
-  .gh-settings-stage .rs-card .rs-card.is-tappable:not(.is-elev):hover {
-    background: var(--rs-veil-3) !important;
-    box-shadow: none;
-  }
 }
