@@ -157,7 +157,7 @@ pymavlink>=2.4.41                    # MAVLink telemetry for ArduRover
 # -----------------------------------------------------------------------------
 setuptools>=78.1.1                   # CVE-2025-47273 path traversal
 requests>=2.33.0                     # CVE-2024-35195 + CVE-2025-23159 temp-file reuse
-urllib3>=2.7.0                       # CVE-2024-37891 + decompression bomb chain (several CVEs)
+urllib3>=2.8.0                       # CVE-2024-37891 + decompression bomb chain (several CVEs)
 certifi>=2026.7.22                    # stale certificate bundle
 cryptography>=50.0.0                 # CVE-2024-26130
 h11>=0.16.0                          # CRITICAL: malformed chunked-encoding bypass
