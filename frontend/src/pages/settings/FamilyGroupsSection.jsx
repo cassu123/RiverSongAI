@@ -260,10 +260,8 @@ function FamilyGroupCard({ group, users, token, expanded, onToggleExpand, onDele
   }
 
   return (
-    <div className="rs-clip" style={{
-      background: 'var(--md-surface-container)',
-      border: '1px solid var(--md-outline-variant)',
-      borderRadius: 'var(--md-shape-sm)',
+    <div className="rs-clip rs-panel" style={{
+      borderRadius: 'var(--md-shape-sm)'
     }}>
       {/* Header row */}
       <div className="rs-flex rs-items-center rs-gap-3" style={{ padding: 'var(--rs-space-3) var(--rs-space-4)' }}>

@@ -12,10 +12,8 @@ export default function CapabilityFlagsSection({ data }) {
 
       <div className="rs-flex rs-flex-col" style={{ gap: 'var(--rs-space-4)' }}>
         {data.flags.map(flag => (
-          <div key={flag.key} style={{
+          <div className="rs-panel" key={flag.key} style={{
             padding: 'var(--rs-space-3) var(--rs-space-4)',
-            background: 'var(--md-surface-container-lowest)',
-            border: '1px solid var(--md-outline-variant)',
             borderRadius: 'var(--md-shape-md)'
           }}>
             <div className="rs-flex rs-items-center rs-justify-between rs-mb-2">
@@ -43,7 +41,6 @@ export default function CapabilityFlagsSection({ data }) {
               borderRadius: 'var(--md-shape-sm)',
               color: 'var(--md-on-surface)',
               userSelect: 'all',
-              border: '1px solid color-mix(in srgb, var(--md-outline) 20%, transparent)',
             }}>
               {flag.env_var}={flag.enabled ? 'true' : 'false'}
             </div>

@@ -80,7 +80,7 @@ export default function AdminModelFamiliesSection({ token }) {
           return (
             <div
               key={family.id}
-              className="rs-p-3" style={{ opacity: enabled ? 1 : 0.55, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}
+              className="rs-p-3 rs-panel" style={{ opacity: enabled ? 1 : 0.55, borderRadius: 'var(--md-shape-md)' }}
             >
               <div className="rs-flex rs-justify-between rs-items-center rs-mb-3">
                 <div>

@@ -156,11 +156,9 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
                   return (
                     <div key={src.source}
                       onClick={() => setOpenSource(open ? null : src.source)}
-                      className="rs-pointer" style={{
+                      className="rs-pointer rs-panel" style={{
                         padding: 'var(--rs-space-3) var(--rs-space-3)',
-                        borderRadius: 'var(--md-shape-sm)',
-                        background: 'var(--md-surface-container-low)',
-                        border: '1px solid var(--md-outline-variant)',
+                        borderRadius: 'var(--md-shape-sm)'
                       }}>
                       <div className="rs-flex rs-items-center rs-gap-3 rs-flex-wrap">
                         <span className="material-symbols-rounded" style={{ fontSize: '1rem', opacity: 0.7 }}>{meta.icon}</span>
@@ -199,7 +197,7 @@ export default function TokenUsageSection({ token, isAdmin = false, isParent = f
           ) : (
             <>
               <div className="rs-card-label rs-mb-2 rs-type-nano">BY MODEL</div>
-              <div className="rs-table-wrap" style={{ padding: 0, background: 'var(--md-surface-container-low)', border: '1px solid var(--md-outline-variant)', borderRadius: 'var(--md-shape-md)' }}>
+              <div className="rs-table-wrap rs-panel" style={{ padding: 0, borderRadius: 'var(--md-shape-md)' }}>
                 <table className="rs-w-full rs-type-tiny" style={{ borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--md-surface-container-high)' }}>
