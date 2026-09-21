@@ -1075,19 +1075,6 @@
   font-weight: 650 !important;
 }
 
-/* Embedded components inside hub */
-.embedded-profile,
-.embedded-users {
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-  background: transparent !important;
-}
-
-.embedded-profile .rs-foyer-head,
-.embedded-users .rs-foyer-head {
-  display: none !important;
-}
 
 
 

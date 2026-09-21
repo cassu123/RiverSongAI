@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@context/AuthContext'
 import { registerPushNotifications } from '../utils/pushNotifications'
+import { PageHead } from './settings/shared.jsx'
 
 /**
  * ProfilePage — Phase 3 Rewrite
@@ -332,7 +333,6 @@ export default function ProfilePage({
   profile = {}, onSave = () => {},
   universe = 'dune', environment = 'atreides', mood = 'caladan',
   onUniverseChange = () => {}, onEnvironmentChange = () => {}, onMoodChange = () => {},
-  embedded = false,
 }) {
   const { user, token } = useAuth()
   const [displayName, setDisplayName] = useState(profile?.displayName || user?.display_name || '')
@@ -431,15 +431,10 @@ export default function ProfilePage({
   }
 
   return (
-    <div className={`rs-foyer animate-fade-in ${embedded ? 'embedded-profile' : ''}`}>
-      
-      {/* Header (only shown if not embedded in Settings Hub) */}
-      {!embedded && (
-        <div className="rs-foyer-head">
-          <h1 className="rs-greeting">Identity & Context</h1>
-          <div className="rs-greeting-sub">Define your presence and calibrate the visual stage.</div>
-        </div>
-      )}
+    <div className="gh-settings-stage animate-fade-in">
+      <PageHead icon="account_circle" eyebrow="PERSONAL IDENTITY" title="Identity & Account">
+        Your display name, visual theme calibration, push alerts, and two-factor authentication.
+      </PageHead>
 
       <div className="rs-card-flow">
 
