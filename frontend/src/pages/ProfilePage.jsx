@@ -462,7 +462,7 @@ export default function ProfilePage({
             </div>
             <button className="rs-btn-primary rs-type-small" style={{ padding: 'var(--rs-space-3) var(--rs-space-5)' }} onClick={handleSaveProfile}>SAVE CHANGES</button>
           </div>
-          <div className="rs-card-meta rs-mt-5 rs-flex rs-gap-6">
+          <div className="rs-card-meta rs-mt-5 rs-flex rs-flex-wrap rs-gap-6">
             <div>
               <div className="rs-card-label rs-type-nano">ACCOUNT EMAIL</div>
               <div className="rs-mt-1 rs-type-body">{user?.email}</div>
