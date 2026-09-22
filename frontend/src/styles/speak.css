@@ -181,11 +181,12 @@
   .rs-speak-orb-fallback { animation: none; }
 }
 
-/* --- Bulb on the Speaking stage -------------------------------------------
-   The bulb sizes off its own box, so the stage only has to say how big.    */
+/* --- River on the Speaking stage ------------------------------------------
+   She fills the whole stage box and sizes herself to its short side; the
+   width left over is room for her ribbons to reach out and fade.           */
 
-.rs-speak-bulb {
-  --rs-bulb-size: min(72vw, 46svh, 420px);
-  position: relative;
+.rs-speak-river {
+  position: absolute;
+  inset: 0;
   z-index: 2;
 }

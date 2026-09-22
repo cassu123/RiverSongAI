@@ -3,7 +3,7 @@ import { useAuth } from '@context/AuthContext.jsx'
 import { useConversation } from '@hooks/useConversation.js'
 import AudioVisualizer from '@components/AudioVisualizer.jsx'
 import RsMarkdown from '@components/RsMarkdown.jsx'
-import PresenceBulb from '@components/PresenceBulb.jsx'
+import RiverOrb from '@/presence/RiverOrb.jsx'
 
 // The VRM character path is intact and unchanged — set VITE_RIVER_USE_AVATAR=true
 // (with a model at public/models/river.vrm) to render it.
@@ -11,8 +11,8 @@ import PresenceBulb from '@components/PresenceBulb.jsx'
 // It is now opt-IN rather than opt-out. It used to default to on, which meant
 // every visit to this page downloaded three.js (~268 kB gzipped, the largest
 // chunk in the build), spun up a WebGL context and compiled shaders — and then
-// fell straight back to the orb, because no VRM is shipped. The bulb is CSS and
-// costs none of that.
+// fell straight back to the orb, because no VRM is shipped. The orb is one small
+// shader and costs none of that.
 const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR === 'true'
 
 const RiverAvatar = lazy(() => import('@components/RiverAvatar.jsx'))
@@ -143,11 +143,7 @@ export default function ConversationPage({ setAction }) {
             <RiverAvatar state={convState} audioLevel={visualLvl} />
           </Suspense>
         ) : (
-          <PresenceBulb
-            state={convState}
-            level={visualLvl}
-            className="rs-speak-bulb"
-          />
+          <RiverOrb detail="full" className="rs-speak-river" label={`River is ${convState}`} />
         )}
         {convState === 'speaking' && (
           <div className="rs-speak-visualizer">

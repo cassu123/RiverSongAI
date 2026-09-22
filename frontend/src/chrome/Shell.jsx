@@ -1,5 +1,5 @@
 import React from 'react'
-import PresenceOrb from './PresenceOrb.jsx'
+import RiverOrb from '@/presence/RiverOrb.jsx'
 import RsMark from '@components/RsMark.jsx'
 
 const PAGE_TITLES = {
@@ -128,8 +128,7 @@ export default function Shell({
             aria-label="Voice conversation"
             title="Talk with River"
           >
-            <div className="rs-dock-pulse-halo" />
-            <PresenceOrb mode="workshop" interactive={false} />
+            <RiverOrb detail="compact" className="rs-dock-orb" />
           </button>
           <button
             className={`rs-floating-dock-btn rs-mobile-dock-btn ${currentPage === 'briefing' ? 'is-active' : ''}`}

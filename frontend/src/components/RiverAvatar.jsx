@@ -1,7 +1,7 @@
 // =============================================================================
 // frontend/src/components/RiverAvatar.jsx
 //
-// 3D VRM avatar for River Song — a drop-in replacement for <PresenceBulb />.
+// 3D VRM avatar for River Song — a drop-in replacement for <RiverOrb />.
 //
 // Takes the same props the orb does (state, audioLevel, lipSyncOpen, compact),
 // so anywhere the orb renders, this can render instead.
@@ -10,7 +10,7 @@
 // audio it already sends; no GPU work is added server-side, which matters
 // when hub devices are Raspberry Pis and the server has one small card.
 //
-// No VRM file present? It falls back to the CSS presence bulb rather than
+// No VRM file present? It falls back to the orb rather than
 // showing an empty canvas. Put a model at public/models/river.vrm to switch over — free
 // rigged models are on VRoid Hub and BOOTH, no modelling required.
 // =============================================================================
@@ -22,7 +22,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm'
 
-import PresenceBulb from './PresenceBulb.jsx'
+import RiverOrb from '@/presence/RiverOrb.jsx'
 
 // Where the model lives. Override with VITE_RIVER_AVATAR_URL to swap models
 // without touching code.
@@ -30,9 +30,8 @@ const AVATAR_URL =
   import.meta.env?.VITE_RIVER_AVATAR_URL || '/models/river.vrm'
 
 // Conversation states, collapsed to the four the avatar actually performs.
-// Vocabulary is fixed by the Vortex wire protocol (see
-// wire protocol (see core/vortex/hub.py); PresenceBulb
-// keys off the same set.
+// Vocabulary is fixed by the Vortex wire protocol (see core/vortex/hub.py);
+// River's mind (presence/riverMind.js) keys off the same set.
 const STATE_MAP = {
   idle: 'idle',
   connecting: 'thinking',
@@ -262,7 +261,7 @@ export default function RiverAvatar({
     // A missing or broken model must not leave a blank panel where River
     // should be. Fall back to the orb, which always works.
     console.warn(
-      `[RiverAvatar] Could not load ${AVATAR_URL}; falling back to the presence bulb.`,
+      `[RiverAvatar] Could not load ${AVATAR_URL}; falling back to the orb.`,
       err,
     )
     setFailed(true)
@@ -272,10 +271,9 @@ export default function RiverAvatar({
 
   if (failed) {
     return (
-      <PresenceBulb
-        state={state}
-        level={audioLevel}
-        className={compact ? 'is-compact' : 'rs-speak-bulb'}
+      <RiverOrb
+        detail={compact ? 'compact' : 'full'}
+        className={compact ? '' : 'rs-speak-river'}
       />
     )
   }
