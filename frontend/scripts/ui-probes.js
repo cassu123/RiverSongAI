@@ -33,7 +33,7 @@
   const MIN_DELTA = 2;          // px — below this is rounding, not clipping
   const WASTE = 24;             // px — unused room below a scroller worth reporting
   const DOCK_SEL = '.rs-floating-dock, .rs-mobile-dock';
-  const IGNORE = /^(rs-space-label|rs-header-voice-orb-wrap|rs-bulb|rs-floating-dock-btn|leaflet-|recharts)/;
+  const IGNORE = /^(rs-space-label|rs-bulb|rs-floating-dock-btn|leaflet-|recharts)/;
 
   /** getComputedStyle returns 'auto' and '' as well as lengths. A NaN in a sum
    *  silently disqualifies the whole sum, so never let one in. */

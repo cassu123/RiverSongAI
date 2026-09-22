@@ -177,58 +177,8 @@
   flex-shrink: 0;
 }
 
-.rs-header-context {
-  font-size: 0.82rem;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
 .rs-header-center {
   flex: 1;
-}
-
-/* Luminous AI Voice Capsule */
-.rs-header-voice-btn {
-  all: unset;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 12px 5px 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-base) 66%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
-  box-shadow: 0 0 14px -3px color-mix(in srgb, var(--primary) 18%, transparent), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
-  transition: background-color var(--rs-motion-fast) var(--rs-motion-curve), border-color var(--rs-motion-fast) var(--rs-motion-curve), color var(--rs-motion-fast) var(--rs-motion-curve), box-shadow var(--rs-motion-fast) var(--rs-motion-curve), transform var(--rs-motion-fast) var(--rs-motion-curve), opacity var(--rs-motion-fast) var(--rs-motion-curve);
-}
-
-.rs-header-voice-btn:hover {
-  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
-  box-shadow: 0 0 20px -2px color-mix(in srgb, var(--primary) 30%, transparent), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
-}
-
-.rs-header-voice-btn:active {
-  transform: scale(0.96);
-}
-
-.rs-header-voice-orb-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.rs-header-voice-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--md-primary, var(--primary));
-  text-transform: uppercase;
 }
 
 .rs-sidebar-reopen,
