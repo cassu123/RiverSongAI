@@ -11,7 +11,8 @@
  *
  *   Motes  Points. A shell of particles around her, some loose, which she
  *          flings outward when she is doing something and pulls back after;
- *          and ribbons of particles that pass through her and carry her voice.
+ *          ribbons of particles that pass through her and carry her voice;
+ *          and flecks that come off her surface and float away, fading.
  *
  * Everything fades to nothing well inside the canvas edge. A hard edge
  * anywhere in this is a defect.
@@ -203,13 +204,15 @@ void main() {
 
 const MOTE_VS = `
 attribute vec4 aSeed;
-attribute float aKind;          // 0 shell, 1 ribbon
+attribute float aKind;          // 0 shell, 1 ribbon, 2 fleck
 uniform vec2  uRes;
 uniform float uBody, uDpr, uT, uFlow;
 uniform float uShell, uRibbon, uCoh, uTurb, uLevel, uReach, uReachDir, uRibAng, uEnergy;
 uniform vec2  uRotXY, uAttn;
 uniform vec3  uC0, uC1, uC2;
 varying vec4  vCol;
+
+float hash1(float n) { return fract(sin(n) * 43758.5453); }
 
 vec3 palette(float x) {
   float y = fract(x) * 3.0;
@@ -222,7 +225,6 @@ void main() {
   vec2 pos;
   float alpha, size;
   vec3 col;
-  float minHalf = 0.5 * min(uRes.x, uRes.y);
 
   if (aKind < 0.5) {
     // Shell: a point on the sphere, turned by her slow rotation.
@@ -251,7 +253,7 @@ void main() {
     alpha = uShell * (0.22 + 0.78 * front) * (0.6 + 0.5 * uEnergy);
     size = max(1.2 * uDpr, uBody * (0.006 + 0.010 * aSeed.z) * (0.7 + 0.4 * front));
     col = mix(palette(aSeed.w), vec3(1.0), 0.45);
-  } else {
+  } else if (aKind < 1.5) {
     // Ribbons: strands in a band that twists as it passes through her.
     float strand = floor(aSeed.y * 18.0);
     float u = fract(aSeed.x + uFlow * (0.05 + 0.03 * aSeed.z)) * 2.0 - 1.0;
@@ -268,11 +270,43 @@ void main() {
     alpha = uRibbon * pow(1.0 - smoothstep(0.5, 1.0, abs(u)), 1.5) * (0.6 + 0.4 * aSeed.w);
     size = max(1.1 * uDpr, uBody * (0.005 + 0.007 * aSeed.w));
     col = mix(palette(strand / 18.0 + u * 0.15), vec3(1.0), 0.4);
+  } else {
+    // Flecks: bits of her that lift off the surface and float away, fading.
+    // Each fleck lives one cycle; every new life picks a fresh place, speed
+    // and path from its cycle number, so no fleck ever retraces the last.
+    float rate = 0.10 + 0.08 * aSeed.w;
+    float age = uT * rate + aSeed.x;
+    float life = fract(age);
+    float cyc = floor(age);
+    float h1 = hash1(cyc * 12.9898 + aSeed.y * 78.233);
+    float h2 = hash1(cyc * 39.346 + aSeed.z * 11.135);
+    float h3 = hash1(cyc * 73.156 + aSeed.w * 52.235);
+
+    float ang = h1 * 6.2831853;
+    vec2 dir = vec2(cos(ang), sin(ang));
+    vec2 side = vec2(-dir.y, dir.x);
+    // Held close when she is gathered (listening), freer when she is loose,
+    // thrown further when she speaks or reaches.
+    float travel = (0.35 + 0.8 * h2) * (1.45 - uCoh) * (1.0 + uLevel * 0.9 + uReach * 0.7);
+    float r0 = 0.95 + 0.1 * h3;
+    vec2 p = dir * (r0 + life * travel)
+           + side * sin(life * 5.0 + h3 * 20.0) * 0.07 * (0.5 + h2)
+           + vec2(0.0, life * (0.10 + 0.12 * h3));
+    pos = p * uBody + uAttn * 0.07 * uBody;
+
+    // Lifts off quickly, lingers as it fades.
+    float fade = smoothstep(0.0, 0.12, life) * pow(1.0 - life, 1.3);
+    float twinkle = 0.75 + 0.25 * sin(uT * (3.0 + 5.0 * h2) + h1 * 30.0);
+    // Most are dust; about one in six is a larger bit you can follow.
+    float big = step(0.83, h3);
+    alpha = fade * twinkle * (0.6 + 0.4 * h2) * (0.7 + 0.5 * uEnergy) * (1.0 + 0.3 * big);
+    size = max(1.3 * uDpr, uBody * (0.012 + 0.02 * h3) * (1.0 + 1.4 * big) * (1.0 - 0.35 * life));
+    col = mix(palette(h1 + 0.2), vec3(1.0), 0.55);
   }
 
   // Nothing gets near the canvas edge.
-  float reachOut = length(pos) / minHalf;
-  if (aKind < 0.5) alpha *= 1.0 - smoothstep(0.82, 0.98, reachOut);
+  float reachOut = max(abs(pos.x) / (0.5 * uRes.x), abs(pos.y) / (0.5 * uRes.y));
+  if (aKind < 0.5 || aKind > 1.5) alpha *= 1.0 - smoothstep(0.8, 0.97, reachOut);
   alpha *= 1.0 - smoothstep(0.9, 0.99, abs(pos.y) / (0.5 * uRes.y));
 
   gl_Position = vec4(pos / (0.5 * uRes), 0.0, 1.0);
@@ -402,12 +436,13 @@ export function createOrbRenderer(canvas, { detail = 'full', random = Math.rando
 
   const shellN = compact ? 170 : 2200
   const ribbonN = compact ? 0 : 7200
-  const count = shellN + ribbonN
+  const fleckN = compact ? 16 : 360
+  const count = shellN + ribbonN + fleckN
   const seeds = new Float32Array(count * 4)
   const kinds = new Float32Array(count)
   for (let i = 0; i < count; i++) {
     for (let j = 0; j < 4; j++) seeds[i * 4 + j] = random()
-    kinds[i] = i < shellN ? 0 : 1
+    kinds[i] = i < shellN ? 0 : i < shellN + ribbonN ? 1 : 2
   }
   const seedBuf = gl.createBuffer()
   gl.bindBuffer(gl.ARRAY_BUFFER, seedBuf)
