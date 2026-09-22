@@ -130,28 +130,6 @@ function pageKeyFromPath(pathname) {
   return hit ? hit[0] : 'briefing'
 }
 
-// Environment display names — used as header context outside of dashboard/briefing.
-const ENV_LABELS = {
-  atreides:   'Atreides',
-  harkonnen:  'Harkonnen',
-  arrakis:    'Arrakis',
-  forerunner: 'Forerunner',
-  unsc:       'UNSC',
-  spires:     'Sacred Spires',
-  garden:     'Garden Pavilion',
-  corpo:      'Corpo Plaza',
-  pacifica:   'Pacifica Street',
-}
-
-function timeOfDayGreeting() {
-  const h = new Date().getHours()
-  if (h < 5)  return 'Late night'
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  if (h < 21) return 'Good evening'
-  return 'Good night'
-}
-
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
   catch { return fallback }
@@ -444,14 +422,6 @@ export default function App() {
     )
   }
 
-  // Header context per RIVER_SONG_CHROME_PLAN.md §3:
-  //   - dashboard / briefing: time-of-day greeting fragment
-  //   - all other pages:      active environment name
-  // Never the page's own label.
-  const headerContext = (currentPage === 'dashboard' || currentPage === 'briefing')
-    ? timeOfDayGreeting()
-    : (ENV_LABELS[environment] || '')
-
   // Desktop chat-history sidebar slot (≥1200px). Only on chat/speak pages.
   const showChatSidebar = currentPage === 'chat' || currentPage === 'speak'
   const chatSidebar = showChatSidebar && sidebarOpen ? (
@@ -490,7 +460,6 @@ export default function App() {
       />
 
       <Shell
-        context={headerContext}
         currentPage={currentPage}
         onNavigate={handleNavigate}
         mode={shellMode}

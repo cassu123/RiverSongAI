@@ -32,13 +32,12 @@ const PAGE_TITLES = {
 /**
  * Shell — the clean futuristic global chrome.
  *
- *   Zone 1 (top)    : Floating Glass Header — Monogram · Page Title · River Presence Core · Menu
+ *   Zone 1 (top)    : Floating Glass Header — Monogram · Page Title · Menu
  *   Zone 2 (middle) : Content Stage — independent scrolling viewport
  *   Zone 3 (bottom) : Contextual Action Bar (e.g. Chat input)
  *   Zone 4 (mobile) : Floating Glass Mobile Dock (< 768px)
  */
 export default function Shell({
-  context,
   currentPage = 'briefing',
   onNavigate,
   onOpenDrawer,
@@ -65,7 +64,6 @@ export default function Shell({
           </button>
           <span className="rs-header-sep">/</span>
           <span className="rs-header-title">{PAGE_TITLES[currentPage] || (currentPage || '').toUpperCase()}</span>
-          {context && <span className="rs-header-context">· {context}</span>}
         </div>
 
         <div className="rs-header-center" />
@@ -76,17 +74,6 @@ export default function Shell({
               <span className="material-symbols-rounded">left_panel_open</span>
             </button>
           )}
-          <button
-            className="rs-header-voice-btn"
-            onClick={onOpenSpeak}
-            title="Activate River Voice"
-            aria-label="Activate River Voice"
-          >
-            <div className="rs-header-voice-orb-wrap">
-              <PresenceOrb mode={mode} interactive={false} />
-            </div>
-            <span className="rs-header-voice-label">River</span>
-          </button>
           <button className="rs-hamburger" onClick={onOpenDrawer} aria-label="Open navigation menu">
             <span className="material-symbols-rounded">menu</span>
           </button>
