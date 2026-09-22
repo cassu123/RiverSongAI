@@ -189,6 +189,9 @@
 
 .rs-chat-textarea {
   all: unset;
+  /* `all: unset` resets this to content-box, which put the 16px padding and
+     the border outside width: 100% — the box ran 33px past its container. */
+  box-sizing: border-box;
   width: 100%;
   min-height: 48px;
   max-height: 200px;
