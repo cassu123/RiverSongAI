@@ -1,7 +1,6 @@
 import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react'
 import { useAuth } from '@context/AuthContext.jsx'
 import { useConversation } from '@hooks/useConversation.js'
-import AudioVisualizer from '@components/AudioVisualizer.jsx'
 import RsMarkdown from '@components/RsMarkdown.jsx'
 import RiverOrb from '@/presence/RiverOrb.jsx'
 
@@ -144,11 +143,6 @@ export default function ConversationPage({ setAction }) {
           </Suspense>
         ) : (
           <RiverOrb detail="full" className="rs-speak-river" label={`River is ${convState}`} />
-        )}
-        {convState === 'speaking' && (
-          <div className="rs-speak-visualizer">
-            <AudioVisualizer audioLevel={visualLvl} />
-          </div>
         )}
       </div>
 

@@ -141,18 +141,6 @@
     color-mix(in srgb, var(--bg-base) 70%, transparent) 100%);
 }
 
-/* --- Visualizer ------------------------------------------------------------ */
-
-.rs-speak-visualizer {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: clamp(8px, 3svh, 28px);
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 3;
-}
-
 /* --- Transcript ------------------------------------------------------------
    Previously this panel rendered its glass background unconditionally, so an
    idle screen showed an empty grey pill floating above the orb. It is now
