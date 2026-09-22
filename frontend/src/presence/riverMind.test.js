@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createMind, seeded, TARGETS } from './riverMind.js'
+import { createMind, seeded, TARGETS, getRiverMind } from './riverMind.js'
 import { derivePalette } from './riverOrbGL.js'
 
 const FRAME = 1000 / 60
@@ -88,6 +88,25 @@ describe('riverMind', () => {
     ;({ s } = run(m, 0.15, t))
     expect(rise).toBeGreaterThan(0.6)
     expect(1 - rise).toBeLessThan(rise - s.level + 0.5)
+  })
+})
+
+describe('the shared mind on the app bus', () => {
+  const send = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }))
+
+  it('follows rs-presence and reaches out on rs-activity', () => {
+    const mind = getRiverMind()
+    expect(getRiverMind()).toBe(mind)
+    send('rs-presence', { state: 'thinking' })
+    expect(mind.state).toBe('thinking')
+    let t = 10_000
+    mind.tick(t)
+    send('rs-activity', { phase: 'start' })
+    let s
+    for (let i = 0; i < 30; i++) s = mind.tick((t += FRAME))
+    expect(s.reach).toBeGreaterThan(0.5)
+    send('rs-presence', { state: 'idle' })
+    expect(mind.state).toBe('idle')
   })
 })
 

@@ -96,6 +96,11 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         setToolEvents(p => [...p, event])
         // A tool running is the commonest reason for a long silence mid-turn.
         armStreamWatchdog()
+        // Tell River's body she is doing something, so it shows: she reaches
+        // out when a tool starts and gathers back in when it returns.
+        window.dispatchEvent(new CustomEvent('rs-activity', {
+          detail: { phase: type === 'tool_use' ? 'start' : 'end' },
+        }))
         break
       case 'stream_done':
         finalizeStream()
