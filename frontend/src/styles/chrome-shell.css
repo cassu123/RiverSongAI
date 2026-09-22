@@ -283,6 +283,31 @@
 .rs-action-inner {
   max-width: 1000px;
   margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-3);
+}
+
+/* The page's own bar takes whatever width River leaves it. */
+.rs-action-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* River in the bar: the same compact orb as the dock, and the same job —
+   tap her to talk. 48px keeps her a full touch target. */
+.rs-action-river {
+  all: unset;
+  flex: none;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.rs-action-river:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* --- Flows (Bento 2.0 Grid Architecture) ---------------------------------- */
