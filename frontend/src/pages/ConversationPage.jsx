@@ -16,9 +16,24 @@ const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR === 'true'
 
 const RiverAvatar = lazy(() => import('@components/RiverAvatar.jsx'))
 
+// Whether the floating transcript is shown. Per device, so a phone and a
+// desk can differ; defaults to shown.
+const TRANSCRIPT_KEY = 'rs-voice-transcript'
+function readTranscriptPref() {
+  try { return localStorage.getItem(TRANSCRIPT_KEY) !== 'off' } catch { return true }
+}
+
 export default function ConversationPage({ setAction }) {
   const { token, user } = useAuth()
   const [muted, setMuted] = useState(false)
+  const [showTranscript, setShowTranscript] = useState(readTranscriptPref)
+  const toggleTranscript = useCallback(() => {
+    setShowTranscript((on) => {
+      const next = !on
+      try { localStorage.setItem(TRANSCRIPT_KEY, next ? 'on' : 'off') } catch { /* private mode: keep it for this visit */ }
+      return next
+    })
+  }, [])
   
   const {
     convState,
@@ -91,6 +106,18 @@ export default function ConversationPage({ setAction }) {
               <span className="material-symbols-rounded">{muted ? 'mic_off' : 'mic'}</span>
               <span className="rs-speak-actions-label">{muted ? 'Muted' : 'Live'}</span>
             </button>
+            {/* State shows in the icon, not a fill: a lit pill here would
+                compete with the mic button, the one control that matters. */}
+            <button
+              className="rs-pill"
+              onClick={toggleTranscript}
+              aria-pressed={showTranscript}
+              aria-label={showTranscript ? 'Hide transcript' : 'Show transcript'}
+              title={showTranscript ? 'Hide transcript' : 'Show transcript'}
+            >
+              <span className="material-symbols-rounded">{showTranscript ? 'subtitles' : 'subtitles_off'}</span>
+              <span className="rs-speak-actions-label">Transcript</span>
+            </button>
           </div>
           <div className="rs-chat-input-right">
             <button
@@ -110,7 +137,7 @@ export default function ConversationPage({ setAction }) {
         </div>
       </div>
     )
-  }, [setAction, isActive, convState, muted, handleToggleMute, handleStartListening, resetSession])
+  }, [setAction, isActive, convState, muted, handleToggleMute, handleStartListening, resetSession, showTranscript, toggleTranscript])
 
   // Drives whether the transcript panel is laid out at all.
   const hasTranscript = messages.length > 0 || !!streamingContent || convState === 'listening'
@@ -161,7 +188,7 @@ export default function ConversationPage({ setAction }) {
           it used to paint its glass panel unconditionally, leaving an empty
           grey pill hovering over the orb on an idle screen. */}
       <div
-        className={`rs-speak-transcript-float rs-c-fg rs-flex-col ${hasTranscript ? 'is-live' : ''}`}
+        className={`rs-speak-transcript-float rs-c-fg rs-flex-col ${hasTranscript && showTranscript ? 'is-live' : ''}`}
         style={{ position: 'absolute', bottom: 120, left: '50%', transform: 'translateX(-50%)', width: '80%', maxWidth: 600, maxHeight: 150, overflowY: 'auto', background: 'color-mix(in srgb, var(--bg-base) 72%, transparent)', backdropFilter: 'blur(12px)', borderRadius: 'var(--md-shape-lg)', padding: 'var(--rs-space-4) var(--rs-space-5)', border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', gap: 'var(--rs-space-2)', zIndex: 2 }}>
         {messages.slice(-2).map((m, i) => (
           <div key={i} className="rs-type-small" style={{
