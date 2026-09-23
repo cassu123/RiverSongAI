@@ -48,10 +48,11 @@ export default function RiverOrb({ detail = 'full', className = '', label }) {
     themeWatch.observe(root, { attributes: true, attributeFilter: ['data-universe', 'data-env', 'data-mood', 'data-theme', 'class', 'style'] })
 
     const maxDpr = detail === 'compact' ? 2 : 1.25
-    const fit = () => {
-      const r = canvas.getBoundingClientRect()
-      renderer.resize(r.width, r.height, Math.min(window.devicePixelRatio || 1, maxDpr))
-    }
+    // Layout size, not getBoundingClientRect: pages scale in on entry
+    // (.page-enter), and a transformed size would leave the canvas short
+    // of its box — and soft — after the animation ends.
+    const fit = () =>
+      renderer.resize(canvas.offsetWidth, canvas.offsetHeight, Math.min(window.devicePixelRatio || 1, maxDpr))
     fit()
     const resizeWatch = new ResizeObserver(fit)
     resizeWatch.observe(canvas)
