@@ -1,8 +1,9 @@
-import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, Suspense, lazy, useEffect } from 'react'
 import { useAuth } from '@context/AuthContext.jsx'
 import { useConversation } from '@hooks/useConversation.js'
 import RsMarkdown from '@components/RsMarkdown.jsx'
 import RiverOrb from '@/presence/RiverOrb.jsx'
+import { summarizeToolEvents } from '@/utils/toolActivity.js'
 
 // The VRM character path is intact and unchanged — set VITE_RIVER_USE_AVATAR=true
 // (with a model at public/models/river.vrm) to render it.
@@ -15,6 +16,9 @@ import RiverOrb from '@/presence/RiverOrb.jsx'
 const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR === 'true'
 
 const RiverAvatar = lazy(() => import('@components/RiverAvatar.jsx'))
+
+const ACTIVITY_ICON = { running: 'progress_activity', done: 'check', failed: 'error' }
+const ACTIVITY_STATE = { running: 'working', done: 'done', failed: 'failed' }
 
 // Whether the floating transcript is shown. Per device, so a phone and a
 // desk can differ; defaults to shown.
@@ -46,8 +50,12 @@ export default function ConversationPage({ setAction }) {
     stopRecording,
     audioLevel,
     resetSession,
-    connectionStatus
+    connectionStatus,
+    toolEvents,
   } = useConversation({ token, user })
+
+  // What River has actually done this session, newest last.
+  const activity = useMemo(() => summarizeToolEvents(toolEvents), [toolEvents])
 
   const isThinking = convState === 'thinking' || convState === 'speaking' || streamingContent !== ''
   const isActive = convState !== 'idle' && convState !== 'connecting'
@@ -127,6 +135,17 @@ export default function ConversationPage({ setAction }) {
             {convState === 'idle' ? 'READY' : convState.toUpperCase()}
           </span>
         </div>
+        {activity.length > 0 && (
+          <ul className="rs-speak-activity" aria-label="What River has been doing">
+            {activity.map((a) => (
+              <li key={a.key} className={`rs-speak-activity-item is-${a.status}`}>
+                <span className="material-symbols-rounded" aria-hidden="true">{ACTIVITY_ICON[a.status]}</span>
+                <span className="rs-speak-activity-label">{a.label}</span>
+                <span className="rs-speak-activity-state">{ACTIVITY_STATE[a.status]}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="rs-speak-orb">

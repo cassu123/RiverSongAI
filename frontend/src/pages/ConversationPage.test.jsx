@@ -21,13 +21,43 @@ function setup() {
   return { panel, toggle, rerenderBar }
 }
 
+describe('Voice page status', () => {
+  beforeEach(() => {
+    conv = {
+      convState: 'idle', messages: [], streamingContent: '', error: null, setError: vi.fn(),
+      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), audioLevel: 0,
+      resetSession: vi.fn(), connectionStatus: 'connected', toolEvents: [],
+    }
+  })
+
+  it('calls idle what it is, and invents no activity', () => {
+    const page = render(<ConversationPage setAction={() => {}} />)
+    expect(page.container.textContent).toContain('READY')
+    expect(page.container.textContent).not.toMatch(/AUTONOMOUS|temporal|subroutines/i)
+    expect(page.container.querySelector('.rs-speak-activity')).toBeNull()
+  })
+
+  it('lists the tool calls River really made', () => {
+    conv.toolEvents = [
+      { type: 'tool_use', tool: 'control_device', input: { entity: 'light.living_room' } },
+      { type: 'tool_result', tool: 'control_device', result: 'ok' },
+      { type: 'tool_use', tool: 'find_notes', input: {} },
+    ]
+    const page = render(<ConversationPage setAction={() => {}} />)
+    const items = [...page.container.querySelectorAll('.rs-speak-activity-item')]
+    expect(items.map((li) => li.className.match(/is-(\w+)/)[1])).toEqual(['done', 'running'])
+    expect(items[0].textContent).toContain('Control device')
+    expect(items[1].textContent).toContain('Find notes')
+  })
+})
+
 describe('Voice page transcript panel', () => {
   beforeEach(() => {
     localStorage.clear()
     conv = {
       convState: 'connecting', messages: [], streamingContent: '', error: null, setError: vi.fn(),
       isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), audioLevel: 0,
-      resetSession: vi.fn(), connectionStatus: 'connecting',
+      resetSession: vi.fn(), connectionStatus: 'connecting', toolEvents: [],
     }
   })
 
