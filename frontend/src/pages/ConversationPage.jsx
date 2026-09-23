@@ -78,12 +78,16 @@ export default function ConversationPage({ setAction }) {
     if (!setAction) return
     setAction(
       <div className="rs-chat-input-container">
-        <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
-          <span className="rs-status-dot" style={{ background: isActive ? 'var(--rs-status-nominal)' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
-          <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.1em' }}>
-            {convState === 'idle' ? 'READY' : convState.toUpperCase()}
-          </span>
-        </div>
+        {/* Idle needs no label: on a wall panel she is simply there. Only a
+            state that means something happening gets named. */}
+        {convState !== 'idle' && (
+          <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
+            <span className="rs-status-dot" style={{ background: isActive ? 'var(--rs-status-nominal)' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
+            <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.1em' }}>
+              {convState.toUpperCase()}
+            </span>
+          </div>
+        )}
         <div className="rs-chat-input-controls">
           <div className="rs-chat-input-left">
             <button className={`rs-pill ${muted ? 'is-active' : ''}`} onClick={handleToggleMute}>
@@ -129,12 +133,14 @@ export default function ConversationPage({ setAction }) {
   return (
     <div className="rs-speak-stage">
       <div className="rs-speak-status rs-flex rs-flex-col rs-items-center">
-        <div className="rs-flex rs-items-center rs-gap-2">
-          <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
-          <span className="rs-type-h3 rs-fw-600" style={{ letterSpacing: '0.15em', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
-            {convState === 'idle' ? 'READY' : convState.toUpperCase()}
-          </span>
-        </div>
+        {convState !== 'idle' && (
+          <div className="rs-flex rs-items-center rs-gap-2">
+            <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
+            <span className="rs-type-h3 rs-fw-600" style={{ letterSpacing: '0.15em', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
+              {convState.toUpperCase()}
+            </span>
+          </div>
+        )}
         {activity.length > 0 && (
           <ul className="rs-speak-activity" aria-label="What River has been doing">
             {activity.map((a) => (

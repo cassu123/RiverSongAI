@@ -30,11 +30,24 @@ describe('Voice page status', () => {
     }
   })
 
-  it('calls idle what it is, and invents no activity', () => {
-    const page = render(<ConversationPage setAction={() => {}} />)
-    expect(page.container.textContent).toContain('READY')
-    expect(page.container.textContent).not.toMatch(/AUTONOMOUS|temporal|subroutines/i)
+  it('shows no status at all while idle, and invents no activity', () => {
+    let bar = null
+    const page = render(<ConversationPage setAction={(n) => { bar = n }} />)
+    const barView = render(<>{bar}</>)
+    const text = page.container.textContent + barView.container.textContent
+    expect(text).not.toMatch(/READY|IDLE|AUTONOMOUS|temporal|subroutines/i)
+    expect(page.container.querySelector('.rs-speak-status .rs-status-dot')).toBeNull()
+    expect(barView.container.querySelector('.rs-status-dot')).toBeNull()
     expect(page.container.querySelector('.rs-speak-activity')).toBeNull()
+  })
+
+  it('names a state that means something is happening', () => {
+    conv.convState = 'listening'
+    let bar = null
+    const page = render(<ConversationPage setAction={(n) => { bar = n }} />)
+    const barView = render(<>{bar}</>)
+    expect(page.container.textContent).toContain('LISTENING')
+    expect(barView.container.textContent).toContain('LISTENING')
   })
 
   it('lists the tool calls River really made', () => {
