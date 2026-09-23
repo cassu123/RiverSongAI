@@ -401,9 +401,14 @@ function compile(gl, type, src) {
 
 function program(gl, vs, fs) {
   const p = gl.createProgram()
-  gl.attachShader(p, compile(gl, gl.VERTEX_SHADER, vs))
-  gl.attachShader(p, compile(gl, gl.FRAGMENT_SHADER, fs))
+  const v = compile(gl, gl.VERTEX_SHADER, vs)
+  const f = compile(gl, gl.FRAGMENT_SHADER, fs)
+  gl.attachShader(p, v)
+  gl.attachShader(p, f)
   gl.linkProgram(p)
+  // Flag the shaders now; they go when the program does.
+  gl.deleteShader(v)
+  gl.deleteShader(f)
   if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(`river orb link: ${gl.getProgramInfoLog(p)}`)
   const u = {}
   const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS)
@@ -551,7 +556,21 @@ export function createOrbRenderer(canvas, { detail = 'full', random = Math.rando
       gl.disableVertexAttribArray(aKind)
     },
 
+    /** Free what this renderer made, but keep the context: the same canvas
+     *  may get a new renderer straight away (StrictMode's second mount, a
+     *  context restore), and a lost context would make that one fail. */
     destroy() {
+      gl.deleteBuffer(quad)
+      gl.deleteBuffer(seedBuf)
+      gl.deleteBuffer(kindBuf)
+      gl.deleteProgram(body.p)
+      gl.deleteProgram(motes.p)
+    },
+
+    /** Give the context back to the browser. Only once the canvas is gone
+     *  for good — browsers cap live contexts, and waiting for GC to free
+     *  them can push out one that is still on screen. */
+    release() {
       gl.getExtension('WEBGL_lose_context')?.loseContext()
     },
   }

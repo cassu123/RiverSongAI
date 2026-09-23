@@ -102,8 +102,11 @@ export default function RiverOrb({ detail = 'full', className = '', label }) {
       document.removeEventListener('visibilitychange', onVisibility)
       canvas.removeEventListener('webglcontextlost', onLost)
       canvas.removeEventListener('webglcontextrestored', onRestored)
-      // Releasing a context that was just restored would lose it again.
-      if (!lost) renderer.destroy()
+      renderer.destroy()
+      // Release the context only if the canvas has really left the page. In
+      // StrictMode's double mount, and after a context restore, the same
+      // canvas is set up again at once and needs it.
+      setTimeout(() => { if (!lost && !canvas.isConnected) renderer.release() }, 0)
     }
   }, [detail, generation])
 
