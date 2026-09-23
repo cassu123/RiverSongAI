@@ -127,7 +127,11 @@ const EVENTS = {
 
 /* ------------------------------------------------------------------ mind */
 
-export function createMind({ random = Math.random, reducedMotion = false } = {}) {
+/**
+ * `wallClock` gives the real time for night dimming. tick() is fed frame
+ * timestamps, which count from page load and are no use as a time of day.
+ */
+export function createMind({ random = Math.random, reducedMotion = false, wallClock = Date.now } = {}) {
   const rand = random
   const noise = makeNoise(rand)
   const noiseOffset = {}
@@ -139,6 +143,8 @@ export function createMind({ random = Math.random, reducedMotion = false } = {})
   let clock = 0                 // seconds of her own time
   let nextEventAt = 3 + rand() * 4
   let charge = 0                // slow mood: rises while busy, decays over minutes
+  let night = 1                 // 0.78 between 23:00 and 06:00, real local time
+  let hourCheckedAt = -Infinity
   const envelopes = []          // active unprompted behaviours / reactions
 
   const dial = {}
@@ -279,8 +285,12 @@ export function createMind({ random = Math.random, reducedMotion = false } = {})
       // --- mood ---------------------------------------------------------
       if (state !== 'idle') charge = Math.min(1, charge + dt / 45)
       charge *= Math.exp(-dt / 150)
-      const hour = new Date(nowMs).getHours()
-      const night = hour >= 23 || hour < 6 ? 0.78 : 1
+      // The hour moves slowly; no need for a Date every frame.
+      if (clock - hourCheckedAt > 30 || hourCheckedAt === -Infinity) {
+        const hour = new Date(wallClock()).getHours()
+        night = hour >= 23 || hour < 6 ? 0.78 : 1
+        hourCheckedAt = clock
+      }
 
       // --- envelopes ------------------------------------------------------
       for (const k in envTotals) envTotals[k] = 0

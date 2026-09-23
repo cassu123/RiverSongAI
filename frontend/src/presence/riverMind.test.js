@@ -91,6 +91,20 @@ describe('riverMind', () => {
   })
 })
 
+describe('night dimming', () => {
+  // The frame timestamps a renderer passes are milliseconds since page load,
+  // not wall-clock time. Night must follow the real clock either way.
+  const at = (h) => () => new Date(2026, 0, 15, h, 30).getTime()
+
+  it('is not dimmed at midday, whatever the frame timestamps are', () => {
+    const noon = createMind({ random: seeded(9), wallClock: at(12) })
+    const night = createMind({ random: seeded(9), wallClock: at(2) })
+    let a, b, t = 0
+    for (let i = 0; i < 300; i++) { t += FRAME; a = noon.tick(t); b = night.tick(t) }
+    expect(a.energy).toBeGreaterThan(b.energy + 0.05)
+  })
+})
+
 describe('the shared mind on the app bus', () => {
   const send = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }))
 
