@@ -96,6 +96,11 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         setToolEvents(p => [...p, event])
         // A tool running is the commonest reason for a long silence mid-turn.
         armStreamWatchdog()
+        // Tell River's body she is doing something, so it shows: she reaches
+        // out when a tool starts and gathers back in when it returns.
+        window.dispatchEvent(new CustomEvent('rs-activity', {
+          detail: { phase: type === 'tool_use' ? 'start' : 'end' },
+        }))
         break
       case 'stream_done':
         finalizeStream()
@@ -180,9 +185,9 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     }
   }, [convState])
 
-  // Amplitude on its own event. PresenceOrb has always documented
-  // `rs-presence {state, level}` but only the state was ever dispatched, so
-  // every avatar outside this page was deaf to the voice and could not pulse.
+  // Amplitude on its own event. River's mind (presence/riverMind.js) reads
+  // `rs-presence {state, level}`; only the state used to be dispatched, so
+  // every orb outside this page was deaf to the voice and could not pulse.
   // Kept separate from the state effect so a 60fps level never re-runs it.
   useEffect(() => {
     if (convState !== 'listening' && convState !== 'speaking') return

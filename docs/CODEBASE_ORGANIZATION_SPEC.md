@@ -229,7 +229,8 @@ Group the 62 routes into 7 functional subdirectories while preserving `api/route
 * `src/__tests__/`: Move `CulinaryPage.test.jsx` and `VehiclePage.test.jsx`.
 
 #### Components Partitioning
-* `src/components/conversation/`: `ChatInterface`, `ConversationPanel`, `RiverAvatar`, `RiverStatusBox`, `PresenceBulb`, `AudioVisualizer`
+* `src/components/conversation/`: `ChatInterface`, `ConversationPanel`, `RiverAvatar`, `RiverStatusBox`
+* `src/presence/` (already in place): `RiverOrb`, `riverMind`, `riverOrbGL` — River's placeholder body and the behaviour model the avatar will share. Replaces `PresenceBulb` and `AudioVisualizer`, both deleted.
 * `src/components/culinary/`: `AddRecipeModal`, `AppliancePanel`, `CookPlanTab`, `CookPlanTimeline`, `ShoppingListTab`, `StepTimer`
 * `src/components/vehicles/`: `MaintenancePulse`, `AssetDetailModal`, `JobWalkthroughModal`
 * `src/components/widgets/`: `PulseWidget`, `DaemonHealthWidget`, `HealthCard`, `RateIndicator`

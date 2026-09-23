@@ -210,93 +210,6 @@
 }
 .rs-mark-btn:active { transform: scale(0.92); }
 
-.rs-orb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--primary);
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 0 12px var(--primary);
-  transition: width 0.4s var(--rs-motion-curve), 
-              height 0.4s var(--rs-motion-curve), 
-              opacity 0.4s var(--rs-motion-curve), 
-              transform 0.3s ease, 
-              box-shadow 0.3s ease;
-}
-.rs-orb:hover { transform: scale(1.2); box-shadow: 0 0 20px var(--primary); }
-
-.rs-orb.is-large {
-  width: 24px;
-  height: 24px;
-  box-shadow: 0 0 16px var(--primary);
-  animation: rs-orb-breathe 3s ease-in-out infinite;
-}
-
-.rs-orb.is-small {
-  width: 12px;
-  height: 12px;
-  opacity: 0.6;
-  animation: rs-orb-breathe 4s ease-in-out infinite;
-}
-
-@keyframes rs-orb-breathe {
-  0%, 100% { opacity: 0.6; box-shadow: 0 0 8px var(--primary); }
-  50%       { opacity: 1;   box-shadow: 0 0 20px var(--primary); }
-}
-
-/* ── Presence states (PresenceOrb.jsx) ─────────────────────────────────────
-   The orb is River's pulse: ripples while she listens, shimmers while she
-   thinks, beats while she speaks, flares when she has something to say. */
-
-.rs-orb.is-listening {
-  opacity: 1;
-  animation: rs-orb-listen 1.6s ease-out infinite;
-}
-@keyframes rs-orb-listen {
-  0%   { box-shadow: 0 0 10px var(--primary),
-                     0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent); }
-  100% { box-shadow: 0 0 14px var(--primary),
-                     0 0 0 16px color-mix(in srgb, var(--primary) 0%, transparent); }
-}
-
-.rs-orb.is-thinking {
-  opacity: 1;
-  animation: rs-orb-think 2.4s ease-in-out infinite;
-}
-@keyframes rs-orb-think {
-  0%, 100% { filter: saturate(0.7) brightness(0.9); box-shadow: 0 0 10px var(--primary); }
-  50%      { filter: saturate(1.6) brightness(1.25); box-shadow: 0 0 24px var(--primary); }
-}
-
-.rs-orb.is-speaking {
-  opacity: 1;
-  animation: rs-orb-speak 0.55s ease-in-out infinite;
-}
-@keyframes rs-orb-speak {
-  0%, 100% { transform: scale(1);    box-shadow: 0 0 12px var(--primary); }
-  50%      { transform: scale(1.22); box-shadow: 0 0 26px var(--primary); }
-}
-
-.rs-orb.is-attention {
-  animation: rs-orb-attention 0.8s ease-out 3;
-}
-@keyframes rs-orb-attention {
-  0%   { box-shadow: 0 0 12px var(--primary),
-                     0 0 0 0 color-mix(in srgb, var(--primary) 70%, transparent); }
-  100% { box-shadow: 0 0 18px var(--primary),
-                     0 0 0 22px color-mix(in srgb, var(--primary) 0%, transparent); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rs-orb.is-listening, .rs-orb.is-thinking,
-  .rs-orb.is-speaking, .rs-orb.is-attention {
-    animation: none;
-    opacity: 1;
-    box-shadow: 0 0 20px var(--primary);
-  }
-}
-
 .rs-hamburger {
   background: none;
   border: none;
@@ -370,6 +283,31 @@
 .rs-action-inner {
   max-width: 1000px;
   margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-3);
+}
+
+/* The page's own bar takes whatever width River leaves it. */
+.rs-action-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* River in the bar: the same compact orb as the dock, and the same job —
+   tap her to talk. 48px keeps her a full touch target. */
+.rs-action-river {
+  all: unset;
+  flex: none;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.rs-action-river:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* --- Flows (Bento 2.0 Grid Architecture) ---------------------------------- */
@@ -675,21 +613,14 @@
 .rs-mobile-dock-btn.is-voice-hero {
   position: relative;
   color: #fff;
-  padding: 4px;
+  padding: 0;
 }
 
-.rs-dock-pulse-halo {
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 30%, transparent) 0%, transparent 70%);
-  animation: rs-dock-halo-pulse 2.5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes rs-dock-halo-pulse {
-  0%, 100% { transform: scale(0.9); opacity: 0.4; }
-  50% { transform: scale(1.2); opacity: 0.8; }
+/* River in the dock. Her own glow is part of her; no extra halo behind. */
+.rs-river-orb.rs-dock-orb {
+  inline-size: 48px;
+  block-size: 48px;
+  flex: none;
 }
 
 /* Leave bottom room for floating dock when there is no action bar */

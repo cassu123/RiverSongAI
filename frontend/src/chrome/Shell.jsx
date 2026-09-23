@@ -1,5 +1,5 @@
 import React from 'react'
-import PresenceOrb from './PresenceOrb.jsx'
+import RiverOrb from '@/presence/RiverOrb.jsx'
 import RsMark from '@components/RsMark.jsx'
 
 const PAGE_TITLES = {
@@ -34,7 +34,7 @@ const PAGE_TITLES = {
  *
  *   Zone 1 (top)    : Floating Glass Header — Monogram · Page Title · Menu
  *   Zone 2 (middle) : Content Stage — independent scrolling viewport
- *   Zone 3 (bottom) : Contextual Action Bar (e.g. Chat input)
+ *   Zone 3 (bottom) : Contextual Action Bar (e.g. Chat input), River on its left
  *   Zone 4 (mobile) : Floating Glass Mobile Dock (< 768px)
  */
 export default function Shell({
@@ -93,10 +93,18 @@ export default function Shell({
         </div>
       </main>
 
-      {/* ZONE 3: ACTION BAR */}
+      {/* ZONE 3: ACTION BAR
+          A page's bar replaces the dock, which is where River lives — so she
+          comes along into the bar, on the left, as the way into Voice. Not on
+          the Voice page itself: she is already the whole stage there. */}
       <div id="rs-shell-action" className="rs-action" style={{ display: action ? 'block' : 'none' }}>
         <div className="rs-action-inner">
-          {action}
+          {action && onOpenSpeak && currentPage !== 'speak' && (
+            <button className="rs-action-river" onClick={onOpenSpeak} aria-label="Talk to River" title="Talk to River">
+              <RiverOrb detail="compact" />
+            </button>
+          )}
+          <div className="rs-action-slot">{action}</div>
         </div>
       </div>
       {!action && <div style={{ height: 'env(safe-area-inset-bottom)' }} />}
@@ -128,8 +136,7 @@ export default function Shell({
             aria-label="Voice conversation"
             title="Talk with River"
           >
-            <div className="rs-dock-pulse-halo" />
-            <PresenceOrb mode="workshop" interactive={false} />
+            <RiverOrb detail="compact" className="rs-dock-orb" />
           </button>
           <button
             className={`rs-floating-dock-btn rs-mobile-dock-btn ${currentPage === 'briefing' ? 'is-active' : ''}`}

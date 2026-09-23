@@ -1,0 +1,17 @@
+/* RiverOrb — the canvas fills whatever box the page gives it. */
+.rs-river-orb {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  pointer-events: none;
+}
+
+/* No WebGL: a still, soft glow in the universe's colour. No hard edge, no
+   loop — better a quiet placeholder than a repeating one. */
+.rs-river-orb.is-fallback {
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--primary) 55%, transparent) 0%,
+    color-mix(in srgb, var(--primary) 16%, transparent) 42%,
+    transparent 68%);
+}

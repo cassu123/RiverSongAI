@@ -66,7 +66,7 @@ function NimTelemetry({ token }) {
   )
 }
 
-export default function DashboardPage({ onNavigate, isAdmin = false, setAction }) {
+export default function DashboardPage({ onNavigate, isAdmin = false }) {
   const { user, token } = useAuth()
   const userId = user?.id || 'default'
 
@@ -129,20 +129,6 @@ export default function DashboardPage({ onNavigate, isAdmin = false, setAction }
       }
     } catch {}
   }, [userId])
-
-  useEffect(() => {
-    if (setAction) {
-      setAction(
-        <div className="rs-speak-actions">
-          <button className="rs-btn-primary" onClick={() => onNavigate('speak')}>
-            <span className="material-symbols-rounded">mic</span>
-            <span>Speak to River</span>
-          </button>
-        </div>
-      )
-    }
-    return () => { if (setAction) setAction(null) }
-  }, [setAction, onNavigate])
 
   const firstName = user?.display_name?.split(' ')[0] || 'Operator'
   const statusOk = !stats || stats.status === 'operational'
