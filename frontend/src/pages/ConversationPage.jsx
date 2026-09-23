@@ -53,30 +53,6 @@ export default function ConversationPage({ setAction }) {
   const isActive = convState !== 'idle' && convState !== 'connecting'
   const visualLvl = (convState === 'listening' || convState === 'speaking') ? audioLevel : 0
 
-  // Simulate autonomous background thinking logs
-  const [sysLogs, setSysLogs] = useState([])
-  useEffect(() => {
-    if (convState === 'listening' || convState === 'speaking') {
-      setSysLogs([])
-      return
-    }
-    const interval = setInterval(() => {
-      const logs = [
-        "Analyzing environment context...",
-        "Optimizing subroutines...",
-        "Awaiting auditory input...",
-        "Background task: 0x4FA2 complete.",
-        "Re-calibrating temporal nodes...",
-        "Monitoring connected nodes..."
-      ];
-      setSysLogs(prev => {
-        const newLogs = [...prev, logs[Math.floor(Math.random() * logs.length)]]
-        return newLogs.slice(-5)
-      })
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [convState])
-
   const handleToggleMute = useCallback(() => {
     if (muted && convState === 'listening') stopRecording()
     setMuted(!muted)
@@ -97,7 +73,7 @@ export default function ConversationPage({ setAction }) {
         <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
           <span className="rs-status-dot" style={{ background: isActive ? 'var(--rs-status-nominal)' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
           <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.1em' }}>
-            {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
+            {convState === 'idle' ? 'READY' : convState.toUpperCase()}
           </span>
         </div>
         <div className="rs-chat-input-controls">
@@ -148,19 +124,9 @@ export default function ConversationPage({ setAction }) {
         <div className="rs-flex rs-items-center rs-gap-2">
           <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
           <span className="rs-type-h3 rs-fw-600" style={{ letterSpacing: '0.15em', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
-            {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}
+            {convState === 'idle' ? 'READY' : convState.toUpperCase()}
           </span>
         </div>
-        {convState === 'idle' && (
-          <div className="rs-mt-3 rs-text-center rs-type-micro rs-mono rs-c-accent" style={{
-            minHeight: 80,
-            pointerEvents: 'none',
-          }}>
-            {sysLogs.map((log, i) => (
-              <div key={i} style={{ animation: 'slideUpFade 0.3s ease-out' }}>&gt; {log}</div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="rs-speak-orb">
