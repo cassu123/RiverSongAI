@@ -378,9 +378,14 @@ export function getRiverMind() {
   shared = createMind({ reducedMotion: !!reduced })
   if (typeof window !== 'undefined') {
     window.addEventListener('rs-presence', (e) => {
-      if (e.detail?.state) shared.setState(e.detail.state)
+      const st = e.detail?.state
+      if (st) shared.setState(st)
+      // The voice loop only sends a level while listening or speaking. Any
+      // other state arriving without one means the audio has stopped —
+      // otherwise the last amplitude sticks through transcribing, connecting
+      // or an error.
       if (typeof e.detail?.level === 'number') shared.setLevel(e.detail.level)
-      if (e.detail?.state === 'idle' || e.detail?.state === 'thinking') shared.setLevel(0)
+      else if (st && st !== 'listening' && st !== 'speaking') shared.setLevel(0)
     })
     window.addEventListener('rs-activity', (e) => shared.work(e.detail?.phase === 'end' ? 'end' : 'start'))
     window.addEventListener('rs-toast', () => shared.attention())

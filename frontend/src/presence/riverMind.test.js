@@ -122,6 +122,21 @@ describe('the shared mind on the app bus', () => {
     send('rs-presence', { state: 'idle' })
     expect(mind.state).toBe('idle')
   })
+
+  it('lets go of the voice level when a turn moves on to transcribing', () => {
+    const mind = getRiverMind()
+    let t = 50_000
+    mind.tick(t)
+    send('rs-presence', { state: 'listening', level: 0.9 })
+    let s
+    for (let i = 0; i < 30; i++) s = mind.tick((t += FRAME))
+    expect(s.level).toBeGreaterThan(0.5)
+    // useConversation sends level only while listening or speaking.
+    send('rs-presence', { state: 'transcribing' })
+    for (let i = 0; i < 90; i++) s = mind.tick((t += FRAME))
+    expect(s.level).toBeLessThan(0.05)
+    send('rs-presence', { state: 'idle' })
+  })
 })
 
 describe('derivePalette', () => {
