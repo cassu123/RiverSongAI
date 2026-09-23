@@ -1,8 +1,9 @@
-import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, Suspense, lazy, useEffect } from 'react'
 import { useAuth } from '@context/AuthContext.jsx'
 import { useConversation } from '@hooks/useConversation.js'
 import RsMarkdown from '@components/RsMarkdown.jsx'
 import RiverOrb from '@/presence/RiverOrb.jsx'
+import { summarizeToolEvents } from '@/utils/toolActivity.js'
 
 // The VRM character path is intact and unchanged — set VITE_RIVER_USE_AVATAR=true
 // (with a model at public/models/river.vrm) to render it.
@@ -15,6 +16,9 @@ import RiverOrb from '@/presence/RiverOrb.jsx'
 const useAvatar = import.meta.env?.VITE_RIVER_USE_AVATAR === 'true'
 
 const RiverAvatar = lazy(() => import('@components/RiverAvatar.jsx'))
+
+const ACTIVITY_ICON = { running: 'progress_activity', done: 'check', failed: 'error' }
+const ACTIVITY_STATE = { running: 'working', done: 'done', failed: 'failed' }
 
 // Whether the floating transcript is shown. Per device, so a phone and a
 // desk can differ; defaults to shown.
@@ -46,36 +50,16 @@ export default function ConversationPage({ setAction }) {
     stopRecording,
     audioLevel,
     resetSession,
-    connectionStatus
+    connectionStatus,
+    toolEvents,
   } = useConversation({ token, user })
+
+  // What River has actually done this session, newest last.
+  const activity = useMemo(() => summarizeToolEvents(toolEvents), [toolEvents])
 
   const isThinking = convState === 'thinking' || convState === 'speaking' || streamingContent !== ''
   const isActive = convState !== 'idle' && convState !== 'connecting'
   const visualLvl = (convState === 'listening' || convState === 'speaking') ? audioLevel : 0
-
-  // Simulate autonomous background thinking logs
-  const [sysLogs, setSysLogs] = useState([])
-  useEffect(() => {
-    if (convState === 'listening' || convState === 'speaking') {
-      setSysLogs([])
-      return
-    }
-    const interval = setInterval(() => {
-      const logs = [
-        "Analyzing environment context...",
-        "Optimizing subroutines...",
-        "Awaiting auditory input...",
-        "Background task: 0x4FA2 complete.",
-        "Re-calibrating temporal nodes...",
-        "Monitoring connected nodes..."
-      ];
-      setSysLogs(prev => {
-        const newLogs = [...prev, logs[Math.floor(Math.random() * logs.length)]]
-        return newLogs.slice(-5)
-      })
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [convState])
 
   const handleToggleMute = useCallback(() => {
     if (muted && convState === 'listening') stopRecording()
@@ -94,12 +78,16 @@ export default function ConversationPage({ setAction }) {
     if (!setAction) return
     setAction(
       <div className="rs-chat-input-container">
-        <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
-          <span className="rs-status-dot" style={{ background: isActive ? 'var(--rs-status-nominal)' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
-          <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.1em' }}>
-            {convState === 'idle' ? 'AUTONOMOUS MODE' : convState.toUpperCase()}
-          </span>
-        </div>
+        {/* Idle needs no label: on a wall panel she is simply there. Only a
+            state that means something happening gets named. */}
+        {convState !== 'idle' && (
+          <div className="rs-chat-textarea rs-flex rs-items-center" style={{ minHeight: 40 }}>
+            <span className="rs-status-dot" style={{ background: isActive ? 'var(--rs-status-nominal)' : '#6b7280', marginRight: 'var(--rs-space-3)' }} />
+            <span className="rs-type-tiny rs-fw-600" style={{ letterSpacing: '0.1em' }}>
+              {convState.toUpperCase()}
+            </span>
+          </div>
+        )}
         <div className="rs-chat-input-controls">
           <div className="rs-chat-input-left">
             <button className={`rs-pill ${muted ? 'is-active' : ''}`} onClick={handleToggleMute}>
@@ -145,21 +133,24 @@ export default function ConversationPage({ setAction }) {
   return (
     <div className="rs-speak-stage">
       <div className="rs-speak-status rs-flex rs-flex-col rs-items-center">
-        <div className="rs-flex rs-items-center rs-gap-2">
-          <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
-          <span className="rs-type-h3 rs-fw-600" style={{ letterSpacing: '0.15em', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
-            {convState === 'idle' ? 'SYSTEM AUTONOMOUS' : convState.toUpperCase()}
-          </span>
-        </div>
-        {convState === 'idle' && (
-          <div className="rs-mt-3 rs-text-center rs-type-micro rs-mono rs-c-accent" style={{
-            minHeight: 80,
-            pointerEvents: 'none',
-          }}>
-            {sysLogs.map((log, i) => (
-              <div key={i} style={{ animation: 'slideUpFade 0.3s ease-out' }}>&gt; {log}</div>
-            ))}
+        {convState !== 'idle' && (
+          <div className="rs-flex rs-items-center rs-gap-2">
+            <span className="rs-status-dot" style={{ background: isActive ? 'var(--md-tertiary, #4ade80)' : 'var(--primary)' }} />
+            <span className="rs-type-h3 rs-fw-600" style={{ letterSpacing: '0.15em', color: isActive ? 'var(--fg)' : 'var(--primary)' }}>
+              {convState.toUpperCase()}
+            </span>
           </div>
+        )}
+        {activity.length > 0 && (
+          <ul className="rs-speak-activity" aria-label="What River has been doing">
+            {activity.map((a) => (
+              <li key={a.key} className={`rs-speak-activity-item is-${a.status}`}>
+                <span className="material-symbols-rounded" aria-hidden="true">{ACTIVITY_ICON[a.status]}</span>
+                <span className="rs-speak-activity-label">{a.label}</span>
+                <span className="rs-speak-activity-state">{ACTIVITY_STATE[a.status]}</span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 
