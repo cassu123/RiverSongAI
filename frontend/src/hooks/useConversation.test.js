@@ -4,21 +4,24 @@ import { renderHook, act } from '@testing-library/react'
 // The socket: capture what the hook sends and let the test play the server.
 const sent = []
 let serverSays = null
+let connection = 'connected'
 vi.mock('./useWebSocket.js', () => ({
   useWebSocket: (_url, onMessage) => {
     serverSays = onMessage
-    return { sendMessage: (m) => sent.push(m), connectionStatus: 'connected', authError: null }
+    return { sendMessage: (m) => sent.push(m), connectionStatus: connection, authError: null }
   },
 }))
 
 // The mic: record the order of events against the socket.
 const order = []
 let micOpens = true
+// Like the real recorder, stopping reports what it heard synchronously.
+let recording = false
 vi.mock('./useAudioRecorder.js', () => ({
-  useAudioRecorder: () => ({
-    startRecording: vi.fn(async () => { order.push('mic-open'); return micOpens }),
-    stopRecording: vi.fn(),
-    isRecording: false,
+  useAudioRecorder: (cbs) => ({
+    startRecording: vi.fn(async () => { order.push('mic-open'); recording = micOpens; return micOpens }),
+    stopRecording: vi.fn(() => { if (recording) { recording = false; cbs.onComplete(new Int16Array(8)) } }),
+    isRecording: recording,
     audioLevel: 0,
   }),
 }))
@@ -38,7 +41,7 @@ vi.mock('../utils/AudioPlayer.js', () => ({
 
 import { useConversation } from './useConversation.js'
 
-beforeEach(() => { sent.length = 0; order.length = 0; micOpens = true })
+beforeEach(() => { sent.length = 0; order.length = 0; micOpens = true; recording = false; connection = 'connected' })
 
 describe('starting a voice turn', () => {
   it('tells the server before opening the mic, and listens', async () => {
@@ -180,4 +183,27 @@ describe('what River is told about state changes', () => {
     expect(states.slice(3)).toEqual(['idle'])
     window.removeEventListener('rs-presence', onPresence)
   })
+})
+
+describe('mute and connection', () => {
+  const sentAudio = () => sent.filter((m) => m instanceof Int16Array)
+
+  it('Mute stops the mic and throws away what it heard', async () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    await act(async () => { await result.current.startRecording() })
+    expect(result.current.convState).toBe('listening')
+    act(() => { result.current.cancelListening() })
+    expect(recording).toBe(false)
+    expect(sentAudio()).toHaveLength(0)
+    expect(result.current.convState).toBe('idle')
+  })
+
+  it('stopping normally still sends what it heard', async () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    await act(async () => { await result.current.startRecording() })
+    act(() => { result.current.stopRecording() })
+    expect(sentAudio()).toHaveLength(1)
+    expect(result.current.convState).toBe('thinking')
+  })
+
 })

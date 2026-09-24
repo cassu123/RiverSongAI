@@ -25,7 +25,7 @@ describe('Voice page status', () => {
   beforeEach(() => {
     conv = {
       convState: 'idle', messages: [], streamingContent: '', error: null, setError: vi.fn(),
-      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), audioLevel: 0,
+      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), cancelListening: vi.fn(), audioLevel: 0,
       resetSession: vi.fn(), connectionStatus: 'connected', toolEvents: [],
     }
   })
@@ -49,6 +49,15 @@ describe('Voice page status', () => {
     const mic = barView.container.querySelector('.rs-send-btn')
     expect(mic.disabled).toBe(false)
     expect(mic.textContent).toContain('stop')
+  })
+
+  it('Mute while listening cancels the recording', () => {
+    conv.convState = 'listening'
+    let bar = null
+    render(<ConversationPage setAction={(n) => { bar = n }} />)
+    const barView = render(<>{bar}</>)
+    fireEvent.click(barView.container.querySelector('.rs-chat-input-left .rs-pill'))
+    expect(conv.cancelListening).toHaveBeenCalledTimes(1)
   })
 
   it('names a state that means something is happening', () => {
@@ -79,7 +88,7 @@ describe('Voice page transcript panel', () => {
     localStorage.clear()
     conv = {
       convState: 'connecting', messages: [], streamingContent: '', error: null, setError: vi.fn(),
-      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), audioLevel: 0,
+      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), cancelListening: vi.fn(), audioLevel: 0,
       resetSession: vi.fn(), connectionStatus: 'connecting', toolEvents: [],
     }
   })

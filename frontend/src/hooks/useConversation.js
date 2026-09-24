@@ -207,12 +207,24 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     }
   }, [audioPlayer])
 
+  // Set by cancelListening: the recording that is about to finish is thrown
+  // away instead of sent. The recorder reports synchronously from stop.
+  const discardNextRef = useRef(false)
+
   const { startRecording: openMic, stopRecording, isRecording, audioLevel } = useAudioRecorder({
     onComplete: pcm => {
+      if (discardNextRef.current) {
+        discardNextRef.current = false
+        setConvState(s => (s === 'listening' ? 'idle' : s))
+        return
+      }
       setConvState('thinking')
       sendMessage(pcm)
     },
-    onNoSpeech: () => setConvState(s => (s === 'listening' ? 'idle' : s)),
+    onNoSpeech: () => {
+      discardNextRef.current = false
+      setConvState(s => (s === 'listening' ? 'idle' : s))
+    },
   })
 
   useEffect(() => {
@@ -281,6 +293,15 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     return opened
   }, [convState, bargeIn, sendMessage, openMic])
 
+  /** Stop listening and throw away what the mic heard (Mute). */
+  const cancelListening = useCallback(() => {
+    if (isRecording) {
+      discardNextRef.current = true
+      stopRecording()
+    }
+    setConvState(s => (s === 'listening' ? 'idle' : s))
+  }, [isRecording, stopRecording])
+
   const sendText = useCallback((text, overrides = {}) => {
     if (!text.trim()) return
     // Typing over her cuts her off, the same as speaking over her.
@@ -324,6 +345,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     isRecording,
     startRecording: startListening,
     stopRecording,
+    cancelListening,
     bargeIn,
     sendText,
     resetSession,
