@@ -132,3 +132,35 @@ describe('her level while speaking', () => {
     expect(speaking.every((d) => d.level === 0.62)).toBe(true)
   })
 })
+
+describe('errors', () => {
+  it('put River in the error state long enough to be seen, then settle', () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+      act(() => { serverSays({ type: 'error', message: 'TTS error: voice model missing' }) })
+      expect(result.current.convState).toBe('error')
+      expect(result.current.error).toMatch(/TTS error/)
+      act(() => { serverSays({ type: 'idle' }) })          // the server often follows with idle
+      expect(result.current.convState).toBe('error')
+      act(() => { vi.advanceTimersByTime(4500) })
+      expect(result.current.convState).toBe('idle')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('give way at once to something new happening', () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+      act(() => { serverSays({ type: 'error', message: 'x' }) })
+      act(() => { serverSays({ type: 'thinking' }) })
+      expect(result.current.convState).toBe('thinking')
+      act(() => { vi.advanceTimersByTime(4500) })
+      expect(result.current.convState).toBe('thinking')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

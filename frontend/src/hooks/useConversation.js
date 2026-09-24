@@ -20,6 +20,9 @@ const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
  */
 const STREAM_WATCHDOG_MS = 180000
 
+/** How long an error stays visible before River settles back to idle. */
+const ERROR_HOLD_MS = 4000
+
 export function useConversation({ token, user, sessionId, onSessionId, extraQueryParams = {} }) {
   const backendHost = API_BASE ? new URL(API_BASE).host : window.location.host;
   const wsProtocol = API_BASE ? (API_BASE.startsWith('https') ? 'wss:' : 'ws:') : WS_PROTOCOL;
@@ -36,6 +39,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   const [toolEvents, setToolEvents] = useState([])
 
   const streamTimeoutRef = useRef(null)
+  const errorTimerRef = useRef(null)
   const expectedGenIdRef = useRef(0)
   // Newest generation id seen on an audio chunk. The server bumps its id once
   // per turn; interrupting must skip past the one actually playing, or late
@@ -161,9 +165,17 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         break
       }
       case 'idle':
-        if (!audioPlayer.isPlaying && !audioPlayer.pendingDecodes) setConvState('idle')
+        // An error is held for ERROR_HOLD_MS; the idle the server sends right
+        // after one must not wipe it before it has been seen.
+        if (!audioPlayer.isPlaying && !audioPlayer.pendingDecodes) setConvState(s => (s === 'error' ? s : 'idle'))
         break
-      case 'error':   setError(message || 'An unknown error occurred.'); break
+      case 'error':
+        // Nothing used to set the error state, so River never showed one.
+        setError(message || 'An unknown error occurred.')
+        setConvState('error')
+        clearTimeout(errorTimerRef.current)
+        errorTimerRef.current = setTimeout(() => setConvState(s => (s === 'error' ? 'idle' : s)), ERROR_HOLD_MS)
+        break
       case 'session':
         if (onSessionId) onSessionId(session_id)
         break
@@ -191,6 +203,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   useEffect(() => {
     return () => {
       audioPlayer.close()
+      clearTimeout(errorTimerRef.current)
     }
   }, [audioPlayer])
 
