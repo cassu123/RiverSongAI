@@ -29,7 +29,7 @@ vi.mock('../utils/AudioPlayer.js', () => ({
     constructor() { this.isPlaying = false; this.pendingDecodes = 0; this.flushes = 0; this.played = []; this.clips = []; players.push(this) }
     playChunk(pcm) { this.played.push(pcm); return Promise.resolve() }
     playEncoded(buf) { this.clips.push(buf); this.pendingDecodes++; return Promise.resolve() }
-    getLevel() { return 0 }
+    getLevel() { return this.level ?? 0 }
     interrupt() { this.flushes++ }
     stop() { this.flushes++ }
     close() {}
@@ -112,5 +112,23 @@ describe('whole audio clips from the server', () => {
     expect(player().clips).toHaveLength(1)
     expect(player().clips[0]).toBeInstanceOf(ArrayBuffer)
     expect(result.current.convState).toBe('speaking')
+  })
+})
+
+describe('her level while speaking', () => {
+  const player = () => players[players.length - 1]
+
+  it('comes from her own playback, not the mic', async () => {
+    renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    player().level = 0.62
+    const seen = []
+    const onPresence = (e) => { if (typeof e.detail?.level === 'number') seen.push(e.detail) }
+    window.addEventListener('rs-presence', onPresence)
+    act(() => { serverSays({ type: 'speaking' }) })
+    await act(async () => { await new Promise((r) => setTimeout(r, 120)) })
+    window.removeEventListener('rs-presence', onPresence)
+    const speaking = seen.filter((d) => d.state === 'speaking')
+    expect(speaking.length).toBeGreaterThan(0)
+    expect(speaking.every((d) => d.level === 0.62)).toBe(true)
   })
 })

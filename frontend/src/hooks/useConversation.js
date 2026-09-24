@@ -210,15 +210,32 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   }, [convState])
 
   // Amplitude on its own event. River's mind (presence/riverMind.js) reads
-  // `rs-presence {state, level}`; only the state used to be dispatched, so
-  // every orb outside this page was deaf to the voice and could not pulse.
-  // Kept separate from the state effect so a 60fps level never re-runs it.
+  // `rs-presence {state, level}`. Kept separate from the state effect so a
+  // 60fps level never re-runs it.
+  //
+  // Listening: your voice, from the mic recorder.
   useEffect(() => {
-    if (convState !== 'listening' && convState !== 'speaking') return
+    if (convState !== 'listening') return
     window.dispatchEvent(new CustomEvent('rs-presence', {
       detail: { state: convState, level: audioLevel },
     }))
   }, [audioLevel, convState])
+
+  // Speaking: her voice, measured from what the player is actually playing.
+  // This used to send the mic level here too — and the mic is closed by the
+  // time she speaks, so her level was always 0.
+  useEffect(() => {
+    if (convState !== 'speaking') return undefined
+    let raf = 0
+    const tick = () => {
+      window.dispatchEvent(new CustomEvent('rs-presence', {
+        detail: { state: 'speaking', level: audioPlayer.getLevel() },
+      }))
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [convState, audioPlayer])
 
   const bargeIn = useCallback(() => {
     if (convState === 'speaking' || convState === 'thinking') {

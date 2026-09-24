@@ -36,7 +36,12 @@ export class AudioPlayer {
     if (!this.worklet) {
       await this.ctx.audioWorklet.addModule('/playback-processor.js')
       this.worklet = new AudioWorkletNode(this.ctx, 'playback-processor')
-      this.worklet.connect(this.ctx.destination)
+      // Tap the output so the orb can follow River's own voice.
+      this.analyser = this.ctx.createAnalyser()
+      this.analyser.fftSize = 1024
+      this.levelBuf = new Float32Array(this.analyser.fftSize)
+      this.worklet.connect(this.analyser)
+      this.analyser.connect(this.ctx.destination)
       
       this.worklet.port.onmessage = (e) => {
         if (e.data.type === 'playback_state') {
@@ -94,6 +99,19 @@ export class AudioPlayer {
   }
 
   /**
+   * How loud River is right now, 0..1 — the RMS of what is actually playing.
+   * Speech from the TTS sits around 0.05-0.2 RMS, so it is scaled to use the
+   * range; the mic level (vad-processor.js) is scaled for a quieter source.
+   */
+  getLevel() {
+    if (!this.analyser || !this.isPlaying) return 0
+    this.analyser.getFloatTimeDomainData(this.levelBuf)
+    let sum = 0
+    for (let i = 0; i < this.levelBuf.length; i++) sum += this.levelBuf[i] * this.levelBuf[i]
+    return Math.min(1, Math.sqrt(sum / this.levelBuf.length) * 5)
+  }
+
+  /**
    * Instantly stops playback and flushes the ring buffer.
    */
   interrupt() {
@@ -119,6 +137,7 @@ export class AudioPlayer {
     }
     this.ctx = null
     this.worklet = null
+    this.analyser = null
     this.initPromise = null
   }
 }
