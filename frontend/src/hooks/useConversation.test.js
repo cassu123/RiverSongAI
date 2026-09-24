@@ -23,10 +23,11 @@ vi.mock('./useAudioRecorder.js', () => ({
   }),
 }))
 
+const players = []
 vi.mock('../utils/AudioPlayer.js', () => ({
   AudioPlayer: class {
-    constructor() { this.isPlaying = false; this.flushes = 0 }
-    playChunk() { return Promise.resolve() }
+    constructor() { this.isPlaying = false; this.flushes = 0; this.played = []; players.push(this) }
+    playChunk(pcm) { this.played.push(pcm); return Promise.resolve() }
     playEncoded() { return Promise.resolve() }
     getLevel() { return 0 }
     interrupt() { this.flushes++ }
@@ -58,5 +59,43 @@ describe('starting a voice turn', () => {
     await act(async () => { await result.current.startRecording() })
     expect(result.current.convState).toBe('idle')
     expect(result.current.error).toMatch(/microphone/i)
+  })
+})
+
+describe('River speaking', () => {
+  const player = () => players[players.length - 1]
+
+  it('does not cut off a sentence when the next one arrives', () => {
+    renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    // The server sends "speaking" before every sentence's audio.
+    act(() => { serverSays({ type: 'speaking' }) })
+    act(() => { serverSays({ type: 'speaking' }) })
+    act(() => { serverSays({ type: 'speaking' }) })
+    expect(player().flushes).toBe(0)
+  })
+
+  const chunk = (gen) => {
+    const buf = new ArrayBuffer(4 + 8)
+    new DataView(buf).setUint16(0, gen, true)
+    return { type: 'audio_chunk', data: buf }
+  }
+
+  it('drops late audio from a reply you cut off, even many turns in', () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    act(() => { serverSays({ type: 'speaking' }); serverSays(chunk(7)) })
+    const before = player().played.length
+    act(() => { result.current.bargeIn() })
+    act(() => { serverSays(chunk(7)) })          // still in flight from the cut-off reply
+    expect(player().played.length).toBe(before)
+    act(() => { serverSays({ type: 'speaking' }); serverSays(chunk(8)) })  // the next turn
+    expect(player().played.length).toBe(before + 1)
+  })
+
+  it('still cuts her off when you type over her', () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    act(() => { serverSays({ type: 'speaking' }) })
+    act(() => { result.current.sendText('stop, different question') })
+    expect(player().flushes).toBeGreaterThan(0)
+    expect(sent.some((m) => m?.type === 'interrupt')).toBe(true)
   })
 })

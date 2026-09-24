@@ -37,6 +37,10 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
 
   const streamTimeoutRef = useRef(null)
   const expectedGenIdRef = useRef(0)
+  // Newest generation id seen on an audio chunk. The server bumps its id once
+  // per turn; interrupting must skip past the one actually playing, or late
+  // chunks from the cut-off reply still play.
+  const lastGenIdRef = useRef(-1)
 
   const finalizeStream = useCallback(() => {
     setStreamingContent(current => {
@@ -118,8 +122,11 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         setStreamingContent('')
         break
       case 'speaking':
+        // The server sends this before every sentence's audio, not once per
+        // reply. Flushing here cut each sentence off when the next arrived.
+        // Stale audio from an earlier turn is dropped by gen_id instead, and
+        // a new turn from the user interrupts her (bargeIn).
         setConvState('speaking')
-        audioPlayer.stop()
         break
       case 'audio_chunk': {
         const buffer = data
@@ -130,6 +137,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         if (gen_id < expectedGenIdRef.current) {
           return
         }
+        lastGenIdRef.current = Math.max(lastGenIdRef.current, gen_id)
         
         const pcm = new Int16Array(buffer, 4)
         setConvState('speaking')
@@ -199,7 +207,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   const bargeIn = useCallback(() => {
     if (convState === 'speaking' || convState === 'thinking') {
       audioPlayer.interrupt()
-      expectedGenIdRef.current += 1
+      expectedGenIdRef.current = Math.max(expectedGenIdRef.current, lastGenIdRef.current) + 1
       sendMessage({ type: 'interrupt' })
       setConvState('idle')
     }
@@ -224,6 +232,8 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
 
   const sendText = useCallback((text, overrides = {}) => {
     if (!text.trim()) return
+    // Typing over her cuts her off, the same as speaking over her.
+    if (convState === 'speaking' || convState === 'thinking') bargeIn()
     setError(null)
     setMessages(p => [...p, { role: 'user', text }])
     setStreamingContent('')
@@ -236,7 +246,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     // The user saw their own message appear (it is added optimistically just
     // above) and River never answered.
     sendMessage({ type: 'text_input', text, ...overrides })
-  }, [sendMessage])
+  }, [sendMessage, convState, bargeIn])
 
   const resetSession = useCallback(() => {
     sendMessage({ type: 'reset_history', flush_memory: true })
