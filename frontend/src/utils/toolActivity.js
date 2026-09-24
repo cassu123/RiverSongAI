@@ -14,6 +14,17 @@
  * with "Error" is a failure.
  */
 
+/**
+ * Did this tool_result report a failure? Trusts the server's `ok`; a server
+ * from before `ok` existed is read the old way (a result starting "Error").
+ * Shared by the Voice feed and the Chat tool panel so they always agree.
+ */
+export function toolResultFailed(evt) {
+  return typeof evt?.ok === 'boolean'
+    ? !evt.ok
+    : /^\s*error\b/i.test(String(evt?.result ?? ''))
+}
+
 /** "control_device" -> "Control device" */
 export function toolLabel(name) {
   const words = String(name || 'tool').replace(/[_.]+/g, ' ').trim()
@@ -33,10 +44,7 @@ export function summarizeToolEvents(events = [], limit = 4) {
     } else if (evt?.type === 'tool_result') {
       for (let j = calls.length - 1; j >= 0; j--) {
         if (calls[j].tool === evt.tool && calls[j].status === 'running') {
-          const failed = typeof evt.ok === 'boolean'
-            ? !evt.ok
-            : /^\s*error\b/i.test(String(evt.result ?? ''))
-          calls[j].status = failed ? 'failed' : 'done'
+          calls[j].status = toolResultFailed(evt) ? 'failed' : 'done'
           break
         }
       }

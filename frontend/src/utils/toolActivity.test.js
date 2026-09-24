@@ -47,3 +47,13 @@ describe('toolLabel', () => {
     expect(toolLabel('lights.set_brightness')).toBe('Lights set brightness')
   })
 })
+
+import { toolResultFailed } from './toolActivity.js'
+describe('toolResultFailed', () => {
+  it('follows ok, and falls back to the Error prefix without it', () => {
+    expect(toolResultFailed({ ok: false, result: 'I tried to ... encountered an issue' })).toBe(true)
+    expect(toolResultFailed({ ok: true, result: 'Error-free' })).toBe(false)
+    expect(toolResultFailed({ result: 'Error: timed out' })).toBe(true)
+    expect(toolResultFailed({ result: 'It is sunny' })).toBe(false)
+  })
+})

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import RsMarkdown from './RsMarkdown.jsx'
 import './ConversationPanel.css'
+import { toolResultFailed } from '@/utils/toolActivity.js'
 
 function ThinkingBubble({ startTime }) {
   const [elapsed, setElapsed] = useState(0)
@@ -171,10 +172,17 @@ export default function ConversationPanel({ messages, streamingContent, isThinki
                   {evt.input && <pre className="tool-input">{JSON.stringify(evt.input)}</pre>}
                 </div>
               ) : (
-                <div className="tool-result">
-                  <span className="tool-tag tool-tag--done">✓ RESULT</span>
-                  <span className="tool-name">{evt.tool}</span>
-                </div>
+                toolResultFailed(evt) ? (
+                  <div className="tool-result is-failed">
+                    <span className="tool-tag tool-tag--failed">✕ FAILED</span>
+                    <span className="tool-name">{evt.tool}</span>
+                  </div>
+                ) : (
+                  <div className="tool-result">
+                    <span className="tool-tag tool-tag--done">✓ RESULT</span>
+                    <span className="tool-name">{evt.tool}</span>
+                  </div>
+                )
               )}
             </div>
           </div>
