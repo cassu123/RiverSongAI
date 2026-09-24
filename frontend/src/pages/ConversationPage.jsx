@@ -49,6 +49,7 @@ export default function ConversationPage({ setAction }) {
     startRecording,
     stopRecording,
     cancelListening,
+    stop,
     audioLevel,
     resetSession,
     connectionStatus,
@@ -60,6 +61,8 @@ export default function ConversationPage({ setAction }) {
 
   const isThinking = convState === 'thinking' || convState === 'speaking' || streamingContent !== ''
   const isActive = convState !== 'idle' && convState !== 'connecting'
+  // Something River is doing that Stop can end.
+  const busy = ['listening', 'transcribing', 'thinking', 'speaking'].includes(convState)
   const visualLvl = (convState === 'listening' || convState === 'speaking') ? audioLevel : 0
 
   // Muting while she listens stops the mic and discards what it heard. This
@@ -123,14 +126,23 @@ export default function ConversationPage({ setAction }) {
                 {convState === 'listening' ? 'stop' : 'mic'}
               </span>
             </button>
-            <button className="rs-pill" onClick={resetSession} title="Reset session">
-              <span className="material-symbols-rounded">refresh</span>
-            </button>
+            {/* Stop, in the style of Claude's voice mode: a white circle, far
+                right, whenever there is something to stop. It takes the reset
+                button's place — resetting mid-turn is not a thing to offer. */}
+            {busy ? (
+              <button className="rs-speak-stop" onClick={stop} aria-label="Stop River" title="Stop">
+                <span className="material-symbols-rounded" aria-hidden="true">close</span>
+              </button>
+            ) : (
+              <button className="rs-pill" onClick={resetSession} title="Reset session">
+                <span className="material-symbols-rounded">refresh</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
     )
-  }, [setAction, isActive, convState, muted, handleToggleMute, handleStartListening, resetSession, showTranscript, toggleTranscript])
+  }, [setAction, isActive, busy, stop, convState, muted, handleToggleMute, handleStartListening, resetSession, showTranscript, toggleTranscript])
 
   // Drives whether the transcript panel is laid out at all.
   const hasTranscript = messages.length > 0 || !!streamingContent || convState === 'listening'

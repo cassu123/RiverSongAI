@@ -20,6 +20,12 @@ const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
  */
 const STREAM_WATCHDOG_MS = 180000
 
+/** What a stopped turn may still send, and is ignored once stopped. */
+const STOPPED_TURN_EVENTS = new Set([
+  'transcribing', 'transcript', 'thinking', 'response_chunk', 'token',
+  'tool_use', 'tool_result', 'speaking', 'audio', 'response_complete',
+])
+
 /** How long an error stays visible before River settles back to idle. */
 const ERROR_HOLD_MS = 4000
 
@@ -40,6 +46,10 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
 
   const streamTimeoutRef = useRef(null)
   const errorTimerRef = useRef(null)
+  // Set when the user stops a turn. Messages from that turn can still be in
+  // flight; without this a late "speaking" or token would bring it back.
+  // Cleared when the user starts a new turn.
+  const stoppedTurnRef = useRef(false)
   const settleTimerRef = useRef(null)
   const expectedGenIdRef = useRef(0)
   // Newest generation id seen on an audio chunk. The server bumps its id once
@@ -85,6 +95,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
 
   const handleMessage = useCallback((event) => {
     const { type, text, content, message, data, session_id, title } = event
+    if (stoppedTurnRef.current && STOPPED_TURN_EVENTS.has(type)) return
     switch (type) {
       case 'connected':       setConvState('idle');       setError(null); break
       case 'listening':       setConvState('listening');  setStreamingContent(''); setError(null); break
@@ -284,13 +295,15 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   }, [convState, audioPlayer])
 
   const bargeIn = useCallback(() => {
-    if (convState === 'speaking' || convState === 'thinking') {
+    if (convState === 'speaking' || convState === 'thinking' || convState === 'transcribing') {
+      stoppedTurnRef.current = true
       audioPlayer.interrupt()
       expectedGenIdRef.current = Math.max(expectedGenIdRef.current, lastGenIdRef.current) + 1
       sendMessage({ type: 'interrupt' })
+      finalizeStream()   // keep what she had said so far
       setConvState('idle')
     }
-  }, [convState, audioPlayer, sendMessage])
+  }, [convState, audioPlayer, sendMessage, finalizeStream])
 
   /**
    * Start a voice turn. The server ignores any recorded audio that is not
@@ -304,7 +317,8 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
       setError('Not connected to River yet. Try again in a moment.')
       return false
     }
-    if (convState === 'speaking' || convState === 'thinking') bargeIn()
+    if (convState === 'speaking' || convState === 'thinking' || convState === 'transcribing') bargeIn()
+    stoppedTurnRef.current = false
     sendMessage({ type: 'start' })
     setConvState('listening')
     const opened = await openMic()
@@ -324,10 +338,21 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     setConvState(s => (s === 'listening' ? 'idle' : s))
   }, [isRecording, stopRecording])
 
+  /**
+   * The Stop button: whatever River is doing, stop. Listening, the recording
+   * is thrown away; transcribing, thinking or speaking, the whole turn is
+   * cancelled on the server and anything still arriving from it ignored.
+   */
+  const stop = useCallback(() => {
+    if (convState === 'listening') cancelListening()
+    else bargeIn()
+  }, [convState, cancelListening, bargeIn])
+
   const sendText = useCallback((text, overrides = {}) => {
     if (!text.trim()) return
     // Typing over her cuts her off, the same as speaking over her.
-    if (convState === 'speaking' || convState === 'thinking') bargeIn()
+    if (convState === 'speaking' || convState === 'thinking' || convState === 'transcribing') bargeIn()
+    stoppedTurnRef.current = false
     setError(null)
     setMessages(p => [...p, { role: 'user', text }])
     setStreamingContent('')
@@ -368,6 +393,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     startRecording: startListening,
     stopRecording,
     cancelListening,
+    stop,
     bargeIn,
     sendText,
     resetSession,
