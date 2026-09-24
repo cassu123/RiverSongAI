@@ -2,16 +2,16 @@
  * toolActivity — the tool calls River actually made, as a short feed.
  *
  * The server's agent loop (core/agent_loop.py) sends, per call:
- *   { type: 'tool_use',    tool, input }   when it starts
- *   { type: 'tool_result', tool, result }  when it returns
+ *   { type: 'tool_use',    tool, input }        when it starts
+ *   { type: 'tool_result', tool, result, ok }   when it returns
  * One call at a time, so a result belongs to the latest unfinished call of
  * the same tool.
  *
- * The server works out whether a call succeeded but does not send that; the
- * only signal is the text. The loop writes timeouts and exceptions as
- * "Error: …" / "Error executing …", so a result starting with "Error" is
- * reported as failed. A tool that fails politely without that prefix will
- * show as done.
+ * `ok` is false when the tool raised, timed out, or caught its own error and
+ * said so (core/tool_outcome.py: ToolFailure) — "I tried to check the
+ * weather ... but encountered an issue" is a failure, whatever its wording.
+ * A server from before `ok` existed is read the old way: a result starting
+ * with "Error" is a failure.
  */
 
 /** "control_device" -> "Control device" */
@@ -33,7 +33,10 @@ export function summarizeToolEvents(events = [], limit = 4) {
     } else if (evt?.type === 'tool_result') {
       for (let j = calls.length - 1; j >= 0; j--) {
         if (calls[j].tool === evt.tool && calls[j].status === 'running') {
-          calls[j].status = /^\s*error\b/i.test(String(evt.result ?? '')) ? 'failed' : 'done'
+          const failed = typeof evt.ok === 'boolean'
+            ? !evt.ok
+            : /^\s*error\b/i.test(String(evt.result ?? ''))
+          calls[j].status = failed ? 'failed' : 'done'
           break
         }
       }

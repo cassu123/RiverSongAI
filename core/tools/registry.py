@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from config.settings import get_settings
 
+from core.tool_outcome import ToolFailure
 logger = logging.getLogger(__name__)
 
 # TOOL_SCHEMAS (and its Playwright extension) live in core/tools_schemas.py;
@@ -74,12 +75,12 @@ async def execute_tool(
         except Exception as exc:
             logger.error("Failed to load admin tool policy in execute_tool: %s", exc)
             if tool_name in DANGEROUS_TOOLS:
-                return f"Security Error: Tool '{tool_name}' is disabled (failed closed: admin security policy could not be verified)."
+                return ToolFailure(f"Security Error: Tool '{tool_name}' is disabled (failed closed: admin security policy could not be verified).")
             disabled_tools = set()
 
     if tool_name in disabled_tools:
         logger.warning("Blocked execution of disabled tool '%s' for user '%s'", tool_name, user_id)
-        return f"Tool '{tool_name}' is currently disabled by administrative security policy."
+        return ToolFailure(f"Tool '{tool_name}' is currently disabled by administrative security policy.")
 
     try:
         if tool_name == "remember_fact":
@@ -258,14 +259,14 @@ async def execute_tool(
             return await _exec_render_diagram(tool_input, user_id)
 
         else:
-            return f"Unknown tool '{tool_name}' requested."
+            return ToolFailure(f"Unknown tool '{tool_name}' requested.")
 
     except Exception as exc:
         logger.error(
             "Unexpected error executing tool '%s': %s",
             tool_name,
             exc)
-        return f"Tool execution failed due to an internal error: {exc}"
+        return ToolFailure(f"Tool execution failed due to an internal error: {exc}")
 
 
 async def _exec_deep_research(args: dict, user_id: str,
@@ -279,7 +280,7 @@ async def _exec_deep_research(args: dict, user_id: str,
         from config.settings import get_settings
         
         if not getattr(get_settings(), "deep_research_enabled", False):
-            return "Deep Research is disabled in settings."
+            return ToolFailure("Deep Research is disabled in settings.")
             
         # Try to estimate complexity
         sub_queries = await decompose_query(query, count=2)
@@ -310,7 +311,7 @@ async def _exec_deep_research(args: dict, user_id: str,
                 return f"I've completed the deep research. The report is saved to your Documents (ID: {doc_id}).\n\n{report}"
             except Exception as e:
                 logger.error(f"Inline deep research failed: {e}")
-                return f"Deep research encountered an error: {e}"
+                return ToolFailure(f"Deep research encountered an error: {e}")
 
         # Big: background execution
         import asyncio
@@ -358,7 +359,7 @@ async def _exec_deep_research(args: dict, user_id: str,
         
     except Exception as exc:
         logger.error("deep_research failed: %s", exc)
-        return f"Deep research failed: {exc}"
+        return ToolFailure(f"Deep research failed: {exc}")
 
 
 # -----------------------------------------------------------------------------
@@ -385,7 +386,7 @@ async def _exec_calendar_event(args: dict, user_id: str) -> str:
         return f"Successfully scheduled '{args['title']}' for {args['date']} at {args['time']} on your Google Calendar."
     except Exception as exc:
         logger.error("Calendar tool failed: %s", exc)
-        return f"I tried to create the calendar event for '{args['title']}', but encountered an issue: {str(exc)}. Make sure Google is linked in Settings."
+        return ToolFailure(f"I tried to create the calendar event for '{args['title']}', but encountered an issue: {str(exc)}. Make sure Google is linked in Settings.")
 
 
 async def _exec_add_asset(args: dict, user_id: str) -> str:
@@ -824,7 +825,7 @@ async def _exec_control_device(args: dict, user_id: str) -> str:
 
         return f"Confirmed. Turned {args['action']} the {args['device_name']}."
     except Exception:
-        return f"Home Assistant isn't reachable right now — I couldn't turn {args['action']} the {args['device_name']}."
+        return ToolFailure(f"Home Assistant isn't reachable right now — I couldn't turn {args['action']} the {args['device_name']}.")
 
 
 async def _exec_alias_device(args: dict, user_id: str) -> str:
@@ -863,7 +864,7 @@ async def _exec_alias_device(args: dict, user_id: str) -> str:
         return f"I already know '{alias}' as a name for {entity_id}."
     except Exception as e:
         logger.error("Error aliasing device: %s", e)
-        return "Failed to save the new name."
+        return ToolFailure("Failed to save the new name.")
 
 
 async def _exec_vehicle_maintenance(args: dict, context: dict) -> str:
@@ -1108,7 +1109,7 @@ async def _exec_trigger_n8n(args: dict, user_id: str) -> str:
         else:
             return f"Failed to trigger n8n workflow '{args['workflow_id']}'. Check if n8n is running."
     except Exception as exc:
-        return f"Error triggering n8n: {exc}"
+        return ToolFailure(f"Error triggering n8n: {exc}")
 
 
 async def _exec_generate_business_report(args: dict, user_id: str) -> str:
@@ -1166,7 +1167,7 @@ async def _exec_web_search(args: dict, user_id: str) -> str:
         return await provider.search(args["query"])
     except Exception as exc:
         logger.error("Web search tool failed: %s", exc)
-        return f"I tried to search the web for '{args['query']}', but encountered an issue: {str(exc)}"
+        return ToolFailure(f"I tried to search the web for '{args['query']}', but encountered an issue: {str(exc)}")
 
 
 async def _exec_search_emails(args: dict, user_id: str) -> str:
@@ -1194,7 +1195,7 @@ async def _exec_search_emails(args: dict, user_id: str) -> str:
 
     except Exception as exc:
         logger.error("Gmail tool failed: %s", exc)
-        return f"I tried to read your emails, but encountered an issue: {str(exc)}. Make sure Google is linked in Settings."
+        return ToolFailure(f"I tried to read your emails, but encountered an issue: {str(exc)}. Make sure Google is linked in Settings.")
 
 
 async def _exec_get_weather(args: dict, user_id: str) -> str:
@@ -1222,7 +1223,7 @@ async def _exec_get_weather(args: dict, user_id: str) -> str:
 
     except Exception as exc:
         logger.error("Weather tool failed: %s", exc)
-        return f"I tried to check the weather for '{args['location']}', but encountered an issue: {str(exc)}"
+        return ToolFailure(f"I tried to check the weather for '{args['location']}', but encountered an issue: {str(exc)}")
 
 
 async def _exec_generate_image(args: dict, user_id: str) -> str:
@@ -1245,7 +1246,7 @@ async def _exec_generate_image(args: dict, user_id: str) -> str:
 
     except Exception as exc:
         logger.error("Image generation tool failed: %s", exc)
-        return f"I tried to generate the image, but encountered an issue: {str(exc)}"
+        return ToolFailure(f"I tried to generate the image, but encountered an issue: {str(exc)}")
 
 
 async def _exec_search_google_books(args: dict, user_id: str) -> str:
@@ -1275,7 +1276,7 @@ async def _exec_search_google_books(args: dict, user_id: str) -> str:
         return "\n".join(lines)
     except Exception as exc:
         logger.error("Google Books tool failed: %s", exc)
-        return f"I tried to search your Google Books, but encountered an error: {str(exc)}"
+        return ToolFailure(f"I tried to search your Google Books, but encountered an error: {str(exc)}")
 
 
 async def _exec_add_google_task(args: dict, user_id: str) -> str:
@@ -1290,7 +1291,7 @@ async def _exec_add_google_task(args: dict, user_id: str) -> str:
         return f"Successfully added task: '{title}' to your Google Tasks."
     except Exception as exc:
         logger.error("Google Tasks add failed: %s", exc)
-        return f"I tried to add the task '{args['title']}' to Google Tasks, but encountered an error: {str(exc)}"
+        return ToolFailure(f"I tried to add the task '{args['title']}' to Google Tasks, but encountered an error: {str(exc)}")
 
 
 async def _exec_list_google_tasks(args: dict, user_id: str) -> str:
@@ -1312,7 +1313,7 @@ async def _exec_list_google_tasks(args: dict, user_id: str) -> str:
         return "\n".join(lines)
     except Exception as exc:
         logger.error("Google Tasks list failed: %s", exc)
-        return f"I tried to retrieve your Google Tasks, but encountered an error: {str(exc)}"
+        return ToolFailure(f"I tried to retrieve your Google Tasks, but encountered an error: {str(exc)}")
 
 
 async def get_upcoming_events(
@@ -1391,7 +1392,7 @@ async def _exec_save_vault_note(args: dict, user_id: str) -> str:
         return f"Note '{args['title']}' saved to your {root} vault."
     except Exception as exc:
         logger.error("save_vault_note failed: %s", exc)
-        return f"Failed to save note '{args.get('title')}': {exc}"
+        return ToolFailure(f"Failed to save note '{args.get('title')}': {exc}")
 
 
 async def _exec_read_vault_note(args: dict, user_id: str) -> str:
@@ -1411,7 +1412,7 @@ async def _exec_read_vault_note(args: dict, user_id: str) -> str:
         return f"No note named '{args['title']}' found in the {args.get('root', 'personal')} vault."
     except Exception as exc:
         logger.error("read_vault_note failed: %s", exc)
-        return f"Failed to read note '{args.get('title')}': {exc}"
+        return ToolFailure(f"Failed to read note '{args.get('title')}': {exc}")
 
 
 async def _exec_search_vault(args: dict, user_id: str) -> str:
@@ -1426,7 +1427,7 @@ async def _exec_search_vault(args: dict, user_id: str) -> str:
         return f"Found {len(results)} note(s):\n" + "\n".join(lines)
     except Exception as exc:
         logger.error("search_vault failed: %s", exc)
-        return f"Vault search failed: {exc}"
+        return ToolFailure(f"Vault search failed: {exc}")
 
 
 async def _exec_code_interpreter(args: dict, user_id: str) -> str:
@@ -1435,7 +1436,7 @@ async def _exec_code_interpreter(args: dict, user_id: str) -> str:
         return await run_code(args["code"])
     except Exception as exc:
         logger.error("code_interpreter failed: %s", exc)
-        return f"Failed to run code: {exc}"
+        return ToolFailure(f"Failed to run code: {exc}")
 
 
 async def _exec_mow_command(args: dict, user_id: str) -> str:
@@ -1480,7 +1481,7 @@ async def _exec_mow_command(args: dict, user_id: str) -> str:
             )
     except Exception as exc:
         logger.error("mow_command failed: %s", exc)
-        return f"Failed to send mower command: {exc}"
+        return ToolFailure(f"Failed to send mower command: {exc}")
 
 async def _exec_set_timer(args: dict, user_id: str) -> str:
     label = args.get("label", "Timer")
@@ -1554,7 +1555,7 @@ async def _exec_get_vehicle_status(args: dict, user_id: str) -> str:
         tl = get_maintenance_timeline(str(vid), None, None, db, owner_id)
         return str(tl)
     except Exception as e:
-        return f"Error: {e}"
+        return ToolFailure(f"Error: {e}")
     finally:
         db.close()
 
@@ -1781,8 +1782,8 @@ async def _exec_play_media(args: dict, user_id: str) -> str:
                     await client.call_service(
                         "media_player", "media_play", entity_id=eid)
     except Exception:
-        return ("Home Assistant isn't reachable right now — I couldn't start "
-                "playback.")
+        return (ToolFailure("Home Assistant isn't reachable right now — I couldn't start "
+                "playback."))
 
     where = f" in the {target}" if target else ""
     what = f" '{query}'" if query else ""
@@ -1821,7 +1822,7 @@ async def _exec_media_control(args: dict, user_id: str) -> str:
             for eid in players:
                 await client.call_service("media_player", service, entity_id=eid)
     except Exception:
-        return "Home Assistant isn't reachable right now."
+        return ToolFailure("Home Assistant isn't reachable right now.")
     return f"Done — {action}."
 
 
@@ -1863,8 +1864,8 @@ async def _exec_announce(args: dict, user_id: str) -> str:
                     "tts", "speak", entity_id=engine,
                     media_player_entity_id=eid, message=message)
     except Exception:
-        return ("Home Assistant isn't reachable right now — the announcement "
-                "didn't play.")
+        return (ToolFailure("Home Assistant isn't reachable right now — the announcement "
+                "didn't play."))
 
     where = f" in the {target}" if target else " everywhere"
     return f"Announced{where}."
