@@ -111,7 +111,7 @@ export default function ConversationPage({ setAction }) {
             <button
               className="rs-btn-primary rs-icon-btn rs-send-btn"
               onClick={handleStartListening}
-              disabled={muted || (isActive && convState !== 'speaking' && convState !== 'thinking')}
+              disabled={muted || convState === 'connecting' || convState === 'transcribing'}
               style={{ background: 'var(--primary)', color: 'var(--bg-base)' }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>

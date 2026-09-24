@@ -41,6 +41,16 @@ describe('Voice page status', () => {
     expect(page.container.querySelector('.rs-speak-activity')).toBeNull()
   })
 
+  it('keeps the mic button usable while listening, so you can stop', () => {
+    conv.convState = 'listening'
+    let bar = null
+    render(<ConversationPage setAction={(n) => { bar = n }} />)
+    const barView = render(<>{bar}</>)
+    const mic = barView.container.querySelector('.rs-send-btn')
+    expect(mic.disabled).toBe(false)
+    expect(mic.textContent).toContain('stop')
+  })
+
   it('names a state that means something is happening', () => {
     conv.convState = 'listening'
     let bar = null

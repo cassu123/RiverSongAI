@@ -170,7 +170,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     }
   }, [audioPlayer])
 
-  const { startRecording, stopRecording, isRecording, audioLevel } = useAudioRecorder({
+  const { startRecording: openMic, stopRecording, isRecording, audioLevel } = useAudioRecorder({
     onComplete: pcm => {
       setConvState('thinking')
       sendMessage(pcm)
@@ -204,6 +204,23 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
       setConvState('idle')
     }
   }, [convState, audioPlayer, sendMessage])
+
+  /**
+   * Start a voice turn. The server ignores any recorded audio that is not
+   * preceded by {type:'start'} (conversation.py: waiting_for_audio), so tell
+   * it first, then open the mic. If River is mid-reply, talking cuts her off.
+   */
+  const startListening = useCallback(async () => {
+    if (convState === 'speaking' || convState === 'thinking') bargeIn()
+    sendMessage({ type: 'start' })
+    setConvState('listening')
+    const opened = await openMic()
+    if (!opened) {
+      setConvState(s => (s === 'listening' ? 'idle' : s))
+      setError("Microphone unavailable. Check this site's microphone permission.")
+    }
+    return opened
+  }, [convState, bargeIn, sendMessage, openMic])
 
   const sendText = useCallback((text, overrides = {}) => {
     if (!text.trim()) return
@@ -244,7 +261,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     setError,
     audioLevel,
     isRecording,
-    startRecording,
+    startRecording: startListening,
     stopRecording,
     bargeIn,
     sendText,
