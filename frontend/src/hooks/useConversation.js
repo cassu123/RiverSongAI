@@ -70,7 +70,10 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   }, [finalizeStream])
 
   const audioPlayer = useMemo(() => new AudioPlayer((isPlaying) => {
-    if (!isPlaying) {
+    if (isPlaying) {
+      // A decoded clip can start after the server has already said idle.
+      setConvState('speaking')
+    } else {
       setConvState(s => (s === 'speaking' ? 'idle' : s))
     }
   }), [])
@@ -144,8 +147,21 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         audioPlayer.playChunk(pcm).catch(console.error)
         break
       }
+      case 'audio': {
+        // Whole clips arrive as base64 JSON rather than binary chunks: replies
+        // the intent router answers, the startup briefing, and chat replies
+        // River is asked to speak. Nothing handled this, so all of those were
+        // silent while the orb sat on "speaking".
+        if (!event.data) break
+        const bin = atob(event.data)
+        const bytes = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+        setConvState('speaking')
+        audioPlayer.playEncoded(bytes.buffer).catch(console.error)
+        break
+      }
       case 'idle':
-        if (!audioPlayer.isPlaying) setConvState('idle')
+        if (!audioPlayer.isPlaying && !audioPlayer.pendingDecodes) setConvState('idle')
         break
       case 'error':   setError(message || 'An unknown error occurred.'); break
       case 'session':

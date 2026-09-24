@@ -26,9 +26,9 @@ vi.mock('./useAudioRecorder.js', () => ({
 const players = []
 vi.mock('../utils/AudioPlayer.js', () => ({
   AudioPlayer: class {
-    constructor() { this.isPlaying = false; this.flushes = 0; this.played = []; players.push(this) }
+    constructor() { this.isPlaying = false; this.pendingDecodes = 0; this.flushes = 0; this.played = []; this.clips = []; players.push(this) }
     playChunk(pcm) { this.played.push(pcm); return Promise.resolve() }
-    playEncoded() { return Promise.resolve() }
+    playEncoded(buf) { this.clips.push(buf); this.pendingDecodes++; return Promise.resolve() }
     getLevel() { return 0 }
     interrupt() { this.flushes++ }
     stop() { this.flushes++ }
@@ -97,5 +97,20 @@ describe('River speaking', () => {
     act(() => { result.current.sendText('stop, different question') })
     expect(player().flushes).toBeGreaterThan(0)
     expect(sent.some((m) => m?.type === 'interrupt')).toBe(true)
+  })
+})
+
+describe('whole audio clips from the server', () => {
+  const player = () => players[players.length - 1]
+  const wavBase64 = btoa('RIFF....WAVEfmt ')   // content is opaque to the hook
+
+  it('plays them, and does not drop to idle before they start', () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    act(() => { serverSays({ type: 'speaking' }) })
+    act(() => { serverSays({ type: 'audio', data: wavBase64, format: 'wav' }) })
+    act(() => { serverSays({ type: 'idle' }) })   // arrives while the clip is still decoding
+    expect(player().clips).toHaveLength(1)
+    expect(player().clips[0]).toBeInstanceOf(ArrayBuffer)
+    expect(result.current.convState).toBe('speaking')
   })
 })

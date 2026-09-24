@@ -12,6 +12,9 @@ export class AudioPlayer {
     this.worklet = null
     this.initPromise = null
     this.isPlaying = false
+    // Whole clips still being decoded. The server sends {type:'idle'} right
+    // after an {type:'audio'} clip, before it can have started playing.
+    this.pendingDecodes = 0
     this.onStateChange = onStateChange
     // Maintain state tracking for Avatar visemes
     this.playbackState = { active: false, queued: 0 }
@@ -60,6 +63,33 @@ export class AudioPlayer {
       }
     } catch (err) {
       console.error('[AudioPlayer] Initialization failed for chunk:', err)
+    }
+  }
+
+  /**
+   * Play a whole encoded clip (WAV or MP3). The server sends these as a JSON
+   * {type:'audio'} frame — intent-routed replies, the startup briefing,
+   * spoken chat replies — rather than as streamed PCM chunks.
+   * decodeAudioData reads the header and resamples to this context's rate;
+   * the worklet then plays it like any streamed chunk.
+   * @param {ArrayBuffer} arrayBuffer
+   */
+  async playEncoded(arrayBuffer) {
+    this.pendingDecodes++
+    try {
+      await this._init()
+      const clip = await this.ctx.decodeAudioData(arrayBuffer)
+      const ch = clip.getChannelData(0)
+      const pcm = new Int16Array(ch.length)
+      for (let i = 0; i < ch.length; i++) {
+        const v = Math.max(-1, Math.min(1, ch[i]))
+        pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff
+      }
+      this.worklet?.port.postMessage({ type: 'audio_chunk', data: pcm })
+    } catch (err) {
+      console.error('[AudioPlayer] Could not decode audio clip:', err)
+    } finally {
+      this.pendingDecodes--
     }
   }
 
