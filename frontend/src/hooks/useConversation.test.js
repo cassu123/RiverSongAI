@@ -206,4 +206,14 @@ describe('mute and connection', () => {
     expect(result.current.convState).toBe('thinking')
   })
 
+  it('will not record with no connection, and says why', async () => {
+    connection = 'reconnecting'
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    let opened
+    await act(async () => { opened = await result.current.startRecording() })
+    expect(opened).toBe(false)
+    expect(order).not.toContain('mic-open')
+    expect(sent.some((m) => m?.type === 'start')).toBe(false)
+    expect(result.current.error).toMatch(/not connected/i)
+  })
 })

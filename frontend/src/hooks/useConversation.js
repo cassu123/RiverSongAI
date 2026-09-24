@@ -282,6 +282,12 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
    * it first, then open the mic. If River is mid-reply, talking cuts her off.
    */
   const startListening = useCallback(async () => {
+    // With no connection the recording would go nowhere and the turn would
+    // hang on "thinking". Say so instead.
+    if (connectionStatus !== 'connected') {
+      setError('Not connected to River yet. Try again in a moment.')
+      return false
+    }
     if (convState === 'speaking' || convState === 'thinking') bargeIn()
     sendMessage({ type: 'start' })
     setConvState('listening')
@@ -291,7 +297,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
       setError("Microphone unavailable. Check this site's microphone permission.")
     }
     return opened
-  }, [convState, bargeIn, sendMessage, openMic])
+  }, [connectionStatus, convState, bargeIn, sendMessage, openMic])
 
   /** Stop listening and throw away what the mic heard (Mute). */
   const cancelListening = useCallback(() => {
