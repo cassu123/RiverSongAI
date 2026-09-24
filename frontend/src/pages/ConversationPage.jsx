@@ -48,6 +48,7 @@ export default function ConversationPage({ setAction }) {
     isRecording,
     startRecording,
     stopRecording,
+    cancelListening,
     audioLevel,
     resetSession,
     connectionStatus,
@@ -61,10 +62,14 @@ export default function ConversationPage({ setAction }) {
   const isActive = convState !== 'idle' && convState !== 'connecting'
   const visualLvl = (convState === 'listening' || convState === 'speaking') ? audioLevel : 0
 
+  // Muting while she listens stops the mic and discards what it heard. This
+  // used to test `muted` before flipping it, so it only stopped the mic when
+  // UNmuting: muting mid-turn left the mic recording and the stop button
+  // disabled.
   const handleToggleMute = useCallback(() => {
-    if (muted && convState === 'listening') stopRecording()
-    setMuted(!muted)
-  }, [muted, convState, stopRecording])
+    if (!muted && convState === 'listening') cancelListening()
+    setMuted(m => !m)
+  }, [muted, convState, cancelListening])
 
   const handleStartListening = useCallback(() => {
     if (convState === 'listening') {
@@ -111,7 +116,7 @@ export default function ConversationPage({ setAction }) {
             <button
               className="rs-btn-primary rs-icon-btn rs-send-btn"
               onClick={handleStartListening}
-              disabled={muted || (isActive && convState !== 'speaking' && convState !== 'thinking')}
+              disabled={muted || convState === 'connecting' || convState === 'transcribing'}
               style={{ background: 'var(--primary)', color: 'var(--bg-base)' }}
             >
               <span className="material-symbols-rounded" style={{ fontSize: '1.4rem' }}>

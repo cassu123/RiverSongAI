@@ -4,6 +4,8 @@ import json
 import uuid
 from typing import Any, List, Dict, Callable, Optional, Tuple
 
+from core.tool_outcome import ToolFailure
+
 logger = logging.getLogger(__name__)
 
 MAX_TOOL_STEPS = 6
@@ -80,7 +82,9 @@ async def run_agent_loop(
                 execute_tool_fn(tool_name, tool_input, ctx),
                 timeout=TOOL_TIMEOUT
             )
-            ok = True
+            # A tool that caught its own error returns a ToolFailure: text for
+            # the model like any result, but not a success.
+            ok = not isinstance(result_text, ToolFailure)
         except asyncio.TimeoutError:
             result_text = f"Error: Tool {tool_name} timed out after {TOOL_TIMEOUT} seconds."
             logger.warning(result_text)
@@ -88,7 +92,7 @@ async def run_agent_loop(
             result_text = f"Error executing {tool_name}: {e}"
             logger.error(result_text)
             
-        await on_event({"type": "tool_result", "tool": tool_name, "result": result_text})
+        await on_event({"type": "tool_result", "tool": tool_name, "result": result_text, "ok": ok})
         
         if llm.__class__.__name__ == "ClaudeAPILLM":
             await append_history_fn("assistant", [{"type": "tool_use", "id": tool_id, "name": tool_name, "input": tool_input}])

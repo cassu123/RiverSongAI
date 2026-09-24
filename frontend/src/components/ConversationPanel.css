@@ -322,6 +322,7 @@
 }
 
 .tool-tag--done { color: #4ade80; }
+.tool-tag--failed { color: var(--rs-status-critical, #f87171); }
 
 .tool-name {
   font-weight: 600;

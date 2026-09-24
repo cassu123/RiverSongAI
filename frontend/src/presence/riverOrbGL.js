@@ -305,9 +305,11 @@ void main() {
   }
 
   // Nothing gets near the canvas edge.
+  // Every kind, ribbons included: a ribbon fades along its own length, but
+  // once the band is tilted and her voice swings it wide, points reached the
+  // left/right edge of a narrow (phone) stage at full strength.
   float reachOut = max(abs(pos.x) / (0.5 * uRes.x), abs(pos.y) / (0.5 * uRes.y));
-  if (aKind < 0.5 || aKind > 1.5) alpha *= 1.0 - smoothstep(0.8, 0.97, reachOut);
-  alpha *= 1.0 - smoothstep(0.9, 0.99, abs(pos.y) / (0.5 * uRes.y));
+  alpha *= 1.0 - smoothstep(0.8, 0.97, reachOut);
 
   gl_Position = vec4(pos / (0.5 * uRes), 0.0, 1.0);
   gl_PointSize = size;

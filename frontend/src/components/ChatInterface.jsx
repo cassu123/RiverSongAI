@@ -228,9 +228,10 @@ export default function ChatInterface({ setAction, onNavigate, initialIntent, on
       return
     }
 
-    let speakOverride = null
-    if (voiceToggle === 'always') speakOverride = true
-    if (voiceToggle === 'never') speakOverride = false
+    // This path is typed text. "Auto — match how you asked" therefore means
+    // don't speak: left unset, the server's voice-mode default spoke every
+    // typed reply. Spoken input goes through the mic, not here.
+    const speakOverride = voiceToggle === 'always'
 
     sendText(t, { 
       provider: selectedModel?.provider,

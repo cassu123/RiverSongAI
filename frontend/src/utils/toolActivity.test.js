@@ -17,6 +17,14 @@ describe('summarizeToolEvents', () => {
     expect(summarizeToolEvents([use('announce'), thrown])[0].status).toBe('failed')
   })
 
+  it('trusts the server\'s ok flag, whatever the wording', () => {
+    const polite = { type: 'tool_result', tool: 'get_weather', ok: false,
+      result: "I tried to check the weather for 'Leeds', but encountered an issue: 503" }
+    expect(summarizeToolEvents([use('get_weather'), polite])[0].status).toBe('failed')
+    const fine = { type: 'tool_result', tool: 'find_notes', ok: true, result: 'Error handling notes, 3 found' }
+    expect(summarizeToolEvents([use('find_notes'), fine])[0].status).toBe('done')
+  })
+
   it('pairs each result with the latest unfinished call of that tool', () => {
     const s = summarizeToolEvents([use('control_device'), res('control_device'), use('control_device')])
     expect(s.map((c) => c.status)).toEqual(['done', 'running'])
@@ -37,5 +45,15 @@ describe('toolLabel', () => {
   it('reads snake_case and dotted names as words', () => {
     expect(toolLabel('create_calendar_event')).toBe('Create calendar event')
     expect(toolLabel('lights.set_brightness')).toBe('Lights set brightness')
+  })
+})
+
+import { toolResultFailed } from './toolActivity.js'
+describe('toolResultFailed', () => {
+  it('follows ok, and falls back to the Error prefix without it', () => {
+    expect(toolResultFailed({ ok: false, result: 'I tried to ... encountered an issue' })).toBe(true)
+    expect(toolResultFailed({ ok: true, result: 'Error-free' })).toBe(false)
+    expect(toolResultFailed({ result: 'Error: timed out' })).toBe(true)
+    expect(toolResultFailed({ result: 'It is sunny' })).toBe(false)
   })
 })

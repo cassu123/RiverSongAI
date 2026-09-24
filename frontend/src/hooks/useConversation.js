@@ -20,6 +20,9 @@ const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
  */
 const STREAM_WATCHDOG_MS = 180000
 
+/** How long an error stays visible before River settles back to idle. */
+const ERROR_HOLD_MS = 4000
+
 export function useConversation({ token, user, sessionId, onSessionId, extraQueryParams = {} }) {
   const backendHost = API_BASE ? new URL(API_BASE).host : window.location.host;
   const wsProtocol = API_BASE ? (API_BASE.startsWith('https') ? 'wss:' : 'ws:') : WS_PROTOCOL;
@@ -36,7 +39,13 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   const [toolEvents, setToolEvents] = useState([])
 
   const streamTimeoutRef = useRef(null)
+  const errorTimerRef = useRef(null)
+  const settleTimerRef = useRef(null)
   const expectedGenIdRef = useRef(0)
+  // Newest generation id seen on an audio chunk. The server bumps its id once
+  // per turn; interrupting must skip past the one actually playing, or late
+  // chunks from the cut-off reply still play.
+  const lastGenIdRef = useRef(-1)
 
   const finalizeStream = useCallback(() => {
     setStreamingContent(current => {
@@ -66,7 +75,10 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   }, [finalizeStream])
 
   const audioPlayer = useMemo(() => new AudioPlayer((isPlaying) => {
-    if (!isPlaying) {
+    if (isPlaying) {
+      // A decoded clip can start after the server has already said idle.
+      setConvState('speaking')
+    } else {
       setConvState(s => (s === 'speaking' ? 'idle' : s))
     }
   }), [])
@@ -118,8 +130,11 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         setStreamingContent('')
         break
       case 'speaking':
+        // The server sends this before every sentence's audio, not once per
+        // reply. Flushing here cut each sentence off when the next arrived.
+        // Stale audio from an earlier turn is dropped by gen_id instead, and
+        // a new turn from the user interrupts her (bargeIn).
         setConvState('speaking')
-        audioPlayer.stop()
         break
       case 'audio_chunk': {
         const buffer = data
@@ -130,16 +145,52 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
         if (gen_id < expectedGenIdRef.current) {
           return
         }
+        lastGenIdRef.current = Math.max(lastGenIdRef.current, gen_id)
         
         const pcm = new Int16Array(buffer, 4)
         setConvState('speaking')
         audioPlayer.playChunk(pcm).catch(console.error)
         break
       }
-      case 'idle':
-        if (!audioPlayer.isPlaying) setConvState('idle')
+      case 'audio': {
+        // Whole clips arrive as base64 JSON rather than binary chunks: replies
+        // the intent router answers, the startup briefing, and chat replies
+        // River is asked to speak. Nothing handled this, so all of those were
+        // silent while the orb sat on "speaking".
+        if (!event.data) break
+        const bin = atob(event.data)
+        const bytes = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+        setConvState('speaking')
+        audioPlayer.playEncoded(bytes.buffer).catch(console.error)
         break
-      case 'error':   setError(message || 'An unknown error occurred.'); break
+      }
+      case 'idle':
+        // An error is held for ERROR_HOLD_MS; the idle the server sends right
+        // after one must not wipe it before it has been seen.
+        //
+        // The server also sends idle straight after its last audio, before
+        // that audio has started playing. Going idle then made River drop to
+        // idle for a moment and come back as "speaking". Wait for playback;
+        // if it never starts (audio locked on a phone), settle anyway.
+        clearTimeout(settleTimerRef.current)
+        if (!audioPlayer.isBusy()) {
+          setConvState(s => (s === 'error' ? s : 'idle'))
+        } else {
+          const settle = () => {
+            if (audioPlayer.isBusy()) settleTimerRef.current = setTimeout(settle, 250)
+            else setConvState(s => (s === 'speaking' ? 'idle' : s))
+          }
+          settleTimerRef.current = setTimeout(settle, 250)
+        }
+        break
+      case 'error':
+        // Nothing used to set the error state, so River never showed one.
+        setError(message || 'An unknown error occurred.')
+        setConvState('error')
+        clearTimeout(errorTimerRef.current)
+        errorTimerRef.current = setTimeout(() => setConvState(s => (s === 'error' ? 'idle' : s)), ERROR_HOLD_MS)
+        break
       case 'session':
         if (onSessionId) onSessionId(session_id)
         break
@@ -167,46 +218,116 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
   useEffect(() => {
     return () => {
       audioPlayer.close()
+      clearTimeout(errorTimerRef.current)
+      clearTimeout(settleTimerRef.current)
     }
   }, [audioPlayer])
 
-  const { startRecording, stopRecording, isRecording, audioLevel } = useAudioRecorder({
+  // Set by cancelListening: the recording that is about to finish is thrown
+  // away instead of sent. The recorder reports synchronously from stop.
+  const discardNextRef = useRef(false)
+
+  const { startRecording: openMic, stopRecording, isRecording, audioLevel } = useAudioRecorder({
     onComplete: pcm => {
+      if (discardNextRef.current) {
+        discardNextRef.current = false
+        setConvState(s => (s === 'listening' ? 'idle' : s))
+        return
+      }
       setConvState('thinking')
       sendMessage(pcm)
     },
-    onNoSpeech: () => setConvState(s => (s === 'listening' ? 'idle' : s)),
+    onNoSpeech: () => {
+      discardNextRef.current = false
+      setConvState(s => (s === 'listening' ? 'idle' : s))
+    },
   })
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('rs-presence', { detail: { state: convState } }))
-    return () => {
-      window.dispatchEvent(new CustomEvent('rs-presence', { detail: { state: 'idle' } }))
-    }
   }, [convState])
 
+  // When this conversation goes away, River goes back to idle. This used to
+  // be the cleanup of the effect above, which React runs before every re-run
+  // — so River was told "idle" between every two states, and loosened for
+  // about 4 s on each transition.
+  useEffect(() => () => {
+    window.dispatchEvent(new CustomEvent('rs-presence', { detail: { state: 'idle' } }))
+  }, [])
+
   // Amplitude on its own event. River's mind (presence/riverMind.js) reads
-  // `rs-presence {state, level}`; only the state used to be dispatched, so
-  // every orb outside this page was deaf to the voice and could not pulse.
-  // Kept separate from the state effect so a 60fps level never re-runs it.
+  // `rs-presence {state, level}`. Kept separate from the state effect so a
+  // 60fps level never re-runs it.
+  //
+  // Listening: your voice, from the mic recorder.
   useEffect(() => {
-    if (convState !== 'listening' && convState !== 'speaking') return
+    if (convState !== 'listening') return
     window.dispatchEvent(new CustomEvent('rs-presence', {
       detail: { state: convState, level: audioLevel },
     }))
   }, [audioLevel, convState])
 
+  // Speaking: her voice, measured from what the player is actually playing.
+  // This used to send the mic level here too — and the mic is closed by the
+  // time she speaks, so her level was always 0.
+  useEffect(() => {
+    if (convState !== 'speaking') return undefined
+    let raf = 0
+    const tick = () => {
+      window.dispatchEvent(new CustomEvent('rs-presence', {
+        detail: { state: 'speaking', level: audioPlayer.getLevel() },
+      }))
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [convState, audioPlayer])
+
   const bargeIn = useCallback(() => {
     if (convState === 'speaking' || convState === 'thinking') {
       audioPlayer.interrupt()
-      expectedGenIdRef.current += 1
+      expectedGenIdRef.current = Math.max(expectedGenIdRef.current, lastGenIdRef.current) + 1
       sendMessage({ type: 'interrupt' })
       setConvState('idle')
     }
   }, [convState, audioPlayer, sendMessage])
 
+  /**
+   * Start a voice turn. The server ignores any recorded audio that is not
+   * preceded by {type:'start'} (conversation.py: waiting_for_audio), so tell
+   * it first, then open the mic. If River is mid-reply, talking cuts her off.
+   */
+  const startListening = useCallback(async () => {
+    // With no connection the recording would go nowhere and the turn would
+    // hang on "thinking". Say so instead.
+    if (connectionStatus !== 'connected') {
+      setError('Not connected to River yet. Try again in a moment.')
+      return false
+    }
+    if (convState === 'speaking' || convState === 'thinking') bargeIn()
+    sendMessage({ type: 'start' })
+    setConvState('listening')
+    const opened = await openMic()
+    if (!opened) {
+      setConvState(s => (s === 'listening' ? 'idle' : s))
+      setError("Microphone unavailable. Check this site's microphone permission.")
+    }
+    return opened
+  }, [connectionStatus, convState, bargeIn, sendMessage, openMic])
+
+  /** Stop listening and throw away what the mic heard (Mute). */
+  const cancelListening = useCallback(() => {
+    if (isRecording) {
+      discardNextRef.current = true
+      stopRecording()
+    }
+    setConvState(s => (s === 'listening' ? 'idle' : s))
+  }, [isRecording, stopRecording])
+
   const sendText = useCallback((text, overrides = {}) => {
     if (!text.trim()) return
+    // Typing over her cuts her off, the same as speaking over her.
+    if (convState === 'speaking' || convState === 'thinking') bargeIn()
     setError(null)
     setMessages(p => [...p, { role: 'user', text }])
     setStreamingContent('')
@@ -219,7 +340,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     // The user saw their own message appear (it is added optimistically just
     // above) and River never answered.
     sendMessage({ type: 'text_input', text, ...overrides })
-  }, [sendMessage])
+  }, [sendMessage, convState, bargeIn])
 
   const resetSession = useCallback(() => {
     sendMessage({ type: 'reset_history', flush_memory: true })
@@ -244,8 +365,9 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     setError,
     audioLevel,
     isRecording,
-    startRecording,
+    startRecording: startListening,
     stopRecording,
+    cancelListening,
     bargeIn,
     sendText,
     resetSession,

@@ -69,3 +69,30 @@ describe('ChatInterface', () => {
     )
   })
 })
+
+describe('ChatInterface — speaking replies', () => {
+  let sendTextMock
+  beforeEach(() => {
+    sendTextMock = vi.fn()
+    vi.mocked(useConversation).mockReturnValue({
+      sendText: sendTextMock, convState: 'idle', messages: [], streamingContent: '', toolEvents: [],
+      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), resetSession: vi.fn(),
+      abortGeneration: vi.fn(), sendMessage: vi.fn(), setMessages: vi.fn(), setError: vi.fn(),
+    })
+    global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ cloud: [], local: [] }) }))
+  })
+
+  it('keeps a typed message as text on "Auto — match how you asked"', async () => {
+    let bar = null
+    render(<ChatInterface setAction={(n) => { bar = n }} />)
+    const barView = render(<>{bar}</>)
+    const box = barView.container.querySelector('textarea')
+    const { fireEvent } = await import('@testing-library/react')
+    act(() => { fireEvent.change(box, { target: { value: 'what is on today' } }) })
+    barView.rerender(<>{bar}</>)
+    act(() => { fireEvent.keyDown(barView.container.querySelector('textarea'), { key: 'Enter' }) })
+    expect(sendTextMock).toHaveBeenCalled()
+    const overrides = sendTextMock.mock.calls[0][1]
+    expect(overrides.speak).toBe(false)
+  })
+})
