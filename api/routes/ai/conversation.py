@@ -211,6 +211,15 @@ async def conversation_websocket(websocket: WebSocket) -> None:
     # Track whether we're waiting for the audio_data that follows a "start"
     waiting_for_audio: bool = False
 
+    # Every turn, spoken or typed, runs through here so "interrupt" can stop
+    # all of it — see core/turn_runner.py for what used to go wrong.
+    from core.turn_runner import TurnRunner
+    turns = TurnRunner(
+        send=lambda evt: _send(websocket, evt),
+        streaming_enabled=lambda: get_settings().llm_streaming_enabled,
+        on_cancel=loop.cancel_generation,
+    )
+
     try:
         while True:
             ws_msg = await websocket.receive()
@@ -221,22 +230,11 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                     continue
                 waiting_for_audio = False
 
-                # Run the turn in the background so we can receive interrupts
-                async def _background_turn(b):
-                    try:
-                        await loop.run_once(
-                            audio_bytes=b,
-                            on_event=lambda evt: _send(websocket, evt),
-                        )
-                    except asyncio.CancelledError:
-                        pass
-                    except Exception as e:
-                        logger.error("Turn failed: %s", e)
-
-                    if get_settings().llm_streaming_enabled:
-                        await _send(websocket, {"type": "stream_done"})
-
-                asyncio.create_task(_background_turn(audio_bytes))
+                # In the background, so an interrupt can still be received.
+                await turns.start(loop.run_once(
+                    audio_bytes=audio_bytes,
+                    on_event=lambda evt: _send(websocket, evt),
+                ))
                 continue
 
             if "text" not in ws_msg or not ws_msg["text"]:
@@ -317,24 +315,16 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                     await _send(websocket, {"type": "idle"})
                     continue
 
-                async def _background_turn_b64(b):
-                    try:
-                        await loop.run_once(
-                            audio_bytes=b,
-                            on_event=lambda evt: _send(websocket, evt),
-                        )
-                    except asyncio.CancelledError:
-                        pass
-                    except Exception as e:
-                        logger.error("Turn failed: %s", e)
-
-                    if get_settings().llm_streaming_enabled:
-                        await _send(websocket, {"type": "stream_done"})
-                asyncio.create_task(_background_turn_b64(audio_bytes))
+                await turns.start(loop.run_once(
+                    audio_bytes=audio_bytes,
+                    on_event=lambda evt: _send(websocket, evt),
+                ))
 
             elif msg_type == "interrupt":
+                # Stops the whole turn — transcription, routing, reply — not
+                # just the LLM generation.
                 waiting_for_audio = False
-                loop.cancel_generation()
+                await turns.cancel()
                 await _send(websocket, {"type": "idle"})
 
             elif msg_type == "text_input":
@@ -343,21 +333,23 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 if not text:
                     await _send(websocket, {"type": "idle"})
                     continue
-                await loop.run_text(
+                # Was awaited inline, which blocked this loop: an interrupt
+                # sent during a typed reply was not read until it finished.
+                await turns.start(loop.run_text(
                     text=text,
                     on_event=lambda evt: _send(websocket, evt),
                     speak=speak
-                )
-                if get_settings().llm_streaming_enabled:
-                    await _send(websocket, {"type": "stream_done"})
+                ))
 
             elif msg_type == "reset_history":
+                await turns.cancel()
                 flush = bool(message.get("flush_memory", False))
                 await loop.reset_history(flush_memory=flush)
                 waiting_for_audio = False
                 await _send(websocket, {"type": "idle"})
                 
             elif msg_type == "attach":
+                await turns.cancel()
                 sess_id = message.get("session_id")
                 if sess_id:
                     await loop.reset_history(session_id=sess_id)
@@ -366,6 +358,7 @@ async def conversation_websocket(websocket: WebSocket) -> None:
                 await _send(websocket, {"type": "idle"})
                 
             elif msg_type == "new_session":
+                await turns.cancel()
                 await loop.reset_history(new_session=True)
                 waiting_for_audio = False
                 await _send(websocket, {"type": "session_attached", "session_id": loop._session_id})
@@ -395,6 +388,9 @@ async def conversation_websocket(websocket: WebSocket) -> None:
             })
 
     finally:
+        # Don't leave a turn running on the GPU for a client that has gone.
+        await turns.cancel()
+
         # Unregister active connection
         if user_id in websocket.app.state.active_connections:
             try:
