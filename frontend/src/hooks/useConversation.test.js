@@ -164,3 +164,20 @@ describe('errors', () => {
     }
   })
 })
+
+describe('what River is told about state changes', () => {
+  it('goes straight from one state to the next, with idle only when the page goes away', () => {
+    const states = []
+    const onPresence = (e) => { if (e.detail?.state && typeof e.detail.level !== 'number') states.push(e.detail.state) }
+    window.addEventListener('rs-presence', onPresence)
+    const { unmount } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    states.length = 0
+    act(() => { serverSays({ type: 'listening' }) })
+    act(() => { serverSays({ type: 'thinking' }) })
+    act(() => { serverSays({ type: 'speaking' }) })
+    expect(states).toEqual(['listening', 'thinking', 'speaking'])
+    unmount()
+    expect(states.slice(3)).toEqual(['idle'])
+    window.removeEventListener('rs-presence', onPresence)
+  })
+})

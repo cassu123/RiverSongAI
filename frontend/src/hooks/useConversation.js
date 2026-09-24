@@ -217,10 +217,15 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('rs-presence', { detail: { state: convState } }))
-    return () => {
-      window.dispatchEvent(new CustomEvent('rs-presence', { detail: { state: 'idle' } }))
-    }
   }, [convState])
+
+  // When this conversation goes away, River goes back to idle. This used to
+  // be the cleanup of the effect above, which React runs before every re-run
+  // — so River was told "idle" between every two states, and loosened for
+  // about 4 s on each transition.
+  useEffect(() => () => {
+    window.dispatchEvent(new CustomEvent('rs-presence', { detail: { state: 'idle' } }))
+  }, [])
 
   // Amplitude on its own event. River's mind (presence/riverMind.js) reads
   // `rs-presence {state, level}`. Kept separate from the state effect so a
