@@ -6,6 +6,11 @@
  * and eliminating the decodeAudioData latency overhead.
  */
 
+// Audio handed to the worklet counts as "on its way" for this long, or until
+// the worklet reports it playing. The server sends {type:'idle'} straight
+// after its last chunk, before playback can have started.
+const START_GRACE_MS = 1500
+
 export class AudioPlayer {
   constructor(onStateChange) {
     this.ctx = null
@@ -15,6 +20,7 @@ export class AudioPlayer {
     // Whole clips still being decoded. The server sends {type:'idle'} right
     // after an {type:'audio'} clip, before it can have started playing.
     this.pendingDecodes = 0
+    this.awaitingUntil = 0
     this.onStateChange = onStateChange
     // Maintain state tracking for Avatar visemes
     this.playbackState = { active: false, queued: 0 }
@@ -45,6 +51,7 @@ export class AudioPlayer {
       
       this.worklet.port.onmessage = (e) => {
         if (e.data.type === 'playback_state') {
+          if (e.data.active || e.data.queued > 0) this.awaitingUntil = 0
           const wasPlaying = this.isPlaying
           this.playbackState = { active: e.data.active, queued: e.data.queued }
           this.isPlaying = e.data.active
@@ -61,12 +68,14 @@ export class AudioPlayer {
    * @param {Int16Array} int16Array - The raw PCM audio data.
    */
   async playChunk(int16Array) {
+    this.awaitingUntil = performance.now() + START_GRACE_MS
     try {
       await this._init()
       if (this.worklet) {
         this.worklet.port.postMessage({ type: 'audio_chunk', data: int16Array })
       }
     } catch (err) {
+      this.awaitingUntil = 0
       console.error('[AudioPlayer] Initialization failed for chunk:', err)
     }
   }
@@ -90,12 +99,18 @@ export class AudioPlayer {
         const v = Math.max(-1, Math.min(1, ch[i]))
         pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff
       }
+      this.awaitingUntil = performance.now() + START_GRACE_MS
       this.worklet?.port.postMessage({ type: 'audio_chunk', data: pcm })
     } catch (err) {
       console.error('[AudioPlayer] Could not decode audio clip:', err)
     } finally {
       this.pendingDecodes--
     }
+  }
+
+  /** Playing, decoding, or audio handed over and about to start. */
+  isBusy() {
+    return this.isPlaying || this.pendingDecodes > 0 || performance.now() < this.awaitingUntil
   }
 
   /**
@@ -119,6 +134,7 @@ export class AudioPlayer {
       this.worklet.port.postMessage({ type: 'flush' })
     }
     this.isPlaying = false
+    this.awaitingUntil = 0
     this.playbackState = { active: false, queued: 0 }
   }
 

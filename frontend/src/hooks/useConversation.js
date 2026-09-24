@@ -40,6 +40,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
 
   const streamTimeoutRef = useRef(null)
   const errorTimerRef = useRef(null)
+  const settleTimerRef = useRef(null)
   const expectedGenIdRef = useRef(0)
   // Newest generation id seen on an audio chunk. The server bumps its id once
   // per turn; interrupting must skip past the one actually playing, or late
@@ -167,7 +168,21 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
       case 'idle':
         // An error is held for ERROR_HOLD_MS; the idle the server sends right
         // after one must not wipe it before it has been seen.
-        if (!audioPlayer.isPlaying && !audioPlayer.pendingDecodes) setConvState(s => (s === 'error' ? s : 'idle'))
+        //
+        // The server also sends idle straight after its last audio, before
+        // that audio has started playing. Going idle then made River drop to
+        // idle for a moment and come back as "speaking". Wait for playback;
+        // if it never starts (audio locked on a phone), settle anyway.
+        clearTimeout(settleTimerRef.current)
+        if (!audioPlayer.isBusy()) {
+          setConvState(s => (s === 'error' ? s : 'idle'))
+        } else {
+          const settle = () => {
+            if (audioPlayer.isBusy()) settleTimerRef.current = setTimeout(settle, 250)
+            else setConvState(s => (s === 'speaking' ? 'idle' : s))
+          }
+          settleTimerRef.current = setTimeout(settle, 250)
+        }
         break
       case 'error':
         // Nothing used to set the error state, so River never showed one.
@@ -204,6 +219,7 @@ export function useConversation({ token, user, sessionId, onSessionId, extraQuer
     return () => {
       audioPlayer.close()
       clearTimeout(errorTimerRef.current)
+      clearTimeout(settleTimerRef.current)
     }
   }, [audioPlayer])
 

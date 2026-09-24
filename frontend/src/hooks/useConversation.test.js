@@ -33,6 +33,7 @@ vi.mock('../utils/AudioPlayer.js', () => ({
     playChunk(pcm) { this.played.push(pcm); return Promise.resolve() }
     playEncoded(buf) { this.clips.push(buf); this.pendingDecodes++; return Promise.resolve() }
     getLevel() { return this.level ?? 0 }
+    isBusy() { return this.busy ?? (this.isPlaying || this.pendingDecodes > 0) }
     interrupt() { this.flushes++ }
     stop() { this.flushes++ }
     close() {}
@@ -215,5 +216,25 @@ describe('mute and connection', () => {
     expect(order).not.toContain('mic-open')
     expect(sent.some((m) => m?.type === 'start')).toBe(false)
     expect(result.current.error).toMatch(/not connected/i)
+  })
+})
+
+describe('the end of a spoken reply', () => {
+  const player = () => players[players.length - 1]
+
+  it('does not drop to idle before her audio has started playing', () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+      act(() => { serverSays({ type: 'speaking' }) })
+      player().busy = true                       // chunk handed over, not yet heard
+      act(() => { serverSays({ type: 'idle' }) }) // the server says idle straight away
+      expect(result.current.convState).toBe('speaking')
+      player().busy = false                      // finished (or never started)
+      act(() => { vi.advanceTimersByTime(300) })
+      expect(result.current.convState).toBe('idle')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
