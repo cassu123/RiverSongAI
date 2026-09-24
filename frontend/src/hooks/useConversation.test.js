@@ -238,3 +238,48 @@ describe('the end of a spoken reply', () => {
     }
   })
 })
+
+describe('the Stop button', () => {
+  const sentAudio = () => sent.filter((m) => m instanceof Int16Array)
+
+  it('stops her mid-reply, and nothing from that turn brings her back', () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    act(() => { serverSays({ type: 'thinking' }) })
+    act(() => { serverSays({ type: 'response_chunk', text: 'Once upon' }) })
+    act(() => { result.current.stop() })
+    expect(sent.some((m) => m?.type === 'interrupt')).toBe(true)
+    expect(result.current.convState).toBe('idle')
+    // Still in flight from the stopped turn:
+    act(() => { serverSays({ type: 'response_chunk', text: ' a time' }) })
+    act(() => { serverSays({ type: 'speaking' }) })
+    expect(result.current.convState).toBe('idle')
+    expect(result.current.streamingContent).toBe('')
+    // What she had said before the stop is kept.
+    expect(result.current.messages.at(-1)).toEqual({ role: 'assistant', text: 'Once upon' })
+  })
+
+  it('lets the next turn through once you ask again', () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    act(() => { serverSays({ type: 'thinking' }) })
+    act(() => { result.current.stop() })
+    act(() => { result.current.sendText('try again') })
+    act(() => { serverSays({ type: 'thinking' }) })
+    expect(result.current.convState).toBe('thinking')
+  })
+
+  it('stops transcription too', () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    act(() => { serverSays({ type: 'transcribing' }) })
+    act(() => { result.current.stop() })
+    expect(sent.some((m) => m?.type === 'interrupt')).toBe(true)
+    expect(result.current.convState).toBe('idle')
+  })
+
+  it('while listening, throws the recording away', async () => {
+    const { result } = renderHook(() => useConversation({ token: 't', user: { id: 1 } }))
+    await act(async () => { await result.current.startRecording() })
+    act(() => { result.current.stop() })
+    expect(sentAudio()).toHaveLength(0)
+    expect(result.current.convState).toBe('idle')
+  })
+})

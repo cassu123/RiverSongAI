@@ -25,7 +25,7 @@ describe('Voice page status', () => {
   beforeEach(() => {
     conv = {
       convState: 'idle', messages: [], streamingContent: '', error: null, setError: vi.fn(),
-      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), cancelListening: vi.fn(), audioLevel: 0,
+      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), cancelListening: vi.fn(), stop: vi.fn(), audioLevel: 0,
       resetSession: vi.fn(), connectionStatus: 'connected', toolEvents: [],
     }
   })
@@ -60,6 +60,25 @@ describe('Voice page status', () => {
     expect(conv.cancelListening).toHaveBeenCalledTimes(1)
   })
 
+  it('shows Stop while River is busy, and it stops her', () => {
+    conv.convState = 'thinking'
+    let bar = null
+    render(<ConversationPage setAction={(n) => { bar = n }} />)
+    const barView = render(<>{bar}</>)
+    const stopBtn = barView.getByRole('button', { name: 'Stop River' })
+    fireEvent.click(stopBtn)
+    expect(conv.stop).toHaveBeenCalledTimes(1)
+    expect(barView.queryByTitle('Reset session')).toBeNull()
+  })
+
+  it('shows no Stop when there is nothing to stop', () => {
+    let bar = null
+    render(<ConversationPage setAction={(n) => { bar = n }} />)
+    const barView = render(<>{bar}</>)
+    expect(barView.queryByRole('button', { name: 'Stop River' })).toBeNull()
+    expect(barView.getByTitle('Reset session')).toBeTruthy()
+  })
+
   it('names a state that means something is happening', () => {
     conv.convState = 'listening'
     let bar = null
@@ -88,7 +107,7 @@ describe('Voice page transcript panel', () => {
     localStorage.clear()
     conv = {
       convState: 'connecting', messages: [], streamingContent: '', error: null, setError: vi.fn(),
-      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), cancelListening: vi.fn(), audioLevel: 0,
+      isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), cancelListening: vi.fn(), stop: vi.fn(), audioLevel: 0,
       resetSession: vi.fn(), connectionStatus: 'connecting', toolEvents: [],
     }
   })

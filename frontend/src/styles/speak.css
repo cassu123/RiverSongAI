@@ -58,6 +58,28 @@
   pointer-events: none;
 }
 
+/* Stop — a white circle, like Claude's voice mode. Filled with the page's
+   foreground so it is the one light, solid control in the bar. */
+.rs-speak-stop {
+  all: unset;
+  box-sizing: border-box;
+  inline-size: 48px;
+  block-size: 48px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--fg);
+  color: var(--bg-base);
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  transition: transform 0.12s ease, opacity 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.rs-speak-stop:active { transform: scale(0.94); }
+.rs-speak-stop:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.rs-speak-stop .material-symbols-rounded { font-size: 1.6rem; }
+
 /* What River has actually done: her real tool calls this session. */
 .rs-speak-activity {
   list-style: none;
