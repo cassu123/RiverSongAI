@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import EnvIcon from './EnvIcon.jsx'
 
 /**
@@ -7,9 +8,14 @@ import EnvIcon from './EnvIcon.jsx'
  *
  * Shares DNA with Drawer: same scrim, same glass material, same row hover.
  * Slides up from bottom on mobile, anchors center-bottom on desktop.
+ *
+ * Rendered into <body>: pages sit inside animated wrappers (.page-enter,
+ * .animate-fade-in) that keep a transform, and a transformed ancestor turns
+ * position:fixed into "fixed to the page". A closed sheet then sat at the
+ * foot of the page, visible, instead of off the bottom of the screen.
  */
 export default function Sheet({ open, onClose, title, children }) {
-  return (
+  return createPortal(
     <>
       <div
         className={`rs-sheet-scrim ${open ? 'is-open' : ''}`}
@@ -30,7 +36,8 @@ export default function Sheet({ open, onClose, title, children }) {
         )}
         <div className="rs-sheet-body">{children}</div>
       </div>
-    </>
+    </>,
+    document.body
   )
 }
 
