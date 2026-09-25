@@ -87,12 +87,12 @@ export default function ComparePage({ setAction }) {
   }
 
   useEffect(() => {
-    setAction(
+    setAction(disabled === true ? null :
       <button className="rs-pill" onClick={submit} disabled={running || !prompt.trim()}>
         {running ? 'RUNNING…' : 'COMPARE'}
       </button>
     )
-  }, [setAction, submit, running, prompt])
+  }, [setAction, submit, running, prompt, disabled])
 
   if (disabled === true) {
     return (

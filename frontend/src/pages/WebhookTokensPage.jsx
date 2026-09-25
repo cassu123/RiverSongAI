@@ -101,8 +101,8 @@ export default function WebhookTokensPage({ setAction }) {
   const closeAudit = () => setAudit({ open: false, entries: [], tokenId: null, loading: false })
 
   useEffect(() => {
-    setAction(<button className="rs-pill" onClick={startNew}>+ ISSUE TOKEN</button>)
-  }, [setAction])
+    setAction(disabled ? null : <button className="rs-pill" onClick={startNew}>+ ISSUE TOKEN</button>)
+  }, [setAction, disabled])
 
   return (
     <FlagGatedPage

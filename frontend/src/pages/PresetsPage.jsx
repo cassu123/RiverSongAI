@@ -93,8 +93,8 @@ export default function PresetsPage({ setAction }) {
   }
 
   useEffect(() => {
-    setAction(<button className="rs-pill" onClick={startNew}>+ NEW PRESET</button>)
-  }, [setAction])
+    setAction(disabled ? null : <button className="rs-pill" onClick={startNew}>+ NEW PRESET</button>)
+  }, [setAction, disabled])
 
   if (loading) return <div className="rs-foyer animate-fade-in"><div className="rs-card-meta">LOADING PRESETS…</div></div>
 
