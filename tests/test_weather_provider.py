@@ -7,7 +7,6 @@ and suns on the hourly strip through the night (no day/night flag).
 """
 import asyncio
 
-
 import providers.feeds.weather as weather
 
 DAY = "2026-09-25"
@@ -118,3 +117,134 @@ def test_no_hourly_data_falls_back_to_the_daily_code(monkeypatch):
     payload["hourly"] = {}
     data, _ = _fetch(monkeypatch, payload)
     assert data["daily"][0]["condition"] == "Fog"
+
+
+# ── Rain outlook ─────────────────────────────────────────────────────────────
+
+NOW = f"{DAY}T13:00"
+
+
+def _min(*mm):
+    return [{"time": f"{DAY}T{13 + (i * 15) // 60:02d}:{(i * 15) % 60:02d}", "precipitation": v}
+            for i, v in enumerate(mm)]
+
+
+def _hr(probs, code=61, start=13, date=DAY):
+    out = []
+    for i, p in enumerate(probs):
+        h = start + i
+        d = date if h < 24 else "2026-09-26"
+        out.append({"time": f"{d}T{h % 24:02d}:00", "precip_prob": p, "weathercode": code})
+    return out
+
+
+def test_outlook_rain_starting_soon():
+    assert weather.rain_outlook(NOW, _min(0, 0, 0.3, 0.5), _hr([40])) == \
+        "Rain starting in about 30 minutes."
+
+
+def test_outlook_rain_now_easing():
+    assert weather.rain_outlook(NOW, _min(0.4, 0.2, 0, 0, 0), _hr([90])) == \
+        "Rain now, easing by 1:30 PM."
+
+
+def test_outlook_likely_later_and_tomorrow():
+    assert weather.rain_outlook(NOW, _min(0, 0), _hr([0, 10, 60])) == "Rain likely around 3 PM."
+    later = _hr([0] * 13 + [70])  # 13:00 + 13h = 2 AM next day
+    assert weather.rain_outlook(NOW, _min(0), later) == "Rain likely around 2 AM tomorrow."
+
+
+def test_outlook_storms_and_slight_chance():
+    assert weather.rain_outlook(NOW, [], _hr([0, 55], code=95)) == "Storms likely around 2 PM."
+    assert weather.rain_outlook(NOW, [], _hr([5, 25, 10])) == \
+        "Slight chance of rain around 2 PM (25%)."
+
+
+def test_outlook_dry():
+    assert weather.rain_outlook(NOW, _min(0, 0), _hr([0, 5, 10])) == \
+        "No rain expected in the next 24 hours."
+
+
+# ── The fuller request, and its fallback ─────────────────────────────────────
+
+def test_full_request_carries_the_new_fields(monkeypatch):
+    data, requested = _fetch(monkeypatch, _payload([0] * 24))
+    assert "minutely_15" in requested and requested["forecast_days"] == 10
+    assert "precipitation_probability_max" in requested["daily"]
+    assert "outlook" in data and "minutely" in data
+
+
+def test_a_refused_full_request_falls_back_to_the_basic_one(monkeypatch):
+    payload = _payload([0] * 24)
+    calls = []
+
+    class _Client:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url, params=None, **k):
+            calls.append(params or {})
+            if params and "minutely_15" in params:
+                r = _Resp({"error": True, "reason": "Cannot initialize ..."})
+                r.status_code = 400
+                r.text = "Cannot initialize ..."
+                return r
+            return _Resp(payload)
+
+    async def _nothing(*a):
+        return {}
+
+    monkeypatch.setattr(weather.httpx, "AsyncClient", _Client)
+    monkeypatch.setattr(weather, "fetch_air_quality", _nothing)
+    monkeypatch.setattr(weather, "_reverse_geocode", _nothing)
+    data = asyncio.run(weather.fetch_weather(34.87, -92.11))
+    assert data["current"]["temperature"] == 68
+    assert "minutely_15" not in calls[1] and calls[1]["forecast_days"] == 7
+
+
+# ── NWS text forecast ────────────────────────────────────────────────────────
+
+def test_nws_text_forecast(monkeypatch):
+    weather._nws_points.clear()
+    pages = {
+        "https://api.weather.gov/points/34.8700,-92.1100": {"properties": {
+            "forecast": "https://api.weather.gov/gridpoints/LZK/90,70/forecast"}},
+        "https://api.weather.gov/gridpoints/LZK/90,70/forecast": {"properties": {"periods": [
+            {"name": "Tonight", "shortForecast": "Mostly Clear",
+             "detailedForecast": "Mostly clear, with a low around 59.",
+             "temperature": 59, "temperatureUnit": "F", "isDaytime": False,
+             "probabilityOfPrecipitation": {"value": None}},
+        ]}},
+    }
+
+    class _Client:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url, **k):
+            if url not in pages:
+                r = _Resp({})
+                r.status_code = 404
+                return r
+            return _Resp(pages[url])
+
+    monkeypatch.setattr(weather.httpx, "AsyncClient", _Client)
+    periods = asyncio.run(weather.fetch_nws_forecast(34.87, -92.11))
+    assert periods == [{"name": "Tonight", "short": "Mostly Clear",
+                        "detailed": "Mostly clear, with a low around 59.",
+                        "temperature": 59, "temperature_unit": "F",
+                        "is_day": False, "precip_prob": None}]
+    # Outside the US the point lookup 404s: no text, no error.
+    assert asyncio.run(weather.fetch_nws_forecast(51.5, -0.12)) == []

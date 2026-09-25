@@ -69,49 +69,54 @@ async def fetch_weather(
     temp_unit = "celsius" if unit == "celsius" else "fahrenheit"
     wind_unit = wind_unit if wind_unit in ("kmh", "mph", "kn", "ms") else "kmh"
 
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current": ",".join([
-            "temperature_2m",
-            "apparent_temperature",
-            "weathercode",
-            "windspeed_10m",
-            "winddirection_10m",
-            "windgusts_10m",
-            "relative_humidity_2m",
-            "precipitation",
-            "uv_index",
-            "visibility",
+    base = {
+        "current": [
+            "temperature_2m", "apparent_temperature", "weathercode",
+            "windspeed_10m", "winddirection_10m", "windgusts_10m",
+            "relative_humidity_2m", "precipitation", "uv_index", "visibility",
             "is_day",
-        ]),
-        "hourly": ",".join([
-            "temperature_2m",
-            "weathercode",
-            "is_day",
-            "precipitation_probability",
-            "precipitation",
-            "windspeed_10m",
-        ]),
-        "daily": ",".join([
-            "weathercode",
-            "temperature_2m_max",
-            "temperature_2m_min",
-            "precipitation_sum",
-            "windspeed_10m_max",
-            "uv_index_max",
-            "sunrise",
-            "sunset",
-        ]),
-        "temperature_unit": temp_unit,
-        "wind_speed_unit": wind_unit,
-        "timezone": "auto",
-        "forecast_days": 7,
+        ],
+        "hourly": [
+            "temperature_2m", "weathercode", "is_day",
+            "precipitation_probability", "precipitation", "windspeed_10m",
+        ],
+        "daily": [
+            "weathercode", "temperature_2m_max", "temperature_2m_min",
+            "precipitation_sum", "windspeed_10m_max", "uv_index_max",
+            "sunrise", "sunset",
+        ],
+    }
+    # The fuller set. If Open-Meteo refuses any of it, the request above is
+    # retried as it stood before, so the page never loses its weather.
+    extra = {
+        "current": ["dew_point_2m", "pressure_msl", "cloud_cover"],
+        "hourly": ["winddirection_10m", "windgusts_10m", "uv_index"],
+        "daily": ["precipitation_probability_max", "wind_gusts_10m_max",
+                  "wind_direction_10m_dominant"],
+        # Rain in 15-minute steps: native from NOAA's HRRR over the US,
+        # interpolated from hourly elsewhere.
+        "minutely_15": ["precipitation"],
     }
 
+    def _params(fields: Dict[str, List[str]], days: int) -> Dict[str, Any]:
+        return {
+            "latitude": lat,
+            "longitude": lon,
+            **{k: ",".join(v) for k, v in fields.items()},
+            "temperature_unit": temp_unit,
+            "wind_speed_unit": wind_unit,
+            "timezone": "auto",
+            "forecast_days": days,
+        }
+
+    full = {k: base.get(k, []) + extra.get(k, []) for k in {*base, *extra}}
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(_BASE, params=params)  # type: ignore
+            resp = await client.get(_BASE, params=_params(full, 10))  # type: ignore
+            if resp.status_code == 400:
+                logger.warning("Open-Meteo refused the full request (%s); "
+                               "falling back to the basic one", resp.text[:200])
+                resp = await client.get(_BASE, params=_params(base, 7))  # type: ignore
             resp.raise_for_status()
             data = resp.json()
     except Exception as exc:
@@ -136,11 +141,17 @@ async def fetch_weather(
         "precipitation": current_raw.get("precipitation"),
         "uv_index": current_raw.get("uv_index"),
         "visibility": current_raw.get("visibility"),  # metres
+        "dew_point": current_raw.get("dew_point_2m"),
+        "pressure": current_raw.get("pressure_msl"),  # hPa
+        "cloud_cover": current_raw.get("cloud_cover"),  # %
         "unit": unit_sym,
         "wind_unit": {"kmh": "km/h", "mph": "mph", "kn": "kn", "ms": "m/s"}.get(wind_unit, "km/h"),
     }
 
-    # Hourly — next 24 hours only
+    def _at(arr: List[Any], i: int) -> Any:
+        return arr[i] if i < len(arr) else None
+
+    # Hourly — the next 48 hours
     hourly_times = hourly_raw.get("time", [])
     hourly_temps = hourly_raw.get("temperature_2m", [])
     hourly_codes = hourly_raw.get("weathercode", [])
@@ -148,8 +159,11 @@ async def fetch_weather(
     hourly_precip = hourly_raw.get("precipitation", [])
     hourly_wind = hourly_raw.get("windspeed_10m", [])
     hourly_is_day = hourly_raw.get("is_day", [])
+    hourly_wind_dir = hourly_raw.get("winddirection_10m", [])
+    hourly_gusts = hourly_raw.get("windgusts_10m", [])
+    hourly_uv = hourly_raw.get("uv_index", [])
 
-    # Find index of current hour to slice next 24
+    # Find index of current hour to slice the next 48
     now_str = current_raw.get("time", "")
     start_idx = 0
     if now_str and hourly_times:
@@ -159,7 +173,7 @@ async def fetch_weather(
                 break
 
     hourly: list = []
-    for i in range(start_idx, min(start_idx + 24, len(hourly_times))):
+    for i in range(start_idx, min(start_idx + 48, len(hourly_times))):
         hourly.append({
             "time": hourly_times[i],
             "temperature": hourly_temps[i] if i < len(hourly_temps) else None,
@@ -169,7 +183,18 @@ async def fetch_weather(
             "precip_prob": hourly_precip_prob[i] if i < len(hourly_precip_prob) else None,
             "precipitation": hourly_precip[i] if i < len(hourly_precip) else None,
             "wind_speed": hourly_wind[i] if i < len(hourly_wind) else None,
+            "wind_direction": _at(hourly_wind_dir, i),
+            "wind_gusts": _at(hourly_gusts, i),
+            "uv_index": _at(hourly_uv, i),
         })
+
+    # Rain in 15-minute steps over the next two hours.
+    m_raw = data.get("minutely_15", {})
+    m_times = m_raw.get("time", [])
+    m_precip = m_raw.get("precipitation", [])
+    m_start = next((i for i, t in enumerate(m_times) if t >= now_str[:16]), len(m_times))
+    minutely = [{"time": m_times[i], "precipitation": _at(m_precip, i)}
+                for i in range(m_start, min(m_start + 8, len(m_times)))]
 
     def _daily_val(key: str, idx: int):
         arr = daily_raw.get(key) or []
@@ -193,23 +218,32 @@ async def fetch_weather(
             "uv_index_max": _daily_val("uv_index_max", i),
             "sunrise": _daily_val("sunrise", i),
             "sunset": _daily_val("sunset", i),
+            "precip_prob_max": _daily_val("precipitation_probability_max", i),
+            "wind_gusts_max": _daily_val("wind_gusts_10m_max", i),
+            "wind_direction": _daily_val("wind_direction_10m_dominant", i),
         })
 
     import asyncio as _asyncio
-    air_quality, location_name = await _asyncio.gather(
+    air_quality, location_name, forecast_text = await _asyncio.gather(
         fetch_air_quality(lat, lon),
         _reverse_geocode(lat, lon),
+        fetch_nws_forecast(lat, lon),
         return_exceptions=True,
     )
     if isinstance(air_quality, Exception):
         air_quality = {}
     if isinstance(location_name, Exception):
         location_name = ""
+    if isinstance(forecast_text, Exception):
+        forecast_text = []
 
     return {
         "current": current,
         "hourly": hourly,
         "daily": daily,
+        "minutely": minutely,
+        "outlook": rain_outlook(now_str, minutely, hourly),
+        "forecast_text": forecast_text,
         "air_quality": air_quality,
         "unit": unit_sym,
         "timezone": data.get("timezone"),
@@ -243,6 +277,111 @@ def _daytime_code(date: str, times: List[str], codes: List[Any],
         return max(wet)
     counts = Counter(c for c in day if c < 51)
     return max(counts, key=lambda c: (counts[c], c))
+
+
+_WET_MM = 0.1  # rain in a 15-minute step that counts as "raining"
+
+
+def _precip_kind(code: Any) -> str:
+    if isinstance(code, int) and code >= 95:
+        return "storms"
+    if isinstance(code, int) and (71 <= code <= 77 or code in (85, 86)):
+        return "snow"
+    return "rain"
+
+
+def _clock(t: str, now: str, minutes: bool = False) -> str:
+    """ "2026-09-25T14:00" → "2 PM", "2:15 PM", "2 PM tomorrow", "2 PM Sat"."""
+    from datetime import date
+    h, m = int(t[11:13]), int(t[14:16])
+    label = f"{h % 12 or 12}{f':{m:02d}' if minutes and m else ''} {'AM' if h < 12 else 'PM'}"
+    try:
+        days = (date.fromisoformat(t[:10]) - date.fromisoformat(now[:10])).days
+    except ValueError:
+        days = 0
+    if days == 1:
+        return f"{label} tomorrow"
+    if days > 1:
+        return f"{label} {date.fromisoformat(t[:10]).strftime('%a')}"
+    return label
+
+
+def rain_outlook(now: str, minutely: List[Dict[str, Any]],
+                 hourly: List[Dict[str, Any]]) -> str:
+    """One plain sentence on when rain (or snow, or storms) is coming.
+
+    The next two hours come from the 15-minute data; beyond that, the first
+    hour in the next day with a 50% chance or more, else the likeliest hour
+    at 20% or more.
+    """
+    if not now:
+        return ""
+    kind_now = _precip_kind(hourly[0].get("weathercode") if hourly else None)
+    wet = [(m.get("precipitation") or 0) >= _WET_MM for m in minutely]
+    if wet and wet[0]:
+        for i in range(1, len(wet)):
+            if not any(wet[i:]):
+                return f"{kind_now.capitalize()} now, easing by {_clock(minutely[i]['time'], now, True)}."
+        return f"{kind_now.capitalize()} now, lasting at least two hours."
+    if any(wet):
+        i = wet.index(True)
+        return f"{kind_now.capitalize()} starting in about {i * 15} minutes."
+
+    day = [h for h in hourly[:24] if h.get("precip_prob") is not None]
+    likely = next((h for h in day if h["precip_prob"] >= 50), None)
+    if likely:
+        return (f"{_precip_kind(likely.get('weathercode')).capitalize()} likely "
+                f"around {_clock(likely['time'], now)}.")
+    chance = max(day, key=lambda h: h["precip_prob"], default=None)
+    if chance and chance["precip_prob"] >= 20:
+        return (f"Slight chance of {_precip_kind(chance.get('weathercode'))} around "
+                f"{_clock(chance['time'], now)} ({chance['precip_prob']}%).")
+    return "No rain expected in the next 24 hours."
+
+
+_NWS_HEADERS = {"User-Agent": "RiverSongAI/1.0 (riversongai.com)"}
+_nws_points: Dict[str, Dict[str, Any]] = {}
+
+
+async def _nws_point(client: Any, lat: float, lon: float) -> Optional[Dict[str, Any]]:
+    """The NWS grid for a point (US only). Cached: a point's grid does not move."""
+    key = f"{lat:.4f},{lon:.4f}"
+    if key not in _nws_points:
+        resp = await client.get(f"{_NWS_BASE}/points/{key}")
+        if resp.status_code != 200:
+            return None
+        if len(_nws_points) > 64:
+            _nws_points.clear()
+        _nws_points[key] = resp.json().get("properties", {})
+    return _nws_points[key]
+
+
+async def fetch_nws_forecast(lat: float, lon: float) -> List[Dict[str, Any]]:
+    """The National Weather Service's own words for the next four periods
+    ("Tonight: Mostly clear, with a low around 59."). US only; [] elsewhere
+    or on any failure."""
+    try:
+        async with httpx.AsyncClient(timeout=10, headers=_NWS_HEADERS) as client:
+            point = await _nws_point(client, lat, lon)
+            url = (point or {}).get("forecast")
+            if not url:
+                return []
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                return []
+            periods = resp.json().get("properties", {}).get("periods", [])
+    except Exception as exc:
+        logger.debug("NWS forecast fetch failed: %s", exc)
+        return []
+    return [{
+        "name": p.get("name", ""),
+        "short": p.get("shortForecast", ""),
+        "detailed": p.get("detailedForecast", ""),
+        "temperature": p.get("temperature"),
+        "temperature_unit": p.get("temperatureUnit"),
+        "is_day": p.get("isDaytime"),
+        "precip_prob": (p.get("probabilityOfPrecipitation") or {}).get("value"),
+    } for p in periods[:4]]
 
 
 async def get_weather_report(lat: float, lon: float,
