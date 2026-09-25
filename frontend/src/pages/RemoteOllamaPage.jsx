@@ -69,7 +69,7 @@ export default function RemoteOllamaPage({ setAction }) {
     } catch (e) { setError(e.message) }
   }
 
-  useEffect(() => { setAction(<button className="rs-pill" onClick={startNew}>+ ADD RIG</button>) }, [setAction])
+  useEffect(() => { setAction(disabled ? null : <button className="rs-pill" onClick={startNew}>+ ADD RIG</button>) }, [setAction, disabled])
 
   if (loading) return <div className="rs-foyer animate-fade-in"><div className="rs-card-meta">LOADING RIGS…</div></div>
 

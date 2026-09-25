@@ -15,6 +15,7 @@ const STATUS_STYLES = {
   disabled:       { bg: 'rgba(255,255,255,0.18)', fg: 'rgba(255,255,255,0.8)', label: 'DISABLED' },
   healthy:        { bg: 'var(--md-secondary)',    fg: 'var(--bg-base)',        label: 'HEALTHY' },
   error:          { bg: 'var(--md-error)',        fg: 'var(--bg-base)',        label: 'ERROR' },
+  idle:           { bg: 'rgba(255,255,255,0.10)', fg: 'rgba(255,255,255,0.6)', label: 'IDLE' },
 }
 
 function StatusPill({ status }) {
@@ -101,17 +102,18 @@ export default function SlaePage({ setAction }) {
         {(roles.roles || []).length === 0 ? (
           <div className="rs-card-meta">No roles registered yet.</div>
         ) : (
-          <div className="rs-type-micro" style={{ display: 'grid', gridTemplateColumns: '110px 1fr auto', columnGap: 'var(--rs-space-3)', rowGap: 'var(--rs-space-2)' }}>
+          <div className="rs-type-micro" style={{ display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr) auto', columnGap: 'var(--rs-space-3)', rowGap: 'var(--rs-space-2)' }}>
             {roles.roles.map((r) => {
               const inv = r.last_invocation
               const dot = inv ? (inv.success ? 'var(--md-secondary)' : 'var(--md-error)') : 'rgba(255,255,255,0.18)'
               return (
                 <React.Fragment key={r.name}>
                   <span style={{ opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{r.name}</span>
-                  <span style={{ opacity: 0.7 }}>
-                    {r.provider}/{r.model}
-                    {r.json_mode && <span className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-2)' }}>JSON</span>}
-                    <span className="rs-muted rs-type-nano" style={{ marginLeft: 'var(--rs-space-2)' }}>T={r.temperature}</span>
+                  <span style={{ opacity: 0.7, display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 'var(--rs-space-2)', minWidth: 0 }}>
+                    {/* The name stays whole; the tags wrap after it on a phone. */}
+                    <span title={`${r.provider}/${r.model}`} style={{ whiteSpace: 'nowrap', display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}>{r.provider}/{r.model}</span>
+                    {r.json_mode && <span className="rs-muted rs-type-nano">JSON</span>}
+                    <span className="rs-muted rs-type-nano">T={r.temperature}</span>
                   </span>
                   <span title={inv ? `${inv.ts} (${inv.elapsed_ms ?? '—'} ms)` : 'No invocations yet'} style={{
                     width: 8, height: 8, borderRadius: '50%', background: dot, alignSelf: 'center',
@@ -124,7 +126,7 @@ export default function SlaePage({ setAction }) {
       </Section>
 
       <Section title="LANGFUSE TRACING" status={langfuse.status} message={langfuse.message}>
-        {langfuse.dashboard_url && (
+        {langfuse.dashboard_url && langfuse.status !== 'disabled' && (
           <div className="rs-mb-2 rs-type-micro">
             <a href={langfuse.dashboard_url} target="_blank" rel="noreferrer" style={{ color: 'var(--md-secondary)' }}>
               OPEN DASHBOARD →
@@ -138,12 +140,12 @@ export default function SlaePage({ setAction }) {
         )}
       </Section>
 
-      <Section title="GRAPHITI KNOWLEDGE GRAPH" status={graphiti.status} message={graphiti.message}>
+      <Section title="KNOWLEDGE GRAPH" status={graphiti.status} message={graphiti.message}>
         <div className="rs-flex rs-gap-4 rs-mb-2 rs-type-micro" style={{ opacity: 0.8 }}>
           <div>NODES: <strong>{graphiti.node_count ?? 0}</strong></div>
           <div>EDGES: <strong>{graphiti.edge_count ?? 0}</strong></div>
         </div>
-        {graphiti.neo4j_browser_url && (
+        {graphiti.neo4j_browser_url && graphiti.status !== 'disabled' && (
           <div className="rs-type-micro">
             <a href={graphiti.neo4j_browser_url} target="_blank" rel="noreferrer" style={{ color: 'var(--md-secondary)' }}>
               OPEN NEO4J BROWSER →
@@ -154,7 +156,7 @@ export default function SlaePage({ setAction }) {
 
       <Section title="RECENT ACTIVITY" status={recent.status} message={recent.message}>
         {(recent.events || []).length === 0 ? (
-          <div className="rs-card-meta">No events yet.</div>
+          !recent.message && <div className="rs-card-meta">No events yet.</div>
         ) : (
           <div className="rs-flex rs-flex-col rs-gap-1">
             {recent.events.slice(0, 20).map((e, i) => (

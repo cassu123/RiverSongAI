@@ -106,12 +106,12 @@ export default function SkillsPage({ setAction }) {
   }
 
   useEffect(() => {
-    setAction(
+    setAction(disabled ? null :
       <div className="rs-flex rs-gap-2">
         <button className="rs-pill" onClick={startNew}>+ ADD</button>
       </div>
     )
-  }, [setAction])
+  }, [setAction, disabled])
 
   if (loading) {
     return <div className="rs-foyer animate-fade-in"><div className="rs-card-meta">LOADING…</div></div>

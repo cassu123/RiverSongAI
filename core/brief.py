@@ -2,10 +2,49 @@ import asyncio
 import logging
 from datetime import datetime
 
-from config.settings import get_settings
 from core.timeutil import local_tz
 
 logger = logging.getLogger(__name__)
+
+async def _weather_section(store, user_id: str) -> str:
+    """Today's weather and any alerts, for the user's own saved location.
+
+    This used to read settings.latitude / settings.longitude, which do not
+    exist, so every brief died with AttributeError before it said anything;
+    and it only ever reported alerts, never the forecast.
+    """
+    from fastapi import HTTPException
+    from api.services.feed_service import FeedService
+    from providers.feeds.weather import fetch_nws_alerts
+
+    try:
+        data = await FeedService.get_weather(store, user_id)
+    except HTTPException:
+        return ""  # no location saved
+    except Exception as exc:
+        logger.warning("Brief weather failed for %s: %s", user_id, exc)
+        return ""
+
+    lines = []
+    cur = data.get("current") or {}
+    today = (data.get("daily") or [{}])[0]
+    unit = cur.get("unit") or ""
+    if cur.get("temperature") is not None:
+        lines.append(f"Now {round(cur['temperature'])}{unit}, "
+                     f"{(cur.get('condition') or '').lower()}.")
+    if today.get("temp_max") is not None and today.get("temp_min") is not None:
+        lines.append(f"Today {(today.get('condition') or '').lower()}, "
+                     f"high {round(today['temp_max'])}{unit}, "
+                     f"low {round(today['temp_min'])}{unit}.")
+    if data.get("outlook"):
+        lines.append(data["outlook"])
+
+    alerts = await fetch_nws_alerts(data.get("lat"), data.get("lon"))
+    if alerts:
+        lines.append("Alerts: " + ", ".join(a.get("event", "Alert") for a in alerts) + ".")
+
+    return "**Weather:** " + " ".join(lines) if lines else ""
+
 
 async def generate_morning_brief(user_id: str, memory_manager) -> str:
     """Generates the morning brief for the user."""
@@ -13,19 +52,13 @@ async def generate_morning_brief(user_id: str, memory_manager) -> str:
     # For now, it compiles weather and calendar.
     
     sections = []
-    
-    s = get_settings()
-    if s.latitude and s.longitude:
-        from providers.feeds.weather import fetch_nws_alerts
-        alerts = await fetch_nws_alerts(s.latitude, s.longitude)
-        if alerts:
-            alert_names = [a.get("event", "Alert") for a in alerts]
-            sections.append(f"**Weather Alerts:** {', '.join(alert_names)}")
-        else:
-            sections.append("No active weather alerts today.")
-            
-    # Proactive items missed
     store = memory_manager._store
+
+    weather = await _weather_section(store, user_id)
+    if weather:
+        sections.append(weather)
+
+    # Proactive items missed
     overnight = await store.execute_read_async(
         "SELECT * FROM proactive_log WHERE user_id = ? AND delivered = 0 ORDER BY created_at ASC",
         (user_id,)

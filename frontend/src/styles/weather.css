@@ -1,0 +1,430 @@
+/* ── Weather (Feeds → Weather) ──────────────────────────────────────────────
+   Every class the tab used was .rs-wx-*, and none had ever been written:
+   the page laid itself out by accident. This is that stylesheet. Colour
+   comes from the theme (--primary), except rain, which stays blue so it
+   means the same thing in every universe. */
+
+.rs-wx {
+  --wx-rain: oklch(70% 0.14 240);
+  --wx-cool: oklch(72% 0.12 235);
+  --wx-warm: oklch(76% 0.15 60);
+  --wx-accent: var(--primary, var(--md-primary));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rs-wx-body {
+  display: grid;
+  gap: 14px;
+}
+.rs-wx-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-inline-size: 0;
+}
+/* A wall panel or a desktop: the glance on the left, the reference on the
+   right. */
+@media (min-width: 1024px) {
+  .rs-wx-body { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; }
+}
+
+.rs-wx-panel {
+  padding: 16px 18px;
+  border-radius: var(--md-shape-lg, 20px);
+  background: color-mix(in srgb, var(--md-surface-container) 72%, transparent);
+  border: 1px solid var(--rs-hairline-soft);
+  min-inline-size: 0;
+}
+.rs-wx-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rs-wx-label {
+  font-family: var(--font-mono);
+  font-size: var(--rs-fs-nano);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  margin-block-end: 12px;
+}
+.rs-wx-panel-head .rs-wx-label { margin-block-end: 12px; }
+.rs-wx-source {
+  font-size: var(--rs-fs-nano);
+  color: var(--md-on-surface-variant);
+  opacity: 0.75;
+  text-align: end;
+}
+
+/* ── Alerts ── */
+.rs-wx-alerts { display: flex; flex-direction: column; gap: 8px; }
+.rs-wx-alert {
+  border-radius: var(--md-shape-md, 16px);
+  border: 1px solid color-mix(in srgb, var(--sev) 55%, transparent);
+  background: color-mix(in srgb, var(--sev) 14%, transparent);
+  padding: 12px 14px;
+}
+.rs-wx-alert summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  cursor: pointer;
+}
+.rs-wx-alert summary::-webkit-details-marker { display: none; }
+.rs-wx-alert summary > .material-symbols-rounded:first-child { color: var(--sev); font-size: 22px; }
+.rs-wx-alert-title { font-weight: 700; color: var(--md-on-surface); }
+.rs-wx-alert-until { font-size: var(--rs-fs-micro); color: var(--md-on-surface-variant); }
+.rs-wx-alert-more { margin-inline-start: auto; color: var(--md-on-surface-variant); transition: transform 0.2s; }
+.rs-wx-alert[open] .rs-wx-alert-more { transform: rotate(180deg); }
+.rs-wx-alert p {
+  margin: 10px 0 0;
+  font-size: var(--rs-fs-small);
+  line-height: 1.5;
+  color: var(--md-on-surface);
+}
+.rs-wx-alert .rs-wx-alert-from { font-size: var(--rs-fs-micro); color: var(--md-on-surface-variant); }
+
+/* ── Now ── */
+.rs-wx-now {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 20px 18px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--wx-accent) 22%, transparent), transparent 60%),
+    color-mix(in srgb, var(--md-surface-container) 72%, transparent);
+}
+.rs-wx-now-main {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 4vw, 28px);
+}
+.rs-wx-now-icon {
+  font-size: clamp(64px, 20vw, 120px);
+  line-height: 1;
+  color: var(--wx-accent);
+  flex: none;
+  filter: drop-shadow(0 6px 22px color-mix(in srgb, var(--wx-accent) 35%, transparent));
+}
+.rs-wx-now-read { min-inline-size: 0; }
+.rs-wx-temp {
+  font-size: clamp(64px, 19vw, 120px);
+  font-weight: 200;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  color: var(--md-on-surface);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rs-wx-temp-deg {
+  font-size: 0.4em;
+  font-weight: 300;
+  letter-spacing: 0;
+  vertical-align: 0.95em;
+  margin-inline-start: 0.06em;
+  color: var(--md-on-surface-variant);
+}
+.rs-wx-cond {
+  margin-block-start: 6px;
+  font-size: var(--rs-fs-body);
+  font-weight: 700;
+  color: var(--md-on-surface);
+}
+.rs-wx-place {
+  margin-block-start: 2px;
+  font-size: var(--rs-fs-micro);
+  color: var(--md-on-surface-variant);
+}
+.rs-wx-now-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-block-start: 16px;
+  font-size: var(--rs-fs-small);
+  color: var(--md-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+.rs-wx-outlook {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block-start: 14px;
+  padding: 10px 12px;
+  border-radius: var(--md-shape-md, 14px);
+  background: color-mix(in srgb, var(--md-on-surface) 6%, transparent);
+  font-size: var(--rs-fs-small);
+  font-weight: 600;
+  color: var(--md-on-surface);
+}
+.rs-wx-outlook .material-symbols-rounded { color: var(--wx-rain); font-size: 22px; flex: none; }
+
+/* ── Next two hours ── */
+.rs-wx-nexthours {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  block-size: 84px;
+}
+.rs-wx-nexthours-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 6px;
+  min-inline-size: 0;
+}
+.rs-wx-nexthours-bar {
+  border-radius: 4px 4px 2px 2px;
+  background: var(--wx-rain);
+}
+.rs-wx-nexthours-col span {
+  block-size: 1em;
+  font-size: var(--rs-fs-nano);
+  color: var(--md-on-surface-variant);
+  white-space: nowrap;
+}
+
+/* ── Hourly ── */
+.rs-wx-hourly-scroll {
+  overflow-x: auto;
+  margin-inline: -18px;
+  padding-inline: 18px;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.rs-wx-hourly-scroll::-webkit-scrollbar { display: none; }
+.rs-wx-hourly {
+  position: relative;
+  display: flex;
+}
+.rs-wx-hour {
+  flex: none;
+  display: grid;
+  grid-template-rows: auto 30px 26px auto auto;
+  justify-items: center;
+  row-gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.rs-wx-hour.is-new-day { box-shadow: inset 1px 0 0 var(--rs-hairline); }
+.rs-wx-hour-time {
+  font-size: var(--rs-fs-nano);
+  color: var(--md-on-surface-variant);
+  white-space: nowrap;
+}
+.rs-wx-hour.is-new-day .rs-wx-hour-time,
+.rs-wx-hour:first-child .rs-wx-hour-time { color: var(--md-on-surface); font-weight: 700; }
+.rs-wx-hour-icon { font-size: 24px; color: var(--md-on-surface); align-self: center; }
+/* Row 3 is left empty for the temperature line drawn across all columns. */
+.rs-wx-hour-temp { grid-row: 4; font-size: var(--rs-fs-small); font-weight: 700; color: var(--md-on-surface); }
+.rs-wx-hour-rain { grid-row: 5; block-size: 1.2em; font-size: var(--rs-fs-nano); color: var(--wx-rain); font-weight: 700; }
+.rs-wx-hourly-line {
+  position: absolute;
+  inset-inline-start: 0;
+  /* time + gap + icon row + gap */
+  inset-block-start: calc(1.2em + 4px + 30px + 4px);
+  overflow: visible;
+  pointer-events: none;
+}
+.rs-wx-hourly-line polyline {
+  fill: none;
+  stroke: var(--wx-accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* ── Days ── */
+.rs-wx-days { list-style: none; margin: 0; padding: 0; }
+.rs-wx-day {
+  display: grid;
+  grid-template-columns: 3.4em 28px 2.6em 2.4em minmax(40px, 1fr) 2.4em;
+  align-items: center;
+  column-gap: 8px;
+  padding-block: 9px;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--rs-fs-small);
+}
+.rs-wx-day + .rs-wx-day { border-block-start: 1px solid var(--rs-hairline-soft); }
+/* The smallest phones leave the tab ~240px: tighter columns, a shorter bar. */
+@media (max-width: 359px) {
+  .rs-wx-day { grid-template-columns: 2.9em 24px 2.4em 2.1em minmax(20px, 1fr) 2.1em; column-gap: 5px; }
+  .rs-wx-panel { padding-inline: 14px; }
+  .rs-wx-hourly-scroll { margin-inline: -14px; padding-inline: 14px; }
+}
+.rs-wx-day-name { font-weight: 700; color: var(--md-on-surface); }
+.rs-wx-day-icon { font-size: 22px; color: var(--md-on-surface); }
+.rs-wx-day-rain { font-size: var(--rs-fs-micro); font-weight: 700; color: var(--wx-rain); }
+.rs-wx-day-lo { text-align: end; color: var(--md-on-surface-variant); }
+.rs-wx-day-hi { font-weight: 700; color: var(--md-on-surface); }
+.rs-wx-range {
+  position: relative;
+  block-size: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--md-on-surface) 10%, transparent);
+}
+.rs-wx-range-fill {
+  position: absolute;
+  inset-block: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--wx-cool), var(--wx-warm));
+}
+.rs-wx-range-now {
+  position: absolute;
+  inset-block-start: 50%;
+  inline-size: 10px;
+  block-size: 10px;
+  margin-inline-start: -5px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: var(--md-on-surface);
+  box-shadow: 0 0 0 2px var(--bg-base, #000);
+}
+
+/* ── NWS forecast text ── */
+.rs-wx-periods { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.rs-wx-periods dt {
+  font-weight: 700;
+  font-size: var(--rs-fs-small);
+  color: var(--md-on-surface);
+}
+.rs-wx-periods dd {
+  margin: 2px 0 0;
+  font-size: var(--rs-fs-small);
+  line-height: 1.5;
+  color: var(--md-on-surface-variant);
+}
+
+/* ── Details ── */
+.rs-wx-details {
+  display: grid;
+  /* Two across even on a 320px phone. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 112px), 1fr));
+  gap: 10px;
+}
+.rs-wx-tile {
+  padding: 14px 16px;
+  border-radius: var(--md-shape-lg, 20px);
+  background: color-mix(in srgb, var(--md-surface-container) 72%, transparent);
+  border: 1px solid var(--rs-hairline-soft);
+  min-inline-size: 0;
+}
+.rs-wx-tile.is-wide { grid-column: 1 / -1; }
+.rs-wx-tile .rs-wx-label { margin-block-end: 8px; }
+.rs-wx-tile-value {
+  font-size: 1.6rem;
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--md-on-surface);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rs-wx-tile-unit { font-size: 0.55em; font-weight: 500; color: var(--md-on-surface-variant); }
+.rs-wx-tile-sub {
+  display: block;
+  margin-block-start: 4px;
+  font-size: var(--rs-fs-micro);
+  color: var(--md-on-surface-variant);
+}
+.rs-wx-sun-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+.rs-wx-sun-row strong {
+  display: block;
+  font-weight: 600;
+  color: var(--md-on-surface);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rs-wx-sun-row > div:last-child { text-align: end; }
+.rs-wx-sun { inline-size: 100%; max-inline-size: 200px; justify-self: center; overflow: visible; }
+.rs-wx-sun-path { fill: none; stroke: var(--rs-hairline); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.rs-wx-sun-horizon { stroke: var(--rs-hairline); stroke-width: 1; }
+.rs-wx-sun-dot { fill: var(--wx-warm); filter: drop-shadow(0 0 6px var(--wx-warm)); }
+
+
+/* Radar: a real box for Leaflet to fill. It had no height at all, so the map
+   drew into nothing. */
+.rs-wx-radar {
+  position: relative;
+}
+.rs-wx-map {
+  block-size: clamp(240px, 52vw, 420px);
+  border-radius: var(--md-shape-md, 16px);
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Leaflet paints its container #ddd; before the tiles land that read as a
+   grey slab. */
+.rs-wx-radar .leaflet-container { background: #0b0f14; }
+/* CARTO dark_all is the darkest set they publish; lifted so land reads
+   against the panel while the echo keeps its contrast. */
+.rs-wx-basemap { filter: brightness(1.9) contrast(0.9) saturate(0.6); }
+.rs-wx-echo { mix-blend-mode: screen; }
+.rs-wx-map .rs-wx-here {
+  fill: var(--primary, var(--md-primary));
+  fill-opacity: 1;
+  stroke: var(--bg-base, #000);
+  stroke-width: 2;
+}
+
+.rs-wx-radar-bar {
+  position: absolute;
+  inset-inline: 10px;
+  inset-block-end: 34px;
+  z-index: 500;               /* above Leaflet's panes */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--md-on-surface);
+  font-size: var(--rs-fs-micro, 0.72rem);
+}
+.rs-wx-radar-play {
+  all: unset;
+  box-sizing: border-box;
+  inline-size: 32px;
+  block-size: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  flex: none;
+}
+.rs-wx-radar-play .material-symbols-rounded { font-size: 20px; }
+.rs-wx-radar-steps {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-inline-size: 0;
+}
+.rs-wx-radar-steps span {
+  flex: 1;
+  block-size: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.rs-wx-radar-steps span.is-on { background: var(--primary, var(--md-primary)); }
+.rs-wx-radar-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+.rs-wx-attrib {
+  margin-block-start: 8px;
+  font-size: var(--rs-fs-nano, 0.62rem);
+  color: var(--md-on-surface-variant);
+  opacity: 0.7;
+}

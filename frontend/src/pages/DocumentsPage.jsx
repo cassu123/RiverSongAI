@@ -167,13 +167,13 @@ export default function DocumentsPage({ setAction }) {
   }
 
   useEffect(() => {
-    setAction(
+    setAction(disabled ? null :
       <div className="rs-flex rs-gap-2 rs-items-center">
         <button className="rs-pill" onClick={createDoc}>+ NEW</button>
         {saving && <span className="rs-card-label" style={{ opacity: 0.55 }}>SAVING…</span>}
       </div>
     )
-  }, [setAction, createDoc, saving])
+  }, [setAction, createDoc, saving, disabled])
 
   if (loading) {
     return <div className="rs-foyer animate-fade-in"><div className="rs-card-meta">LOADING DOCUMENTS…</div></div>

@@ -445,8 +445,13 @@ async def fetch_articles(
     import asyncio
     tasks = []
     meta = []  # track category per task
+    seen_urls = set()
     for src in sources:
+        # A source saved twice would otherwise double every story it carries.
+        if src.get("url") in seen_urls:
+            continue
         if src.get("url"):
+            seen_urls.add(src["url"])
             tasks.append(
                 fetch_rss_feed(
                     src["url"],
@@ -470,12 +475,48 @@ async def fetch_articles(
                 a.setdefault("category", category)
             articles.extend(r)
     articles.sort(key=lambda a: a.get("published_at") or "", reverse=True)
-    return articles
+    return _dedupe(articles)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+_TRACKING_PARAMS = ("utm_", "at_")
+
+
+def _story_url(url: str) -> str:
+    """The link with its tracking noise removed: case and www. of the host,
+    a trailing slash, the fragment, and utm_* / at_* query parameters (BBC
+    tags every RSS link with at_medium / at_campaign)."""
+    from urllib.parse import parse_qsl, urlencode, urlsplit
+    parts = urlsplit(url.strip())
+    host = parts.netloc.lower().removeprefix("www.")
+    query = urlencode([(k, v) for k, v in parse_qsl(parts.query)
+                       if not k.lower().startswith(_TRACKING_PARAMS)])
+    return f"{host}{parts.path.rstrip('/')}?{query}"
+
+
+def _dedupe(articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Drop repeats of a story: the same link once tracking noise is removed,
+    or the same headline from the same source. Order is kept, so the first
+    (newest) copy wins."""
+    seen: set = set()
+    out: List[Dict[str, Any]] = []
+    for a in articles:
+        url = (a.get("url") or "").strip()
+        title = " ".join((a.get("title") or "").split()).casefold()
+        keys = set()
+        if url:
+            keys.add(("url", _story_url(url)))
+        if title:
+            keys.add(("title", a.get("source") or "", title))
+        if keys & seen:
+            continue
+        seen |= keys
+        out.append(a)
+    return out
+
 
 def _article_id(url: str) -> str:
     import hashlib

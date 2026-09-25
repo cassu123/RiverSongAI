@@ -1,6 +1,7 @@
 import React from 'react'
 import RiverOrb from '@/presence/RiverOrb.jsx'
 import RsMark from '@components/RsMark.jsx'
+import { ADMIN_ITEMS } from '../utils/constants.js'
 
 const PAGE_TITLES = {
   briefing:       'Briefing',
@@ -26,8 +27,15 @@ const PAGE_TITLES = {
   settings:       'Settings',
   admin_settings: 'Admin Settings',
   users:          'Users',
-  killswitch:     'Emergency Stop',
+  killswitch:     'Kill Switch',
+  environment:    'Environment',
+  presets:        'Session Presets',
+  compare:        'Blind Compare',
+  proactive:      'Proactive',
 }
+
+// Anything else takes its menu label, so a new page never shows its raw key.
+const NAV_LABELS = Object.fromEntries(ADMIN_ITEMS.map(it => [it.key, it.label]))
 
 /**
  * Shell — the clean futuristic global chrome.
@@ -63,7 +71,7 @@ export default function Shell({
             <RsMark mark="mono" size={26} />
           </button>
           <span className="rs-header-sep">/</span>
-          <span className="rs-header-title">{PAGE_TITLES[currentPage] || (currentPage || '').toUpperCase()}</span>
+          <span className="rs-header-title">{PAGE_TITLES[currentPage] || NAV_LABELS[currentPage] || (currentPage || '').toUpperCase()}</span>
         </div>
 
         <div className="rs-header-center" />

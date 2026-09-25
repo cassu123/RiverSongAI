@@ -326,7 +326,7 @@ export default function UsersPage() {
         )}
       </div>
 
-      <Sheet open={!!resetTarget} onClose={() => setResetTarget(null)} title={`Set Temporary Password: ${resetTarget?.display_name}`}>
+      <Sheet open={!!resetTarget} onClose={() => setResetTarget(null)} title={resetTarget ? `Set Temporary Password: ${resetTarget.display_name}` : 'Set Temporary Password'}>
         <form onSubmit={handleResetPassword} style={{ padding: '0 var(--rs-space-4) var(--rs-space-4)' }}>
           <div className="rs-mb-5">
             <div className="rs-card-label rs-mb-2">NEW PASSWORD</div>
