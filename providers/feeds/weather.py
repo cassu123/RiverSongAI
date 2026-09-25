@@ -83,10 +83,12 @@ async def fetch_weather(
             "precipitation",
             "uv_index",
             "visibility",
+            "is_day",
         ]),
         "hourly": ",".join([
             "temperature_2m",
             "weathercode",
+            "is_day",
             "precipitation_probability",
             "precipitation",
             "windspeed_10m",
@@ -126,6 +128,7 @@ async def fetch_weather(
         "feels_like": current_raw.get("apparent_temperature"),
         "condition": _WMO_CODES.get(current_raw.get("weathercode", -1), "Unknown"),
         "weathercode": current_raw.get("weathercode"),
+        "is_day": _as_bool(current_raw.get("is_day")),
         "wind_speed": current_raw.get("windspeed_10m"),
         "wind_direction": current_raw.get("winddirection_10m"),
         "wind_gusts": current_raw.get("windgusts_10m"),
@@ -144,6 +147,7 @@ async def fetch_weather(
     hourly_precip_prob = hourly_raw.get("precipitation_probability", [])
     hourly_precip = hourly_raw.get("precipitation", [])
     hourly_wind = hourly_raw.get("windspeed_10m", [])
+    hourly_is_day = hourly_raw.get("is_day", [])
 
     # Find index of current hour to slice next 24
     now_str = current_raw.get("time", "")
@@ -161,6 +165,7 @@ async def fetch_weather(
             "temperature": hourly_temps[i] if i < len(hourly_temps) else None,
             "condition": _WMO_CODES.get(hourly_codes[i] if i < len(hourly_codes) else -1, ""),
             "weathercode": hourly_codes[i] if i < len(hourly_codes) else None,
+            "is_day": _as_bool(hourly_is_day[i]) if i < len(hourly_is_day) else None,
             "precip_prob": hourly_precip_prob[i] if i < len(hourly_precip_prob) else None,
             "precipitation": hourly_precip[i] if i < len(hourly_precip) else None,
             "wind_speed": hourly_wind[i] if i < len(hourly_wind) else None,
@@ -173,10 +178,14 @@ async def fetch_weather(
     dates = daily_raw.get("time", [])
     daily: List[Dict[str, Any]] = []
     for i, date in enumerate(dates):
+        worst = _daily_val("weathercode", i)
+        code = _daytime_code(date, hourly_times, hourly_codes, hourly_is_day, worst)
         daily.append({
             "date": date,
-            "condition": _WMO_CODES.get(_daily_val("weathercode", i) or -1, "Unknown"),
-            "weathercode": _daily_val("weathercode", i),
+            "condition": _WMO_CODES.get(code, "Unknown") if code is not None else "Unknown",
+            "weathercode": code,
+            # Open-Meteo's own daily code: the single worst hour of the day.
+            "worst_code": worst,
             "temp_max": _daily_val("temperature_2m_max", i),
             "temp_min": _daily_val("temperature_2m_min", i),
             "precipitation": _daily_val("precipitation_sum", i),
@@ -208,6 +217,32 @@ async def fetch_weather(
         "lon": lon,
         "location_name": location_name,
     }
+
+
+def _as_bool(v: Any) -> Optional[bool]:
+    return None if v is None else bool(v)
+
+
+def _daytime_code(date: str, times: List[str], codes: List[Any],
+                  is_day: List[Any], worst: Any) -> Any:
+    """The code that describes a day the way you would.
+
+    Open-Meteo's daily code is the worst hour of the whole day, so one
+    overcast hour at 3 AM made every day read "Overcast". This looks at the
+    daylight hours instead: rain, snow or storms that last two hours or more
+    win (the worst of them); otherwise the most common sky, ties going to the
+    cloudier one. With no hourly data it falls back to Open-Meteo's code.
+    """
+    from collections import Counter
+    day = [c for t, c, d in zip(times, codes, is_day)
+           if t.startswith(date) and d and c is not None]
+    if not day:
+        return worst
+    wet = [c for c in day if c >= 51]
+    if len(wet) >= 2:
+        return max(wet)
+    counts = Counter(c for c in day if c < 51)
+    return max(counts, key=lambda c: (counts[c], c))
 
 
 async def get_weather_report(lat: float, lon: float,
