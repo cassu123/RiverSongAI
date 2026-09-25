@@ -1,55 +1,33 @@
-// Backend: GET /api/feeds/weather — Open-Meteo, no key.
+// WeatherTab — the Weather tab of Feeds.
+//
+// Backend: GET /api/feeds/weather (Open-Meteo + NWS text), /api/feeds/weather/alerts (NWS).
 // Settings: PATCH /api/settings/page { weather: { lat, lon, location_query, units, wind_unit, alerts_enabled } }
 // units: 'metric' | 'imperial'   wind_unit: 'kmh' | 'mph'
 //
-// Pixel-style layout:
-//   Settings (collapsible inline)
-//   Alerts banner (severe weather)
-//   Hero card — big temp, big icon, location, "feels like · H/L"
-//   Details row — wind, humidity, UV, AQI as compact cards
-//   Hourly strip — temp curve + precip bars over time pills
-//   Daily forecast — min/max range bars
-//   Sun card — sunrise/sunset with arc
-//   Live radar (Leaflet + RainViewer)
+// Layout, for a phone and for a wall panel (two columns from 1024px):
+//   Settings (collapsed)
+//   Alerts — tap for the full text and what to do
+//   Now — temperature, sky (day/night), feels-like, high/low, when rain comes
+//   Next two hours of rain, only when some is coming
+//   Hourly, 48 hours
+//   10 days, with range bars and rain chance
+//   The National Weather Service's forecast in words (US)
+//   Details — wind, humidity, UV, air, pressure, visibility, sun
+//   Radar loop
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
 import RadarMap from '../weather/RadarMap.jsx'
+import {
+  wxIcon, compass, round, pressure, visibility, uvLabel, rangeBar,
+  hourLabel, clockLabel, dayLabel, daylightProgress,
+} from '../weather/wx.js'
 import { InlineSettingsSection, SettingsRow, ToggleGroup, Toggle } from '../TabSettingsPanel.jsx'
-
-// ── Weather → icon mapping ──────────────────────────────────────────────────
-function wmoIcon(code) {
-  if (code == null)  return 'wb_sunny'
-  if (code === 0)    return 'wb_sunny'
-  if (code <= 3)     return 'partly_cloudy_day'
-  if (code <= 48)    return 'foggy'
-  if (code <= 57)    return 'grain'
-  if (code <= 67)    return 'rainy'
-  if (code <= 77)    return 'weather_snowy'
-  if (code <= 82)    return 'thunderstorm'
-  if (code <= 86)    return 'weather_snowy'
-  return 'thunderstorm'
-}
-
-function fmtHour(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', hour12: true }).replace(' ', '')
-}
-
-function fmtDay(dateStr) {
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
-}
-
-function fmtClockTime(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
-}
 
 const ALERT_COLORS = {
   Extreme: 'oklch(50% 0.18 22)', Severe: 'oklch(58% 0.20 40)',
   Moderate: 'oklch(62% 0.18 75)', Minor: 'oklch(65% 0.15 95)',
 }
-const PRECIP_COLOR = 'oklch(65% 0.15 240)'
 
 // Debounced Nominatim geocode search
 async function searchPlaces(q) {
@@ -208,8 +186,6 @@ export default function WeatherTab({ token, active }) {
   const { current = {}, hourly = [], daily = [], air_quality = {}, location_name, unit } = weather || {}
   const alertsEnabled = settings?.alerts_enabled !== false
   const today = daily[0] || {}
-  const tonight = today.sunset
-  const tomorrow = today.sunrise
   const locationLabel = settings?.location_query?.split(',').slice(0, 2).join(',') || location_name || 'no location set'
 
   return (
@@ -277,36 +253,23 @@ export default function WeatherTab({ token, active }) {
 
       {!loading && !error && weather && (
         <>
-          {/* Severe alerts */}
-          {alertsEnabled && alerts.length > 0 && (
-            <div className="rs-flex rs-flex-col rs-gap-2">
-              {alerts.slice(0, 2).map(a => (
-                <div key={a.id} className="rs-flex rs-gap-3 rs-items-start" style={{
-                  background: (ALERT_COLORS[a.severity] || '#88888822') + '22',
-                  border: `1px solid ${ALERT_COLORS[a.severity] || '#88888888'}55`,
-                  borderRadius: 'var(--md-shape-sm)',
-                  padding: 'var(--rs-space-3) var(--rs-space-4)',
-                }}>
-                  <span className="material-symbols-rounded rs-no-shrink" style={{ color: ALERT_COLORS[a.severity], marginTop: 2 }}>warning</span>
-                  <div>
-                    <div className="rs-type-micro rs-fw-700" style={{ marginBottom: 2, color: ALERT_COLORS[a.severity] }}>{a.event}</div>
-                    <div className="rs-card-meta rs-type-micro">{a.headline}</div>
-                  </div>
-                </div>
-              ))}
+          <div className="rs-wx-body">
+            <div className="rs-wx-col">
+              {alertsEnabled && alerts.length > 0 && <AlertList alerts={alerts} />}
+              <NowCard current={current} today={today} location_name={location_name} outlook={weather.outlook} />
+              <NextHours minutely={weather.minutely} />
+              <HourlyStrip hourly={hourly} />
+              <DailyForecast daily={daily} current={current} />
             </div>
-          )}
-
-          <HeroCard current={current} today={today} location_name={location_name} unit={unit} />
-          <DetailsRow current={current} aqi={air_quality} />
-          <HourlyStrip hourly={hourly} unit={unit} />
-          <DailyForecast daily={daily} unit={unit} />
-          {today.sunrise && today.sunset && (
-            <SunCard sunrise={today.sunrise} sunset={today.sunset} />
-          )}
-          {settings?.lat && settings?.lon && (
-            <RadarCard lat={settings.lat} lon={settings.lon} />
-          )}
+            <div className="rs-wx-col">
+              <ForecastText periods={weather.forecast_text} />
+              <DetailsGrid current={current} today={today} aqi={air_quality} unit={unit}
+                now={weather.minutely?.[0]?.time || hourly[0]?.time} />
+              {settings?.lat && settings?.lon && (
+                <RadarCard lat={settings.lat} lon={settings.lon} />
+              )}
+            </div>
+          </div>
         </>
       )}
     </div>
@@ -314,379 +277,281 @@ export default function WeatherTab({ token, active }) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Hero card — Pixel-style massive temp glyph + condition icon + place line
+// Alerts — the NWS's own words, one tap away
 // ──────────────────────────────────────────────────────────────────────────────
 
-function HeroCard({ current, today, location_name, unit }) {
-  const temp = current.temperature != null ? Math.round(current.temperature) : null
-  const feels = current.feels_like != null ? Math.round(current.feels_like) : null
-  const hi = today?.temp_max != null ? Math.round(today.temp_max) : null
-  const lo = today?.temp_min != null ? Math.round(today.temp_min) : null
+function until(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+}
+
+function AlertList({ alerts }) {
   return (
-    <div className="rs-wx-panel is-hero">
-      <div className="rs-flex rs-items-center rs-gap-5 rs-flex-wrap">
-        <span
-          className="material-symbols-rounded rs-no-shrink rs-c-accent"
-          style={{
-            fontSize: 'clamp(3.25rem, 15vw, 6.5rem)',
-            lineHeight: 0.9,
-            filter: 'drop-shadow(0 4px 14px rgba(var(--primary-rgb,100,100,255),0.18))',
-          }}
-        >
-          {wmoIcon(current.weathercode)}
+    <div className="rs-wx-alerts">
+      {alerts.map(a => (
+        <details key={a.id} className="rs-wx-alert" style={{ '--sev': ALERT_COLORS[a.severity] || 'oklch(65% 0.02 250)' }}>
+          <summary>
+            <span className="material-symbols-rounded" aria-hidden="true">warning</span>
+            <span className="rs-wx-alert-title">{a.event}</span>
+            {a.expires && <span className="rs-wx-alert-until">until {until(a.expires)}</span>}
+            <span className="material-symbols-rounded rs-wx-alert-more" aria-hidden="true">expand_more</span>
+          </summary>
+          {a.description && <p>{a.description}</p>}
+          {a.instruction && <p><strong>What to do:</strong> {a.instruction}</p>}
+          {a.sender && <p className="rs-wx-alert-from">{a.sender}</p>}
+        </details>
+      ))}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Now — the glance
+// ──────────────────────────────────────────────────────────────────────────────
+
+function outlookIcon(text) {
+  if (/^No rain/.test(text)) return 'check_circle'
+  if (/snow/i.test(text)) return 'ac_unit'
+  if (/storm/i.test(text)) return 'thunderstorm'
+  return 'umbrella'
+}
+
+function NowCard({ current, today, location_name, outlook }) {
+  const temp = round(current.temperature)
+  const feels = round(current.feels_like)
+  const hi = round(today?.temp_max)
+  const lo = round(today?.temp_min)
+  const letter = (current.unit || '').replace('°', '')
+  return (
+    <section className="rs-wx-panel rs-wx-now">
+      <div className="rs-wx-now-main">
+        <span className="material-symbols-rounded rs-wx-now-icon" aria-hidden="true">
+          {wxIcon(current.weathercode, current.is_day)}
         </span>
-        <div className="rs-grow rs-min-w-0">
-          <div className="rs-nowrap" style={{
-            fontSize: 'clamp(3rem, 15vw, 5.5rem)',
-            fontWeight: 200,
-            lineHeight: 1,
-            letterSpacing: '-0.06em',
-            color: 'var(--md-on-surface)',
-          }}>
-            {temp != null ? temp : '--'}{unit || '°'}
+        <div className="rs-wx-now-read">
+          <div className="rs-wx-temp">
+            {temp ?? '--'}<span className="rs-wx-temp-deg">°{letter}</span>
           </div>
-          <div className="rs-mt-2 rs-type-body rs-fw-700" style={{ color: 'var(--md-on-surface)' }}>
-            {current.condition || '—'}
-          </div>
-          <div className="rs-card-meta rs-mt-1 rs-type-micro">
-            {location_name || ''}
-          </div>
-          <div className="rs-flex rs-gap-4 rs-mt-3 rs-items-center rs-type-micro">
-            {feels != null && (
-              <span className="rs-card-meta">Feels {feels}{unit || '°'}</span>
-            )}
-            {hi != null && lo != null && (
-              <span className="rs-card-meta">H {hi}° · L {lo}°</span>
-            )}
-          </div>
+          <div className="rs-wx-cond">{current.condition || '—'}</div>
+          {location_name && <div className="rs-wx-place">{location_name}</div>}
         </div>
       </div>
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Details row — wind / humidity / UV / AQI
-// ──────────────────────────────────────────────────────────────────────────────
-
-function DetailCard({ label, value, sub, color, badge }) {
-  return (
-    <div className="rs-wx-panel is-detail">
-      <div className="rs-flex rs-justify-between rs-items-start">
-        <div className="rs-card-label rs-mb-1 rs-muted rs-type-nano">{label}</div>
-        {badge && (
-          <div className="rs-muted rs-type-nano rs-nowrap" style={{ padding: '2px 4px', background: 'var(--md-surface-container-highest)', borderRadius: 'var(--md-shape-xs)' }}>
-            {badge}
-          </div>
-        )}
+      <div className="rs-wx-now-meta">
+        {feels != null && <span>Feels {feels}°</span>}
+        {hi != null && <span>H {hi}°</span>}
+        {lo != null && <span>L {lo}°</span>}
       </div>
-      <div className="rs-mono rs-type-body rs-nowrap rs-fw-800" style={{
-        color: color || 'var(--md-on-surface)',
-      }}>
-        {value}
-      </div>
-      {sub && (
-        <div className="rs-card-meta rs-muted rs-type-nano" style={{ marginTop: 2 }}>{sub}</div>
+      {outlook && (
+        <div className="rs-wx-outlook">
+          <span className="material-symbols-rounded" aria-hidden="true">{outlookIcon(outlook)}</span>
+          <span>{outlook}</span>
+        </div>
       )}
-    </div>
+    </section>
   )
 }
 
-function DetailsRow({ current, aqi }) {
-  const items = [
-    {
-      label: 'WIND',
-      value: current.wind_speed != null ? `${Math.round(current.wind_speed)}` : '—',
-      sub: current.wind_speed != null ? (current.wind_unit || 'km/h') : null,
-    },
-    {
-      label: 'HUMIDITY',
-      value: current.humidity != null ? `${current.humidity}%` : '—',
-      sub: current.precipitation != null && current.precipitation > 0 ? `${current.precipitation.toFixed(1)} mm` : null,
-    },
-    {
-      label: 'UV INDEX',
-      value: current.uv_index != null ? current.uv_index.toFixed(1) : '—',
-      sub: current.uv_index != null ? uvLabel(current.uv_index) : null,
-    },
-  ]
-  if (aqi?.aqi != null) {
-    items.push({
-      label: 'AIR QUALITY',
-      value: String(aqi.aqi),
-      sub: aqi.label,
-      color: aqi.color,
-      badge: aqi.source === 'purpleair' ? 'via PurpleAir' : 'via Open-Meteo',
-    })
-  }
+// ──────────────────────────────────────────────────────────────────────────────
+// Next two hours — only when rain is coming
+// ──────────────────────────────────────────────────────────────────────────────
+
+function NextHours({ minutely }) {
+  if (!minutely?.some(m => (m.precipitation || 0) >= 0.1)) return null
+  const peak = Math.max(1, ...minutely.map(m => m.precipitation || 0))
+  const labels = ['Now', '', '30m', '', '1h', '', '1h30', '']
   return (
-    <div className="rs-gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))' }}>
-      {items.map((it, i) => <DetailCard key={i} {...it} />)}
-    </div>
+    <section className="rs-wx-panel">
+      <div className="rs-wx-label">Next two hours</div>
+      <div className="rs-wx-nexthours" role="img"
+        aria-label={`Rain over the next two hours: ${minutely.map(m => (m.precipitation || 0).toFixed(1)).join(', ')} mm per quarter hour`}>
+        {minutely.map((m, i) => (
+          <div key={m.time} className="rs-wx-nexthours-col">
+            <div className="rs-wx-nexthours-bar" style={{ blockSize: `${Math.max(((m.precipitation || 0) / peak) * 100, 3)}%` }} />
+            <span>{labels[i]}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
-function uvLabel(uv) {
-  if (uv < 3) return 'Low'
-  if (uv < 6) return 'Moderate'
-  if (uv < 8) return 'High'
-  if (uv < 11) return 'Very high'
-  return 'Extreme'
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
-// Hourly strip — temperature curve over time pills with precipitation bars
+// Hourly — 48 hours, times on top, the temperature as a line
 // ──────────────────────────────────────────────────────────────────────────────
 
-function HourlyStrip({ hourly, unit }) {
-  if (!hourly?.length) return null
-  const W_PER_HOUR = 52
-  const W = hourly.length * W_PER_HOUR
-  const H_CURVE = 36
+const COL = 56
+
+function HourlyStrip({ hourly }) {
   const temps = hourly.map(h => h.temperature).filter(t => t != null)
   if (!temps.length) return null
-  const tmin = Math.min(...temps)
-  const tmax = Math.max(...temps)
-  const trange = (tmax - tmin) || 1
-  const pts = hourly.map((h, i) => {
-    if (h.temperature == null) return null
-    const x = i * W_PER_HOUR + W_PER_HOUR / 2
-    const y = H_CURVE - ((h.temperature - tmin) / trange) * (H_CURVE - 8) - 4
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).filter(Boolean).join(' ')
-
+  const tmin = Math.min(...temps), tmax = Math.max(...temps)
+  const H = 26
+  const y = t => H - 4 - ((t - tmin) / ((tmax - tmin) || 1)) * (H - 8)
+  const pts = hourly.map((h, i) => h.temperature == null ? null : `${i * COL + COL / 2},${y(h.temperature).toFixed(1)}`).filter(Boolean).join(' ')
   return (
-    <div className="rs-wx-panel">
-      <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">NEXT 24 HOURS</div>
-      <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 'var(--rs-space-1)' }}>
-        <div className="rs-relative" style={{ width: W }}>
-          {/* Curve overlay */}
-          <svg
-            width={W} height={H_CURVE}
-            className="rs-mb-2" style={{ display: 'block' }}
-          >
-            <polyline
-              points={pts}
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth={2.2}
-              strokeLinejoin="round"
-              opacity={0.85}
-            />
-            {hourly.map((h, i) => {
-              if (h.temperature == null) return null
-              const x = i * W_PER_HOUR + W_PER_HOUR / 2
-              const y = H_CURVE - ((h.temperature - tmin) / trange) * (H_CURVE - 8) - 4
-              return <circle key={i} cx={x} cy={y} r={2} fill="var(--primary)" />
-            })}
+    <section className="rs-wx-panel">
+      <div className="rs-wx-label">Next 48 hours</div>
+      <div className="rs-wx-hourly-scroll">
+        <div className="rs-wx-hourly" style={{ inlineSize: hourly.length * COL }}>
+          {hourly.map((h, i) => {
+            const midnight = i > 0 && h.time.slice(11, 13) === '00'
+            return (
+              <div key={h.time} className={`rs-wx-hour${midnight ? ' is-new-day' : ''}`} style={{ inlineSize: COL }}>
+                <span className="rs-wx-hour-time">
+                  {i === 0 ? 'Now' : midnight ? dayLabel(h.time.slice(0, 10), 1) : hourLabel(h.time)}
+                </span>
+                <span className="material-symbols-rounded rs-wx-hour-icon" aria-hidden="true">{wxIcon(h.weathercode, h.is_day)}</span>
+                <span className="rs-wx-hour-temp">{round(h.temperature) ?? '--'}°</span>
+                <span className="rs-wx-hour-rain">{h.precip_prob >= 10 ? `${h.precip_prob}%` : ''}</span>
+              </div>
+            )
+          })}
+          <svg className="rs-wx-hourly-line" width={hourly.length * COL} height={H} aria-hidden="true">
+            <polyline points={pts} />
           </svg>
-
-          {/* Temp labels under curve */}
-          <div className="rs-flex rs-items-start">
-            {hourly.map((h, i) => (
-              <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
-                <div className="rs-mono rs-type-micro rs-fw-700" style={{
-                  color: 'var(--md-on-surface)',
-                }}>
-                  {h.temperature != null ? Math.round(h.temperature) : '--'}°
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Icon row */}
-          <div className="rs-flex rs-mt-2">
-            {hourly.map((h, i) => (
-              <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
-                <span
-                  className="material-symbols-rounded"
-                  style={{ fontSize: '1.05rem', color: 'var(--md-on-surface-variant)' }}
-                >
-                  {wmoIcon(h.weathercode)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Precip bars */}
-          <div className="rs-flex rs-mt-1 rs-items-end" style={{ height: 18 }}>
-            {hourly.map((h, i) => {
-              const p = h.precip_prob || 0
-              const barH = Math.max(0, (p / 100) * 14)
-              return (
-                <div key={i} className="rs-flex rs-flex-col rs-items-center rs-justify-end" style={{ width: W_PER_HOUR }}>
-                  <div style={{
-                    width: 14,
-                    height: barH,
-                    background: PRECIP_COLOR,
-                    borderRadius: 'var(--md-shape-xs)',
-                    opacity: p > 0 ? 0.7 : 0,
-                  }} />
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Precip labels */}
-          <div className="rs-flex" style={{ marginTop: 2 }}>
-            {hourly.map((h, i) => (
-              <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
-                <span className="rs-type-nano rs-fw-600" style={{
-                  color: h.precip_prob > 0 ? PRECIP_COLOR : 'transparent',
-                }}>
-                  {h.precip_prob > 0 ? `${h.precip_prob}%` : '·'}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Time labels */}
-          <div className="rs-flex rs-mt-1">
-            {hourly.map((h, i) => (
-              <div key={i} className="rs-text-center" style={{ width: W_PER_HOUR }}>
-                <span className="rs-card-label rs-type-nano" style={{ opacity: i === 0 ? 0.9 : 0.45 }}>
-                  {i === 0 ? 'NOW' : fmtHour(h.time)}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Daily forecast — min/max range bars
+// 10 days — rain chance, low, a bar on the whole forecast's scale, high
 // ──────────────────────────────────────────────────────────────────────────────
 
-function DailyForecast({ daily, unit }) {
-  if (!daily?.length) return null
-  // Range of all min/max across the week
-  const allMins = daily.map(d => d.temp_min).filter(t => t != null)
-  const allMaxs = daily.map(d => d.temp_max).filter(t => t != null)
-  if (!allMins.length || !allMaxs.length) return null
-  const weekMin = Math.min(...allMins)
-  const weekMax = Math.max(...allMaxs)
-  const weekRange = (weekMax - weekMin) || 1
-
+function DailyForecast({ daily, current }) {
+  const days = daily.filter(d => d.temp_min != null && d.temp_max != null)
+  if (!days.length) return null
+  const min = Math.min(...days.map(d => d.temp_min))
+  const max = Math.max(...days.map(d => d.temp_max))
   return (
-    <div className="rs-wx-panel">
-      <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">7-DAY FORECAST</div>
-      <div className="rs-flex rs-flex-col">
-        {daily.map((d, i) => {
-          const minPct = d.temp_min != null ? ((d.temp_min - weekMin) / weekRange) * 100 : 0
-          const maxPct = d.temp_max != null ? ((d.temp_max - weekMin) / weekRange) * 100 : 0
-          const widthPct = Math.max(2, maxPct - minPct)
-          const isLast = i === daily.length - 1
+    <section className="rs-wx-panel">
+      <div className="rs-wx-label">{days.length}-day forecast</div>
+      <ul className="rs-wx-days">
+        {days.map((d, i) => {
+          const bar = rangeBar(d.temp_min, d.temp_max, min, max)
+          const nowAt = i === 0 && current.temperature != null
+            ? Math.min(100, Math.max(0, ((current.temperature - min) / ((max - min) || 1)) * 100)) : null
           return (
-            <div key={d.date} className="rs-weather-row" style={{
-              padding: 'var(--rs-space-3) 0',
-              borderBottom: isLast ? 'none' : '1px solid var(--md-outline-variant)',
-            }}>
-              {/* Day labels are short and must never split — "TODAY" was
-                  breaking to "TODA / Y" once the column tightened. */}
-              <span className="rs-type-micro rs-nowrap rs-fw-800">
-                {i === 0 ? 'TODAY' : fmtDay(d.date)}
+            <li key={d.date} className="rs-wx-day">
+              <span className="rs-wx-day-name">{dayLabel(d.date, i)}</span>
+              <span className="material-symbols-rounded rs-wx-day-icon" title={d.condition} aria-label={d.condition}>{wxIcon(d.weathercode, true)}</span>
+              <span className="rs-wx-day-rain">{d.precip_prob_max >= 20 ? `${d.precip_prob_max}%` : ''}</span>
+              <span className="rs-wx-day-lo">{round(d.temp_min)}°</span>
+              <span className="rs-wx-range" aria-hidden="true">
+                <span className="rs-wx-range-fill" style={{ insetInlineStart: `${bar.left}%`, inlineSize: `${bar.width}%` }} />
+                {nowAt != null && <span className="rs-wx-range-now" style={{ insetInlineStart: `${nowAt}%` }} />}
               </span>
-              <span className="material-symbols-rounded rs-text-center rs-c-accent" style={{ fontSize: '1.2rem' }}>
-                {wmoIcon(d.weathercode)}
-              </span>
-              <span className="rs-card-meta rs-type-micro rs-clip rs-ellipsis rs-nowrap">
-                {d.condition || '—'}
-              </span>
-              {/* Range bar */}
-              <div className="rs-weather-bar rs-relative" style={{ height: 6, background: 'var(--md-surface-container-high)', borderRadius: 'var(--md-shape-xs)' }}>
-                <div style={{
-                  position: 'absolute',
-                  left: `${minPct}%`,
-                  width: `${widthPct}%`,
-                  top: 0, bottom: 0,
-                  background: 'linear-gradient(90deg, oklch(70% 0.12 240), oklch(75% 0.15 60))',
-                  borderRadius: 'var(--md-shape-xs)',
-                }} />
-              </div>
-              <span className="rs-mono rs-type-micro rs-text-right rs-fw-700">
-                <span style={{ opacity: 0.5 }}>{d.temp_min != null ? Math.round(d.temp_min) : '--'}°</span>
-                <span style={{ margin: '0 var(--rs-space-1)', opacity: 0.3 }}>·</span>
-                {d.temp_max != null ? Math.round(d.temp_max) : '--'}°
-              </span>
-            </div>
+              <span className="rs-wx-day-hi">{round(d.temp_max)}°</span>
+            </li>
           )
         })}
-      </div>
-    </div>
+      </ul>
+    </section>
   )
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Sun arc card
+// The National Weather Service's forecast, in words (US only)
 // ──────────────────────────────────────────────────────────────────────────────
 
-function SunCard({ sunrise, sunset }) {
-  const sunriseT = new Date(sunrise).getTime()
-  const sunsetT  = new Date(sunset).getTime()
-  const now      = Date.now()
-  const dayLength = Math.max(1, sunsetT - sunriseT)
-  // Sun position along the arc (0..1). Clamped — before sunrise: 0, after sunset: 1.
-  const pos = Math.max(0, Math.min(1, (now - sunriseT) / dayLength))
-
-  // Arc geometry — a semicircle from (0, 50) to (200, 50), radius 80
-  const W = 240, H = 84
-  const cx = W / 2, cy = 70
-  const r = 90
-  // For pos t in [0,1], angle is from PI (left, sunrise) to 0 (right, sunset).
-  const angle = Math.PI - pos * Math.PI
-  const sunX = cx + r * Math.cos(angle)
-  const sunY = cy - r * Math.sin(angle)
-
-  // Build the semicircular path
-  const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`
-
+function ForecastText({ periods }) {
+  if (!periods?.length) return null
   return (
-    <div className="rs-wx-panel">
-      <div className="rs-card-label rs-mb-3 rs-muted rs-type-nano">SUN</div>
-      <div className="rs-flex rs-items-center rs-flex-wrap" style={{ justifyContent: 'space-around' }}>
-        <div className="rs-text-center" style={{ minWidth: 60 }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(78% 0.16 75)' }}>wb_twilight</span>
-          <div className="rs-card-label rs-mt-1 rs-muted rs-type-nano">SUNRISE</div>
-          <div className="rs-mono rs-type-tiny rs-fw-700">
-            {fmtClockTime(sunrise)}
-          </div>
-        </div>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: W, height: H, maxWidth: '50%' }}>
-          <path d={arcPath} stroke="var(--md-outline-variant)" strokeWidth={2} fill="none" strokeDasharray="3 4" />
-          <path
-            d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${sunX} ${sunY}`}
-            stroke="oklch(78% 0.16 75)" strokeWidth={2.5} fill="none"
-          />
-          <circle cx={sunX} cy={sunY} r={6} fill="oklch(78% 0.16 75)" />
-          <line x1={cx - r} y1={cy} x2={cx + r} y2={cy} stroke="var(--md-outline-variant)" strokeWidth={1} opacity={0.5} />
-        </svg>
-        <div className="rs-text-center" style={{ minWidth: 60 }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '1.4rem', color: 'oklch(60% 0.18 30)' }}>bedtime</span>
-          <div className="rs-card-label rs-mt-1 rs-muted rs-type-nano">SUNSET</div>
-          <div className="rs-mono rs-type-tiny rs-fw-700">
-            {fmtClockTime(sunset)}
-          </div>
-        </div>
+    <section className="rs-wx-panel">
+      <div className="rs-wx-panel-head">
+        <span className="rs-wx-label">Forecast</span>
+        <span className="rs-wx-source">National Weather Service</span>
       </div>
-    </div>
+      <dl className="rs-wx-periods">
+        {periods.map((p, i) => (
+          <div key={`${i}-${p.name}`}>
+            <dt>{p.name}</dt>
+            <dd>{p.detailed || p.short}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   )
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Radar card
+// Details
+// ──────────────────────────────────────────────────────────────────────────────
+
+function Tile({ label, value, unit, sub, color, children, wide }) {
+  return (
+    <div className={`rs-wx-tile${wide ? ' is-wide' : ''}`}>
+      <div className="rs-wx-label">{label}</div>
+      {value != null && (
+        <div className="rs-wx-tile-value" style={color ? { color } : undefined}>
+          {value}{unit && <span className="rs-wx-tile-unit">{unit}</span>}
+        </div>
+      )}
+      {sub && <div className="rs-wx-tile-sub">{sub}</div>}
+      {children}
+    </div>
+  )
+}
+
+function SunArc({ sunrise, sunset, now }) {
+  const p = daylightProgress(sunrise, sunset, now)
+  const W = 160, H = 70, R = 64, cx = W / 2, cy = H - 4
+  const a = p == null ? null : Math.PI * (1 - p)
+  return (
+    <svg className="rs-wx-sun" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+      <path d={`M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`} className="rs-wx-sun-path" />
+      <line x1={cx - R - 6} y1={cy} x2={cx + R + 6} y2={cy} className="rs-wx-sun-horizon" />
+      {a != null && <circle cx={cx + R * Math.cos(a)} cy={cy - R * Math.sin(a)} r="6" className="rs-wx-sun-dot" />}
+    </svg>
+  )
+}
+
+function DetailsGrid({ current, today, aqi, unit, now }) {
+  const imperial = unit === '°F'
+  const dir = compass(current.wind_direction)
+  const gusts = round(current.wind_gusts)
+  const pres = pressure(current.pressure, imperial)
+  const vis = visibility(current.visibility, imperial)
+  return (
+    <section className="rs-wx-details">
+      <Tile label="Wind" value={round(current.wind_speed)} unit={` ${current.wind_unit || ''}`}
+        sub={[dir && `from the ${dir}`, gusts != null && gusts > (current.wind_speed || 0) && `gusts ${gusts}`].filter(Boolean).join(' · ')} />
+      <Tile label="Humidity" value={current.humidity} unit="%"
+        sub={current.dew_point != null ? `Dew point ${round(current.dew_point)}°` : null} />
+      <Tile label="UV index" value={current.uv_index != null ? round(current.uv_index) : null}
+        sub={current.uv_index != null ? uvLabel(current.uv_index) : null} />
+      {aqi?.aqi != null && (
+        <Tile label="Air quality" value={aqi.aqi} color={aqi.color}
+          sub={`${aqi.label} · ${aqi.source === 'purpleair' ? 'PurpleAir' : 'Open-Meteo'}`} />
+      )}
+      {pres && <Tile label="Pressure" value={pres.value} unit={` ${pres.unit}`} />}
+      {vis && <Tile label="Visibility" value={vis.value} unit={` ${vis.unit}`} />}
+      {today?.sunrise && today?.sunset && (
+        <Tile label="Sun" wide>
+          <div className="rs-wx-sun-row">
+            <div><span className="rs-wx-tile-sub">Sunrise</span><strong>{clockLabel(today.sunrise)}</strong></div>
+            <SunArc sunrise={today.sunrise} sunset={today.sunset} now={now} />
+            <div><span className="rs-wx-tile-sub">Sunset</span><strong>{clockLabel(today.sunset)}</strong></div>
+          </div>
+        </Tile>
+      )}
+    </section>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Radar
 // ──────────────────────────────────────────────────────────────────────────────
 
 function RadarCard({ lat, lon }) {
   return (
-    <div className="rs-wx-panel is-flush">
-      <div className="rs-wx-panel-head">
-        <span className="rs-wx-label">Radar</span>
-      </div>
+    <section className="rs-wx-panel">
+      <div className="rs-wx-label">Radar</div>
       <RadarMap lat={lat} lon={lon} />
-    </div>
+    </section>
   )
 }
 
