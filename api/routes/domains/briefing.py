@@ -118,37 +118,37 @@ async def _section_weather(request: Request, user_id: str) -> Dict[str, Any]:
         return {"status": "unavailable"}
 
     try:
+        # fetch_weather's shape: current.temperature, a list of days, and
+        # unit as "°F"/"°C". This read Open-Meteo's raw names
+        # (temperature_2m, a dict of daily arrays, unit "fahrenheit"), so the
+        # temperature was always None and daily.get() raised on the list —
+        # the Briefing weather never showed.
         current = (data or {}).get("current") or {}
-        daily = (data or {}).get("daily") or {}
+        today = ((data or {}).get("daily") or [{}])[0]
         code = current.get("weathercode")
-        
+
         try:
             code_int = int(code) if code is not None else -1
         except (ValueError, TypeError):
             code_int = -1
-            
+
         icon, description = _WMO.get(code_int, ("thermostat", "current conditions"))
+        if code_int in (0, 1, 2) and current.get("is_day") is False:
+            icon = "clear_night" if code_int == 0 else "partly_cloudy_night"
 
-        temp = current.get("temperature_2m")
-        unit = "F" if (data or {}).get("unit") == "fahrenheit" else "C"
-
-        def _first(seq):
-            return seq[0] if isinstance(seq, list) and seq else None
+        def _round(v):
+            return round(v) if isinstance(v, (int, float)) else None
 
         return {
             "status": "ok",
-            "temperature": round(temp) if isinstance(temp, (int, float)) else None,
-            "feels_like": (round(current.get("apparent_temperature"))
-                           if isinstance(current.get("apparent_temperature"),
-                                         (int, float)) else None),
-            "unit": unit,
+            "temperature": _round(current.get("temperature")),
+            "feels_like": _round(current.get("feels_like")),
+            "unit": "F" if (data or {}).get("unit") == "°F" else "C",
             "code": code,
             "icon": icon,
             "description": description,
-            "high": (round(v) if isinstance(
-                v := _first(daily.get("temperature_2m_max")), (int, float)) else None),
-            "low": (round(v) if isinstance(
-                v := _first(daily.get("temperature_2m_min")), (int, float)) else None),
+            "high": _round(today.get("temp_max")),
+            "low": _round(today.get("temp_min")),
         }
     except Exception as exc:
         logger.warning("Briefing weather parsing failed for %s: %s", user_id, exc)
