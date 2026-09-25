@@ -615,12 +615,12 @@ TOOL_SCHEMAS = [
     },
     {
         "name": "get_weather",
-        "description": "Get the current weather and forecast for a specific location or coordinates.",
+        "description": "Get the weather: conditions now, when rain, snow or storms are coming (to the quarter hour for the next two hours), today and the next three days, the National Weather Service's forecast in words, and active alerts. Use location 'current location' for the user's own saved location.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "location": {"type": "string", "description": "City name or 'current location'."},
-                "units": {"type": "string", "enum": ["celsius", "fahrenheit"], "description": "Temperature units."},
+                "location": {"type": "string", "description": "City name, or 'current location' for the user's saved location."},
+                "units": {"type": "string", "enum": ["celsius", "fahrenheit"], "description": "Temperature units. Omit to use the user's saved preference."},
             },
             "required": ["location"]
         }

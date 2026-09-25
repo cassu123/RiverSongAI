@@ -1198,13 +1198,48 @@ async def _exec_search_emails(args: dict, user_id: str) -> str:
         return ToolFailure(f"I tried to read your emails, but encountered an issue: {str(exc)}. Make sure Google is linked in Settings.")
 
 
+_HERE = {"", "current location", "my location", "here", "home"}
+
+
+async def _saved_weather_units(user_id: str) -> str:
+    store = _get_vault_store()
+    try:
+        page = await store.get_page_settings(user_id) if store else {}
+    except Exception:
+        page = {}
+    return "fahrenheit" if (page.get("weather") or {}).get("units") == "imperial" else "celsius"
+
+
+async def _weather_here(user_id: str) -> str:
+    """The weather at the user's own saved location, in their units."""
+    from fastapi import HTTPException
+    from api.services.feed_service import FeedService
+    from providers.feeds.weather import describe_weather, fetch_nws_alerts
+
+    store = _get_vault_store()
+    if store is None:
+        return ToolFailure("I couldn't reach your saved settings to find your location.")
+    try:
+        data = await FeedService.get_weather(store, user_id)
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            return ("You haven't saved a location for weather yet. You can set one on "
+                    "the Feeds page, or tell me which city you mean.")
+        raise
+    alerts = await fetch_nws_alerts(data.get("lat"), data.get("lon"))
+    return f"Weather for {data.get('location_name') or 'your location'}:\n{describe_weather(data, alerts)}"
+
+
 async def _exec_get_weather(args: dict, user_id: str) -> str:
     try:
+        location = (args.get("location") or "").strip()
+        if location.lower() in _HERE:
+            return await _weather_here(user_id)
+
         from providers.google.maps import build_maps_provider
         from providers.feeds.weather import get_weather_report
 
-        location = args["location"]
-        units = args.get("units", "celsius")
+        units = args.get("units") or await _saved_weather_units(user_id)
 
         # 1. Geocode location name to lat/lon
         maps = build_maps_provider()
@@ -1223,7 +1258,7 @@ async def _exec_get_weather(args: dict, user_id: str) -> str:
 
     except Exception as exc:
         logger.error("Weather tool failed: %s", exc)
-        return ToolFailure(f"I tried to check the weather for '{args['location']}', but encountered an issue: {str(exc)}")
+        return ToolFailure(f"I tried to check the weather for '{args.get('location', 'your location')}', but encountered an issue: {str(exc)}")
 
 
 async def _exec_generate_image(args: dict, user_id: str) -> str:

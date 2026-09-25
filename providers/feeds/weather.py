@@ -384,23 +384,75 @@ async def fetch_nws_forecast(lat: float, lon: float) -> List[Dict[str, Any]]:
     } for p in periods[:4]]
 
 
-async def get_weather_report(lat: float, lon: float,
-                             units: str = "celsius") -> str:
-    """
-    Fetch weather and return a concise text summary for the LLM tool.
-    """
-    data = await fetch_weather(lat, lon, unit=units)
-    curr = data["current"]
-    unit_sym = curr["unit"]
+def _compass(deg: Any) -> str:
+    if not isinstance(deg, (int, float)):
+        return ""
+    return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][round(deg / 45) % 8]
 
-    report = f"The current weather is {curr['condition'].lower()} at {curr['temperature']}{unit_sym}. "
-    report += f"Wind speed is {curr['wind_speed']} {curr.get('wind_unit', 'km/h')}."
 
-    if data["daily"]:
-        today = data["daily"][0]
-        report += f" Expect a high of {today['temp_max']}{unit_sym} and a low of {today['temp_min']}{unit_sym} today."
+def describe_weather(data: Dict[str, Any], alerts: List[Dict[str, Any]] = ()) -> str:
+    """The weather in plain sentences, for River to read and answer from:
+    now, when rain is coming, today, the NWS's words, the next days, alerts."""
+    from datetime import date
 
-    return report
+    def r(v: Any) -> Any:
+        return round(v) if isinstance(v, (int, float)) else v
+
+    cur = data.get("current") or {}
+    unit = cur.get("unit") or data.get("unit") or ""
+    wunit = cur.get("wind_unit") or ""
+    lines = []
+
+    if cur.get("temperature") is not None:
+        now = f"Now {r(cur['temperature'])}{unit}, {(cur.get('condition') or '').lower()}"
+        feels = cur.get("feels_like")
+        if isinstance(feels, (int, float)) and abs(feels - cur["temperature"]) >= 2:
+            now += f", feels like {r(feels)}{unit}"
+        now += "."
+        if cur.get("wind_speed") is not None:
+            now += f" Wind {r(cur['wind_speed'])} {wunit}"
+            if _compass(cur.get("wind_direction")):
+                now += f" from the {_compass(cur['wind_direction'])}"
+            if isinstance(cur.get("wind_gusts"), (int, float)) and cur["wind_gusts"] > cur["wind_speed"] + 5:
+                now += f", gusting {r(cur['wind_gusts'])}"
+            now += "."
+        if cur.get("humidity") is not None:
+            now += f" Humidity {cur['humidity']}%."
+        lines.append(now)
+
+    if data.get("outlook"):
+        lines.append(data["outlook"])
+
+    days = data.get("daily") or []
+    for i, d in enumerate(days[:4]):
+        if d.get("temp_max") is None:
+            continue
+        name = "Today" if i == 0 else date.fromisoformat(d["date"]).strftime("%A")
+        line = (f"{name}: {(d.get('condition') or '').lower()}, "
+                f"high {r(d['temp_max'])}{unit}, low {r(d['temp_min'])}{unit}")
+        if d.get("precip_prob_max"):
+            line += f", {d['precip_prob_max']}% chance of rain"
+        lines.append(line + ".")
+
+    text = data.get("forecast_text") or []
+    if text:
+        lines.append("National Weather Service: " +
+                     " ".join(f"{p['name']}: {p['detailed']}" for p in text[:2]))
+
+    if alerts:
+        lines.append("Active alerts: " + "; ".join(
+            a.get("headline") or a.get("event", "Alert") for a in alerts) + ".")
+    return "\n".join(lines)
+
+
+async def get_weather_report(lat: float, lon: float, units: str = "celsius",
+                             wind_unit: Optional[str] = None) -> str:
+    """Fetch the weather for a point and describe it for the LLM tool."""
+    data = await fetch_weather(
+        lat, lon, unit=units,
+        wind_unit=wind_unit or ("mph" if units == "fahrenheit" else "kmh"))
+    alerts = await fetch_nws_alerts(lat, lon)
+    return describe_weather(data, alerts)
 
 
 async def _reverse_geocode(lat: float, lon: float) -> str:
