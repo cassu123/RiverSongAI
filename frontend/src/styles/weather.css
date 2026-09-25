@@ -1,0 +1,80 @@
+/* ── Weather (Feeds → Weather) ────────────────────────────────────────────── */
+
+/* Radar: a real box for Leaflet to fill. It had no height at all, so the map
+   drew into nothing. */
+.rs-wx-radar {
+  position: relative;
+}
+.rs-wx-map {
+  block-size: clamp(240px, 52vw, 420px);
+  border-radius: var(--md-shape-md, 16px);
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Leaflet paints its container #ddd; before the tiles land that read as a
+   grey slab. */
+.rs-wx-radar .leaflet-container { background: #0b0f14; }
+/* CARTO dark_all is the darkest set they publish; lifted so land reads
+   against the panel while the echo keeps its contrast. */
+.rs-wx-basemap { filter: brightness(1.9) contrast(0.9) saturate(0.6); }
+.rs-wx-echo { mix-blend-mode: screen; }
+.rs-wx-map .rs-wx-here {
+  fill: var(--primary, var(--md-primary));
+  fill-opacity: 1;
+  stroke: var(--bg-base, #000);
+  stroke-width: 2;
+}
+
+.rs-wx-radar-bar {
+  position: absolute;
+  inset-inline: 10px;
+  inset-block-end: 34px;
+  z-index: 500;               /* above Leaflet's panes */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--md-on-surface);
+  font-size: var(--rs-fs-micro, 0.72rem);
+}
+.rs-wx-radar-play {
+  all: unset;
+  box-sizing: border-box;
+  inline-size: 32px;
+  block-size: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  flex: none;
+}
+.rs-wx-radar-play .material-symbols-rounded { font-size: 20px; }
+.rs-wx-radar-steps {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-inline-size: 0;
+}
+.rs-wx-radar-steps span {
+  flex: 1;
+  block-size: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.rs-wx-radar-steps span.is-on { background: var(--primary, var(--md-primary)); }
+.rs-wx-radar-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+.rs-wx-attrib {
+  margin-block-start: 8px;
+  font-size: var(--rs-fs-nano, 0.62rem);
+  color: var(--md-on-surface-variant);
+  opacity: 0.7;
+}

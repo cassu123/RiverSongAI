@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
+import RadarMap from '../weather/RadarMap.jsx'
 import { InlineSettingsSection, SettingsRow, ToggleGroup, Toggle } from '../TabSettingsPanel.jsx'
 
 // ── Weather → icon mapping ──────────────────────────────────────────────────
@@ -137,7 +138,6 @@ export default function WeatherTab({ token, active }) {
   const [error, setError]         = useState(null)
   const [settings, setSettings]   = useState(null)
   const [settingsOpen, setSOpen]  = useState(false)
-  const [radarTs, setRadarTs]     = useState(null)
   const authHeaders = { Authorization: `Bearer ${token}` }
 
   const patchSettings = useCallback(async (patch) => {
@@ -190,20 +190,6 @@ export default function WeatherTab({ token, active }) {
       })
       .catch(() => { setSettings({}); fetchWeather() })
   }, [token, active])
-
-  useEffect(() => {
-    if (!active || !settings?.lat || !settings?.lon) return
-    let cancelled = false
-    fetch('https://api.rainviewer.com/public/weather-maps.json')
-      .then(r => r.json())
-      .then(d => {
-        if (cancelled) return
-        const frames = d?.radar?.past || []
-        if (frames.length) setRadarTs(frames[frames.length - 1].path)
-      })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [active, settings?.lat, settings?.lon])
 
   const handleSettingChange = useCallback(async (patch) => {
     const next = await patchSettings(patch)
@@ -319,7 +305,7 @@ export default function WeatherTab({ token, active }) {
             <SunCard sunrise={today.sunrise} sunset={today.sunset} />
           )}
           {settings?.lat && settings?.lon && (
-            <RadarCard lat={settings.lat} lon={settings.lon} radarTs={radarTs} />
+            <RadarCard lat={settings.lat} lon={settings.lon} />
           )}
         </>
       )}
@@ -693,69 +679,15 @@ function SunCard({ sunrise, sunset }) {
 // Radar card
 // ──────────────────────────────────────────────────────────────────────────────
 
-function RadarCard({ lat, lon, radarTs }) {
+function RadarCard({ lat, lon }) {
   return (
     <div className="rs-wx-panel is-flush">
       <div className="rs-wx-panel-head">
-        <span className="rs-wx-label">Live radar</span>
-        <span className="rs-wx-attrib">RainViewer &middot; CARTO &middot; OpenStreetMap</span>
+        <span className="rs-wx-label">Radar</span>
       </div>
-      <div className="rs-wx-radar">
-        <RadarMap lat={lat} lon={lon} radarTs={radarTs} />
-      </div>
+      <RadarMap lat={lat} lon={lon} />
     </div>
   )
-}
-
-function RadarMap({ lat, lon, radarTs }) {
-  const mapRef        = useRef(null)
-  const instanceRef   = useRef(null)
-  const radarLayerRef = useRef(null)
-
-  useEffect(() => {
-    if (!mapRef.current || lat == null || lon == null) return
-    let disposed = false
-    import('leaflet').then(L => {
-      if (disposed || instanceRef.current) return
-      const map = L.map(mapRef.current, {
-        center: [lat, lon], zoom: 8,
-        zoomControl: false, attributionControl: false,
-      })
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        // CARTO dark_all is the darkest tileset they publish; over an already
-        // dark panel the map read as a black rectangle. Lifted in CSS
-        // (.rs-wx-basemap) rather than swapped for a lighter tileset, so the
-        // radar echo keeps its contrast against the land.
-        className: 'rs-wx-basemap',
-      }).addTo(map)
-      instanceRef.current = map
-    })
-    return () => {
-      disposed = true
-      if (instanceRef.current) {
-        instanceRef.current.remove()
-        instanceRef.current = null
-        radarLayerRef.current = null
-      }
-    }
-  }, [lat, lon])
-
-  useEffect(() => {
-    if (!instanceRef.current || !radarTs) return
-    let disposed = false
-    import('leaflet').then(L => {
-      if (disposed || !instanceRef.current) return
-      if (radarLayerRef.current) instanceRef.current.removeLayer(radarLayerRef.current)
-      radarLayerRef.current = L.tileLayer(
-        `https://tilecache.rainviewer.com${radarTs}/256/{z}/{x}/{y}/2/1_1.png`,
-        { opacity: 0.8, className: 'rs-wx-echo' },
-      )
-      radarLayerRef.current.addTo(instanceRef.current)
-    })
-    return () => { disposed = true }
-  }, [radarTs])
-
-  return <div ref={mapRef} className="rs-wx-map" />
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
