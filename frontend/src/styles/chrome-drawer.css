@@ -219,7 +219,8 @@
   padding: 11px 12px;
   border-radius: 12px;
   cursor: pointer;
-  width: 100%;
+  /* Just the switch: it sits beside its label, which needs the room. */
+  flex: none;
   box-sizing: border-box;
   font-size: var(--rs-fs-small);
   font-weight: 600;
@@ -637,7 +638,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Top-aligned, so a row's icons stay level when one label takes two lines. */
+  justify-content: flex-start;
   gap: 6px;
   padding: 10px 4px;
   border-radius: 16px;
@@ -696,12 +698,18 @@
   font-weight: 600;
   color: #e2e8f0;
   letter-spacing: -0.01em;
-  white-space: nowrap;
+  line-height: 1.2;
+  /* A long name (Webhook Tokens, Remote Ollama) takes a second line rather
+     than losing its end to an ellipsis on a phone. */
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
   width: 100%;
-  display: block;
   min-width: 0;
 }
 

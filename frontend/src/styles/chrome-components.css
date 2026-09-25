@@ -332,6 +332,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  /* Otherwise the browser's own 2px outset border draws a broken ring. */
+  border: none;
   background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
   color: var(--md-on-surface-variant);
   transition: background-color var(--rs-motion-fast) var(--rs-motion-curve), border-color var(--rs-motion-fast) var(--rs-motion-curve), color var(--rs-motion-fast) var(--rs-motion-curve), box-shadow var(--rs-motion-fast) var(--rs-motion-curve), transform var(--rs-motion-fast) var(--rs-motion-curve), opacity var(--rs-motion-fast) var(--rs-motion-curve);
