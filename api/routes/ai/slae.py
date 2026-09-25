@@ -10,6 +10,7 @@ Each section returns a status string the frontend renders as a pill:
   - "disabled"       — built but turned off
   - "healthy"        — running and reachable
   - "error"          — running but broken
+  - "idle"           — working, nothing has happened yet
 
 Sections fill in as the agent-role taxonomy, Langfuse, and Graphiti tasks land.
 Until then this endpoint returns a known-empty shape so the frontend can render.
@@ -169,7 +170,7 @@ def _recent_activity_section() -> dict[str, Any]:
 
     if not events:
         return {
-            "status": "not_configured",
+            "status": "idle",
             "message": "No agent activity yet. Run a daemon or have a conversation to populate the feed.",
             "events": [],
         }
