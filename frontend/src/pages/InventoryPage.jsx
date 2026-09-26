@@ -141,9 +141,12 @@ export default function InventoryPage({ setAction }) {
           <div className="rs-chat-input-container rs-grow" style={{ padding: 'var(--rs-space-2) var(--rs-space-4)', background: 'color-mix(in srgb, var(--md-surface-container-low) 60%, transparent)' }}>
             <div className="rs-flex rs-items-center rs-gap-3">
               <span className="material-symbols-rounded" style={{ opacity: 0.5 }}>search</span>
-              <input 
-                type="text" 
-                className="rs-w-full rs-type-small rs-fw-600" style={{ all: 'unset' }} 
+              {/* size={1}: without it the box's default 20-character width
+                  sets the bar's minimum and pushes the page past a phone's edge. */}
+              <input
+                type="text"
+                size={1}
+                className="rs-w-full rs-type-small rs-fw-600" style={{ all: 'unset', flex: '1 1 0', minWidth: 0 }}
                 placeholder="IDENTIFY ASSET..." 
                 value={query} 
                 onChange={e => setQuery(e.target.value)} 
@@ -159,42 +162,11 @@ export default function InventoryPage({ setAction }) {
             <span className="material-symbols-rounded">barcode_scanner</span>
             <span className="rs-speak-actions-label">SCAN</span>
           </button>
-          <button className="rs-btn-primary rs-c-warning" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'color-mix(in srgb, var(--rs-status-warning) 20%, transparent)' }} disabled={!homeId}>
-            <span className="material-symbols-rounded">fact_check</span>
-            <span className="rs-speak-actions-label">AUDIT</span>
-          </button>
-          <button className="rs-btn-primary" onClick={() => setSweepModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-tertiary)', color: 'var(--md-on-tertiary)' }} disabled={!homeId}>
-            <span className="material-symbols-rounded">360</span>
-            <span className="rs-speak-actions-label">ROOM SWEEP</span>
-          </button>
-          <button className="rs-btn-primary" onClick={() => setActiveItem({ _isNew: true })} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-primary)', color: 'var(--md-on-primary)' }} disabled={!homeId}>
-            <span className="material-symbols-rounded">add</span>
-            <span className="rs-speak-actions-label">ADD ASSET</span>
-          </button>
-          <a href={homeId ? `/api/inventory/homes/${homeId}/labels.pdf?token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Print QR Labels">
-            <span className="material-symbols-rounded">print</span>
-            <span className="rs-speak-actions-label">LABELS</span>
-          </a>
-          <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=pdf&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Download PDF Dossier">
-            <span className="material-symbols-rounded">picture_as_pdf</span>
-            <span className="rs-speak-actions-label">DOSSIER</span>
-          </a>
-          <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=csv&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Download CSV Manifest">
-            <span className="material-symbols-rounded">csv</span>
-            <span className="rs-speak-actions-label">CSV</span>
-          </a>
-          <button className="rs-btn-primary" onClick={() => setReassignModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-error-container)', color: 'var(--md-on-error-container)' }} disabled={!homeId || homes.length < 2} title="Move All Assets (PCS)">
-            <span className="material-symbols-rounded">local_shipping</span>
-            <span className="rs-speak-actions-label">MOVE</span>
-          </button>
-          <button className="rs-pill" onClick={fetchItems} title="Refresh Stash">
-            <span className="material-symbols-rounded">sync</span>
-          </button>
         </div>
       </div>
     )
     return () => setAction(null)
-  }, [query, setAction, fetchItems, homeId])
+  }, [query, setAction])
 
   return (
     <div className="rs-foyer">
@@ -228,6 +200,42 @@ export default function InventoryPage({ setAction }) {
       )}
 
       {homes && homes.length > 0 && <>
+
+      {/* The rest of the tools live on the page, not in the bottom bar: one
+          unwrapping row there pushed them off a phone's screen. This row wraps. */}
+      <div className="rs-flex rs-flex-wrap rs-gap-2 rs-mb-6">
+        <button className="rs-btn-primary rs-c-warning rs-gap-2" onClick={() => setAuditModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'color-mix(in srgb, var(--rs-status-warning) 20%, transparent)' }} disabled={!homeId}>
+          <span className="material-symbols-rounded">fact_check</span>
+          <span>AUDIT</span>
+        </button>
+        <button className="rs-btn-primary rs-gap-2" onClick={() => setSweepModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-tertiary)', color: 'var(--md-on-tertiary)' }} disabled={!homeId}>
+          <span className="material-symbols-rounded">360</span>
+          <span>ROOM SWEEP</span>
+        </button>
+        <button className="rs-btn-primary rs-gap-2" onClick={() => setActiveItem({ _isNew: true })} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-primary)', color: 'var(--md-on-primary)' }} disabled={!homeId}>
+          <span className="material-symbols-rounded">add</span>
+          <span>ADD ASSET</span>
+        </button>
+        <a href={homeId ? `/api/inventory/homes/${homeId}/labels.pdf?token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Print QR Labels">
+          <span className="material-symbols-rounded">print</span>
+          <span>LABELS</span>
+        </a>
+        <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=pdf&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Download PDF Dossier">
+          <span className="material-symbols-rounded">picture_as_pdf</span>
+          <span>DOSSIER</span>
+        </a>
+        <a href={homeId ? `/api/inventory/homes/${homeId}/manifest?format=csv&token=${token}` : '#'} target="_blank" rel="noreferrer" className="rs-btn-primary rs-flex rs-items-center rs-gap-2" style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-surface-container-high)', color: 'var(--md-on-surface)', textDecoration: 'none' }} disabled={!homeId} title="Download CSV Manifest">
+          <span className="material-symbols-rounded">csv</span>
+          <span>CSV</span>
+        </a>
+        <button className="rs-btn-primary rs-gap-2" onClick={() => setReassignModalOpen(true)} style={{ height: 48, padding: '0 var(--rs-space-5)', background: 'var(--md-error-container)', color: 'var(--md-on-error-container)' }} disabled={!homeId || homes.length < 2} title="Move All Assets (PCS)">
+          <span className="material-symbols-rounded">local_shipping</span>
+          <span>MOVE</span>
+        </button>
+        <button className="rs-pill" onClick={fetchItems} title="Refresh Stash">
+          <span className="material-symbols-rounded">sync</span>
+        </button>
+      </div>
 
       {scannerOpen && (
         <BarcodeScanner onDetected={handleScanDetected} onClose={() => setScannerOpen(false)} />
