@@ -232,7 +232,7 @@ export default function InventoryPage({ setAction }) {
           <span className="material-symbols-rounded">local_shipping</span>
           <span>MOVE</span>
         </button>
-        <button className="rs-pill" onClick={fetchItems} title="Refresh Stash">
+        <button className="rs-pill" onClick={() => fetchItems(homeId)} title="Refresh Stash">
           <span className="material-symbols-rounded">sync</span>
         </button>
       </div>
@@ -283,7 +283,7 @@ export default function InventoryPage({ setAction }) {
         <RoomSweepModal 
           homeId={homeId} 
           onClose={() => setSweepModalOpen(false)} 
-          onComplete={fetchItems} 
+          onComplete={() => fetchItems(homeId)} 
         />
       )}
 
