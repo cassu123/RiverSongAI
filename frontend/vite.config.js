@@ -39,7 +39,7 @@ export default defineConfig({
 
   build: {
     sourcemap: false,  // never ship readable source in the production bundle
-    chunkSizeWarningLimit: 1200,  // vendor-three (Three.js ecosystem) is ~1.1MB — expected
+    chunkSizeWarningLimit: 1600,  // vendor-three is ~1.1MB, mermaid elk layout is ~1.46MB — expected
     rollupOptions: {
       output: {
         // Function form (rolldown, Vite 8) — splits the Three.js ecosystem

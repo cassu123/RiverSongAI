@@ -364,9 +364,14 @@
 /* Leaflet paints its container #ddd; before the tiles land that read as a
    grey slab. */
 .rs-wx-radar .leaflet-container { background: #0b0f14; }
-/* CARTO dark_all is the darkest set they publish; lifted so land reads
-   against the panel while the echo keeps its contrast. */
-.rs-wx-basemap { filter: brightness(1.9) contrast(0.9) saturate(0.6); }
+/* Basemap tiles: when using CARTO (with key), lifted slightly; when using
+   standard OSM tiles without an API key, inverted into a dark canvas so
+   the radar echo keeps its contrast without watermarks. */
+.rs-wx-basemap-carto { filter: brightness(1.9) contrast(0.9) saturate(0.6); }
+.rs-wx-basemap,
+.rs-map-dark-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.8);
+}
 .rs-wx-echo { mix-blend-mode: screen; }
 .rs-wx-map .rs-wx-here {
   fill: var(--primary, var(--md-primary));

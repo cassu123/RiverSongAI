@@ -17,11 +17,13 @@
 # Environment and secrets -- NEVER commit these
 # -----------------------------------------------------------------------------
 .env
-.env.local
-.env.*.local
-.env.bak*
+.env.*
 .flaskenv
 instance/
+!.env.example
+!.env.example.*
+!frontend/.env.example
+!frontend/.env.production
 
 # Databases
 *.db
@@ -247,6 +249,11 @@ bin/
 # Scratch and agent artifacts
 scratch/
 .claude/
+.gemini/
+.antigravity/
+.system_generated/
+.cursor/
+.windsurf/
 
 # Editor swap, merge backup, and reject files
 *.swp
