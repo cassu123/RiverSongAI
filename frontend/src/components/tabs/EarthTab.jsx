@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
 
+const CARTO_KEY = import.meta.env.VITE_CARTO_API_KEY || ''
+const BASEMAP_URL = CARTO_KEY
+  ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`
+  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+
 function OcearchMap({ lat, lon, sharks }) {
   const mapRef = useRef(null)
   const instanceRef = useRef(null)
@@ -15,7 +20,9 @@ function OcearchMap({ lat, lon, sharks }) {
         center: [lat, lon], zoom: 3,
         zoomControl: false, attributionControl: false,
       })
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map)
+      L.tileLayer(BASEMAP_URL, {
+        className: CARTO_KEY ? 'rs-wx-basemap-carto' : 'rs-map-dark-tiles',
+      }).addTo(map)
       instanceRef.current = map
       setMapReady(true)
     })

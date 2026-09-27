@@ -106,8 +106,19 @@ fi
 source venv/bin/activate
 
 step "Installing Python dependencies"
-# Build-time prereqs (idempotent; pip skips if already satisfied)
+# Keep pip up-to-date and build-time prereqs satisfied
+pip install --quiet --upgrade pip
 pip install --quiet pybind11
+# openwakeword upstream metadata declares a Linux tflite-runtime dependency which
+# has no Python 3.14 wheel. River Song runs openwakeword on onnxruntime natively.
+# Strip that unused dependency line from dist-info if present so pip resolution stays clean.
+python -c '
+from pathlib import Path
+for p in Path("venv/lib").glob("python*/site-packages/openwakeword-*.dist-info/METADATA"):
+    txt = p.read_text()
+    if "Requires-Dist: tflite-runtime" in txt:
+        p.write_text("\n".join(l for l in txt.splitlines() if "Requires-Dist: tflite-runtime" not in l) + "\n")
+' 2>/dev/null || true
 # Only reinstall requirements when the lockfile changed
 REQ_HASH_FILE=".venv_requirements.sha256"
 NEW_HASH="$(sha256sum requirements.txt | awk '{print $1}')"

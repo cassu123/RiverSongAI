@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { inConus, iemFrames, rainviewerFrames, RAINVIEWER_MAX_ZOOM } from './radar.js'
 
+const CARTO_KEY = import.meta.env.VITE_CARTO_API_KEY || ''
+const BASEMAP_URL = CARTO_KEY
+  ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`
+  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+
 const STEP_MS = 650       // between frames
 const HOLD_MS = 2000      // on the latest frame before looping
 const REFRESH_MS = 5 * 60_000
@@ -70,8 +75,8 @@ export default function RadarMap({ lat, lon }) {
         dragging: !L.Browser.mobile,
         scrollWheelZoom: false,
       })
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        className: 'rs-wx-basemap',
+      L.tileLayer(BASEMAP_URL, {
+        className: CARTO_KEY ? 'rs-wx-basemap-carto' : 'rs-wx-basemap',
       }).addTo(map)
       L.circleMarker([lat, lon], { radius: 5, className: 'rs-wx-here', interactive: false }).addTo(map)
       mapRef.current = map
@@ -137,7 +142,7 @@ export default function RadarMap({ lat, lon }) {
         </div>
       )}
       <div className="rs-wx-attrib">
-        {source === 'rainviewer' ? 'RainViewer' : 'NWS NEXRAD via Iowa Environmental Mesonet'} · CARTO · OpenStreetMap
+        {source === 'rainviewer' ? 'RainViewer' : 'NWS NEXRAD via Iowa Environmental Mesonet'} · {CARTO_KEY ? 'CARTO · ' : ''}OpenStreetMap
       </div>
     </div>
   )

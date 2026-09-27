@@ -270,3 +270,10 @@ p {
   animation: rs-fade-in var(--rs-motion-mid) var(--rs-motion-curve) both;
 }
 
+/* Map dark theme */
+.leaflet-container { background: #0b0f14; }
+.rs-map-dark-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.8);
+}
+
+
