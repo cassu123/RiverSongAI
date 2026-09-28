@@ -33,7 +33,14 @@ const DEFAULT_FORMATS = [
   BarcodeFormat.QR_CODE,
 ]
 
-export default function BarcodeScanner({ onDetected, onClose, formats, continuous = false }) {
+export default function BarcodeScanner({ 
+  onDetected, 
+  onClose, 
+  formats, 
+  continuous = false,
+  headerRight = null,
+  feedback = null,
+}) {
   const videoRef = useRef(null)
   const readerRef = useRef(null)
   const [error, setError] = useState('')
@@ -151,10 +158,37 @@ export default function BarcodeScanner({ onDetected, onClose, formats, continuou
       <div className="barcode-scanner-overlay">
         <video ref={videoRef} className="barcode-scanner-video" playsInline muted />
         <div className="barcode-scanner-frame" />
-        <div className="barcode-scanner-formats">UPC-A · EAN-13 · QR</div>
-        <button className="barcode-scanner-cancel" onClick={handleClose}>Cancel</button>
-        {error && <div className="barcode-scanner-error">{error}</div>}
 
+        {/* Top Floating Control Bar */}
+        <div className="barcode-scanner-top-bar">
+          <button 
+            type="button"
+            className="barcode-scanner-close-btn" 
+            onClick={handleClose}
+            aria-label="Close scanner"
+          >
+            <span className="material-symbols-rounded">close</span>
+          </button>
+          {headerRight}
+        </div>
+
+        {!headerRight && <div className="barcode-scanner-formats">UPC-A · EAN-13 · QR</div>}
+
+        {/* Floating Feedback Toast */}
+        {feedback && (
+          <div className={`barcode-scanner-toast ${feedback.type ? `is-${feedback.type}` : ''}`}>
+            <span className="material-symbols-rounded">
+              {feedback.type === 'error' ? 'error' : (feedback.type === 'warning' ? 'warning' : 'check_circle')}
+            </span>
+            <span>{feedback.message || feedback}</span>
+          </div>
+        )}
+
+        {!continuous && !headerRight && (
+          <button className="barcode-scanner-cancel" onClick={handleClose}>Cancel</button>
+        )}
+
+        {error && <div className="barcode-scanner-error">{error}</div>}
       </div>
     </div>
   )

@@ -91,3 +91,128 @@
   font-size: 0.9rem;
 }
 
+.barcode-scanner-top-bar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.barcode-scanner-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--md-shape-full, 9999px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.barcode-scanner-close-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.barcode-scanner-close-btn span {
+  font-size: 20px;
+}
+
+.barcode-scanner-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--md-shape-full, 9999px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.barcode-scanner-mode-pill:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.barcode-scanner-mode-pill.is-add {
+  color: var(--rs-status-nominal, #34d399);
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+.barcode-scanner-mode-pill.is-deplete {
+  color: var(--rs-status-warning, #fbbf24);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.barcode-scanner-mode-pill span.material-symbols-rounded {
+  font-size: 16px;
+}
+
+.barcode-scanner-toast {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90%;
+  padding: 8px 18px;
+  border-radius: var(--md-shape-full, 9999px);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 10;
+  animation: rs-toast-slide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barcode-scanner-toast span.material-symbols-rounded {
+  font-size: 18px;
+}
+
+.barcode-scanner-toast.is-success span.material-symbols-rounded {
+  color: var(--rs-status-nominal, #34d399);
+}
+
+.barcode-scanner-toast.is-deplete span.material-symbols-rounded {
+  color: var(--rs-status-warning, #fbbf24);
+}
+
+.barcode-scanner-toast.is-error span.material-symbols-rounded {
+  color: var(--rs-status-critical, #f87171);
+}
+
+@keyframes rs-toast-slide {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+

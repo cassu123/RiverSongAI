@@ -132,6 +132,18 @@ def test_store_mappings_and_cart_export(client, monkeypatch):
     assert export_wm.status_code == 200
     assert "14505111_2" in export_wm.json()["cart_url"]
 
+    # 6. Export Sam's Club
+    client.post("/api/culinary/grocery", json={"name": "Rotisserie Chicken", "qty": "1", "store": "Sam's Club"})
+    export_sams = client.post("/api/culinary/store/export?store=sams_club&source=list", json={})
+    assert export_sams.status_code == 200
+    assert export_sams.json()["store"] == "sams_club"
+    sams_link = next(
+        (link for link in export_sams.json()["search_links"] if link["name"] == "Rotisserie Chicken"),
+        None,
+    )
+    assert sams_link is not None
+    assert "samsclub.com" in sams_link["url"]
+
 @pytest.mark.asyncio
 async def test_tools_add_and_read_shopping_list(test_user_household):
     user_id, hh_id = test_user_household
