@@ -26,18 +26,65 @@ const SOURCE_COLORS = {
 }
 
 const STORE_CONFIG = {
-  walmart: { label: 'Walmart', icon: 'storefront', color: '#0071dc' },
-  costco: { label: 'Costco', icon: 'warehouse', color: '#e31837' },
-  target: { label: 'Target', icon: 'adjust', color: '#cc0000' },
-  amazon: { label: 'Amazon', icon: 'shopping_bag', color: '#ff9900' },
-  trader_joes: { label: "Trader Joe's", icon: 'local_florist', color: '#b91c1c' },
-  kroger: { label: 'Kroger', icon: 'local_grocery_store', color: '#0055a5' },
-  aldi: { label: 'Aldi', icon: 'shopping_basket', color: '#1b365d' },
-  homedepot: { label: 'Home Depot', icon: 'home_repair_service', color: '#f96302' },
+  walmart: { 
+    label: 'Walmart', 
+    icon: 'storefront', 
+    color: '#0071dc', 
+    searchUrl: (q) => `https://www.walmart.com/search?q=${encodeURIComponent(q)}` 
+  },
+  sams_club: { 
+    label: "Sam's Club", 
+    icon: 'warehouse', 
+    color: '#0067a0', 
+    searchUrl: (q) => `https://www.samsclub.com/b/search?q=${encodeURIComponent(q)}` 
+  },
+  costco: { 
+    label: 'Costco', 
+    icon: 'warehouse', 
+    color: '#e31837', 
+    searchUrl: (q) => `https://www.costco.com/CatalogSearch?dept=All&keyword=${encodeURIComponent(q)}` 
+  },
+  target: { 
+    label: 'Target', 
+    icon: 'adjust', 
+    color: '#cc0000', 
+    searchUrl: (q) => `https://www.target.com/s?searchTerm=${encodeURIComponent(q)}` 
+  },
+  amazon: { 
+    label: 'Amazon', 
+    icon: 'shopping_bag', 
+    color: '#ff9900', 
+    searchUrl: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}` 
+  },
+  trader_joes: { 
+    label: "Trader Joe's", 
+    icon: 'local_florist', 
+    color: '#b91c1c', 
+    searchUrl: (q) => `https://www.traderjoes.com/home/search?q=${encodeURIComponent(q)}` 
+  },
+  kroger: { 
+    label: 'Kroger', 
+    icon: 'local_grocery_store', 
+    color: '#0055a5', 
+    searchUrl: (q) => `https://www.kroger.com/search?query=${encodeURIComponent(q)}` 
+  },
+  aldi: { 
+    label: 'Aldi', 
+    icon: 'shopping_basket', 
+    color: '#1b365d', 
+    searchUrl: (q) => `https://www.aldi.us/results/?q=${encodeURIComponent(q)}` 
+  },
+  homedepot: { 
+    label: 'Home Depot', 
+    icon: 'home_repair_service', 
+    color: '#f96302', 
+    searchUrl: (q) => `https://www.homedepot.com/s/${encodeURIComponent(q)}` 
+  },
 }
 
-const POPULAR_STORES = [
+const ALL_AVAILABLE_STORES = [
   'Walmart',
+  "Sam's Club",
   'Costco',
   'Target',
   'Amazon',
@@ -47,15 +94,24 @@ const POPULAR_STORES = [
   'Home Depot',
 ]
 
+const DEFAULT_ENABLED_STORES = ['Walmart', "Sam's Club"]
+const DEFAULT_PRIMARY_STORE = 'Walmart'
+
 function getStoreMeta(storeName) {
   if (!storeName) return null
   const key = storeName.toLowerCase().replace(/[^a-z0-9]/g, '')
   for (const [k, meta] of Object.entries(STORE_CONFIG)) {
-    if (key.includes(k.replace(/[^a-z0-9]/g, '')) || k.replace(/[^a-z0-9]/g, '').includes(key)) {
+    const cleanK = k.replace(/[^a-z0-9]/g, '')
+    if (key.includes(cleanK) || cleanK.includes(key)) {
       return meta
     }
   }
-  return { label: storeName, icon: 'store', color: 'var(--primary)' }
+  return { 
+    label: storeName, 
+    icon: 'store', 
+    color: 'var(--primary)',
+    searchUrl: (q) => `https://www.google.com/search?q=${encodeURIComponent(q + ' ' + storeName)}`
+  }
 }
 
 export default function ShoppingListTab({ api, refreshKey }) {
@@ -69,6 +125,54 @@ export default function ShoppingListTab({ api, refreshKey }) {
   const [customStore, setCustomStore] = useState('')
   const [activeStoreFilter, setActiveStoreFilter] = useState('all')
   const [busy, setBusy] = useState(false)
+
+  // Store customization
+  const [enabledStores, setEnabledStores] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rs-enabled-stores')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return DEFAULT_ENABLED_STORES
+  })
+
+  const [primaryStore, setPrimaryStore] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rs-primary-store')
+      if (saved) return saved
+    } catch {}
+    return DEFAULT_PRIMARY_STORE
+  })
+
+  const [showStoreSettingsModal, setShowStoreSettingsModal] = useState(false)
+
+  const handleToggleStore = (storeName) => {
+    setEnabledStores(prev => {
+      let next
+      if (prev.includes(storeName)) {
+        if (prev.length <= 1) return prev
+        next = prev.filter(s => s !== storeName)
+      } else {
+        next = [...prev, storeName]
+      }
+      try { localStorage.setItem('rs-enabled-stores', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
+  const handleSetPrimaryStore = (storeName) => {
+    setPrimaryStore(storeName)
+    try { localStorage.setItem('rs-primary-store', storeName) } catch {}
+    if (!enabledStores.includes(storeName)) {
+      setEnabledStores(prev => {
+        const next = [...prev, storeName]
+        try { localStorage.setItem('rs-enabled-stores', JSON.stringify(next)) } catch {}
+        return next
+      })
+    }
+  }
 
   // Store mappings & export
   const [showStoreLinks, setShowStoreLinks] = useState(false)
@@ -125,7 +229,9 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
   // "Unassigned" is a display bucket, not a store -- adding while it is the
   // active tab must not tag the new item with the literal word.
-  const effectiveStore = selectedStore === 'custom' ? customStore.trim() : (selectedStore || (activeStoreFilter !== 'all' && activeStoreFilter !== 'Unassigned' ? activeStoreFilter : ''))
+  const effectiveStore = selectedStore === 'custom' 
+    ? customStore.trim() 
+    : (selectedStore || (activeStoreFilter !== 'all' && activeStoreFilter !== 'Unassigned' ? activeStoreFilter : primaryStore))
 
   const add = async (e) => {
     e.preventDefault()
@@ -179,14 +285,16 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
   const availableStores = useMemo(() => {
     const fromItems = items.map(i => i.store).filter(Boolean)
-    return Array.from(new Set([...fromItems, ...POPULAR_STORES]))
-  }, [items])
+    return Array.from(new Set([...fromItems, ...enabledStores]))
+  }, [items, enabledStores])
 
   const runExport = async () => {
     setExporting(true)
     setExportResult(null)
     try {
-      const targetStore = activeStoreFilter !== 'all' ? activeStoreFilter : (activeLinkStore || 'walmart')
+      const targetStore = activeStoreFilter !== 'all' && activeStoreFilter !== 'Unassigned' 
+        ? activeStoreFilter 
+        : primaryStore
       const result = await api.post(`/store/export?source=list&store=${encodeURIComponent(targetStore)}`, {})
       setExportResult(result)
       setShowStoreLinks(true)
@@ -298,7 +406,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
                 <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>remove_circle_outline</span>
                 <span>Unassigned</span>
               </button>
-              {POPULAR_STORES.map(st => {
+              {enabledStores.map(st => {
                 const meta = getStoreMeta(st)
                 return (
                   <button
@@ -317,6 +425,22 @@ export default function ShoppingListTab({ api, refreshKey }) {
             </div>
           )}
         </div>
+
+        {/* Direct 1-Click Link to Store Search / Product */}
+        {storeMeta?.searchUrl && (
+          <a
+            href={storeMeta.searchUrl(item.name)}
+            target="_blank"
+            rel="noreferrer"
+            className="rs-pill rs-p-1 rs-min-w-0"
+            title={`Search ${item.name} on ${storeMeta.label || 'Store'}`}
+            style={{ color: storeMeta.color, background: 'transparent' }}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>
+              open_in_new
+            </span>
+          </a>
+        )}
 
         <span
           className="rs-card-label rs-type-tiny rs-nowrap"
@@ -344,8 +468,9 @@ export default function ShoppingListTab({ api, refreshKey }) {
   return (
     <div className="rs-flex rs-flex-col rs-gap-4 rs-w-full" style={{ maxWidth: 740, margin: '0 auto' }}>
       {/* Store Filter Tabs */}
-      <div className="rs-flex rs-gap-2" style={{ overflowX: 'auto', paddingBottom: 'var(--rs-space-1)', scrollbarWidth: 'none' }}>
+      <div className="rs-flex rs-gap-2 rs-items-center" style={{ overflowX: 'auto', paddingBottom: 'var(--rs-space-1)', scrollbarWidth: 'none' }}>
         <button
+          type="button"
           className="rs-pill rs-type-small"
           style={{
             padding: 'var(--rs-space-2) var(--rs-space-3)',
@@ -358,29 +483,92 @@ export default function ShoppingListTab({ api, refreshKey }) {
           All Stores ({items.length})
         </button>
 
-        {Object.entries(storeCounts).filter(([st]) => st !== 'all').map(([st, count]) => {
+        {/* Enabled Stores (Always visible) */}
+        {enabledStores.map(st => {
           const meta = getStoreMeta(st)
+          const count = storeCounts[st] || 0
           const isActive = activeStoreFilter.toLowerCase() === st.toLowerCase()
           return (
             <button
               key={st}
-              className="rs-pill rs-type-small"
+              type="button"
+              className="rs-pill rs-type-small rs-gap-1"
               style={{
                 padding: 'var(--rs-space-2) var(--rs-space-3)',
-                gap: 5,
                 background: isActive ? (meta ? meta.color : 'var(--primary)') : 'var(--md-surface-container-low)',
                 color: isActive ? '#fff' : 'inherit',
                 fontWeight: isActive ? 800 : 500,
               }}
               onClick={() => setActiveStoreFilter(isActive ? 'all' : st)}
             >
-              <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: '0.95rem' }}>
                 {meta ? meta.icon : 'store'}
               </span>
-              {st} ({count})
+              <span>{st}</span>
+              {count > 0 && <span className="rs-mono" style={{ opacity: 0.85 }}>({count})</span>}
             </button>
           )
         })}
+
+        {/* Other stores with existing items */}
+        {Object.entries(storeCounts)
+          .filter(([st]) => st !== 'all' && st !== 'Unassigned' && !enabledStores.some(es => es.toLowerCase() === st.toLowerCase()))
+          .map(([st, count]) => {
+            const meta = getStoreMeta(st)
+            const isActive = activeStoreFilter.toLowerCase() === st.toLowerCase()
+            return (
+              <button
+                key={st}
+                type="button"
+                className="rs-pill rs-type-small rs-gap-1"
+                style={{
+                  padding: 'var(--rs-space-2) var(--rs-space-3)',
+                  background: isActive ? (meta ? meta.color : 'var(--primary)') : 'var(--md-surface-container-low)',
+                  color: isActive ? '#fff' : 'inherit',
+                  fontWeight: isActive ? 800 : 500,
+                }}
+                onClick={() => setActiveStoreFilter(isActive ? 'all' : st)}
+              >
+                <span className="material-symbols-rounded" style={{ fontSize: '0.95rem' }}>
+                  {meta ? meta.icon : 'store'}
+                </span>
+                <span>{st}</span>
+                <span className="rs-mono">({count})</span>
+              </button>
+            )
+          })}
+
+        {storeCounts['Unassigned'] > 0 && (
+          <button
+            type="button"
+            className="rs-pill rs-type-small rs-gap-1"
+            style={{
+              padding: 'var(--rs-space-2) var(--rs-space-3)',
+              background: activeStoreFilter === 'Unassigned' ? 'var(--primary)' : 'var(--md-surface-container-low)',
+              color: activeStoreFilter === 'Unassigned' ? '#000' : 'inherit',
+              fontWeight: activeStoreFilter === 'Unassigned' ? 800 : 500,
+            }}
+            onClick={() => setActiveStoreFilter(activeStoreFilter === 'Unassigned' ? 'all' : 'Unassigned')}
+          >
+            <span>Unassigned</span>
+            <span className="rs-mono">({storeCounts['Unassigned']})</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          className="rs-pill rs-type-small rs-gap-1"
+          style={{
+            padding: 'var(--rs-space-2) var(--rs-space-3)',
+            background: 'var(--md-surface-container-high)',
+            marginLeft: 'auto',
+          }}
+          onClick={() => setShowStoreSettingsModal(true)}
+          title="Manage active stores"
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>tune</span>
+          <span>Stores</span>
+        </button>
       </div>
 
       {/* Add Item Form with Store Selector */}
@@ -388,7 +576,11 @@ export default function ShoppingListTab({ api, refreshKey }) {
         <input
           className="rs-pill"
           style={{ flex: '2 1 180px', minWidth: 140, background: 'var(--md-surface-container-low)', border: 'none' }}
-          placeholder={activeStoreFilter !== 'all' ? `Add to ${activeStoreFilter} list…` : 'Add to shopping list…'}
+          placeholder={
+            activeStoreFilter !== 'all' && activeStoreFilter !== 'Unassigned' 
+              ? `Add to ${activeStoreFilter} list…` 
+              : `Add item (defaults to ${primaryStore})…`
+          }
           aria-label="Item to add"
           value={name}
           onChange={e => setName(e.target.value)}
@@ -421,8 +613,12 @@ export default function ShoppingListTab({ api, refreshKey }) {
           value={selectedStore}
           onChange={e => setSelectedStore(e.target.value)}
         >
-          <option value="">{activeStoreFilter !== 'all' ? `Store: ${activeStoreFilter}` : 'Store (Auto)'}</option>
-          {POPULAR_STORES.map(st => (
+          <option value="">
+            {activeStoreFilter !== 'all' && activeStoreFilter !== 'Unassigned' 
+              ? `Store: ${activeStoreFilter}` 
+              : `Store (${primaryStore})`}
+          </option>
+          {enabledStores.map(st => (
             <option key={st} value={st}>{st}</option>
           ))}
           <option value="custom">+ Custom Store</option>
@@ -589,7 +785,7 @@ export default function ShoppingListTab({ api, refreshKey }) {
 
             {/* Store Selection Tabs for Mapping */}
             <div className="rs-flex rs-gap-2" style={{ overflowX: 'auto', paddingBottom: 2 }}>
-              {POPULAR_STORES.map(st => {
+              {enabledStores.map(st => {
                 const key = st.toLowerCase().replace(/[^a-z0-9]/g, '')
                 const isSelected = activeLinkStore.replace(/[^a-z0-9]/g, '') === key
                 const meta = getStoreMeta(st)
@@ -661,6 +857,99 @@ export default function ShoppingListTab({ api, refreshKey }) {
                   </div>
                 )
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Store Settings Modal */}
+      {showStoreSettingsModal && (
+        <div className="rs-modal-overlay">
+          <div className="rs-modal" style={{ maxWidth: 440 }}>
+            <div className="rs-flex rs-justify-between rs-items-center rs-mb-4">
+              <div>
+                <div className="rs-card-label">SHOPPING STORE SETTINGS</div>
+                <div className="rs-type-tiny rs-c-dim rs-mt-1">Toggle the stores you shop at and set your default store.</div>
+              </div>
+              <button 
+                type="button" 
+                className="rs-pill rs-p-1" 
+                onClick={() => setShowStoreSettingsModal(false)}
+                aria-label="Close store settings"
+              >
+                <span className="material-symbols-rounded">close</span>
+              </button>
+            </div>
+
+            <div className="rs-flex rs-flex-col rs-gap-2 rs-mb-5" style={{ maxHeight: 360, overflowY: 'auto' }}>
+              {ALL_AVAILABLE_STORES.map(storeName => {
+                const meta = getStoreMeta(storeName)
+                const isEnabled = enabledStores.includes(storeName)
+                const isPrimary = primaryStore === storeName
+
+                return (
+                  <div
+                    key={storeName}
+                    className="rs-pill rs-justify-between rs-items-center"
+                    style={{
+                      padding: 'var(--rs-space-2) var(--rs-space-3)',
+                      background: isEnabled ? 'var(--md-surface-container)' : 'var(--md-surface-container-low)',
+                      opacity: isEnabled ? 1 : 0.65,
+                    }}
+                  >
+                    <div className="rs-flex rs-items-center rs-gap-2">
+                      <span className="material-symbols-rounded" style={{ color: meta.color, fontSize: '1.2rem' }}>
+                        {meta.icon}
+                      </span>
+                      <span className="rs-fw-700">{storeName}</span>
+                      {isPrimary && (
+                        <span 
+                          className="rs-pill rs-type-micro rs-fw-800" 
+                          style={{ background: meta.color, color: '#fff', padding: '1px 6px' }}
+                        >
+                          PRIMARY
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="rs-flex rs-items-center rs-gap-2">
+                      {isEnabled && !isPrimary && (
+                        <button
+                          type="button"
+                          className="rs-pill rs-type-micro"
+                          onClick={() => handleSetPrimaryStore(storeName)}
+                          title="Set as primary store"
+                        >
+                          Set Primary
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={`rs-pill rs-type-micro ${isEnabled ? 'is-active' : ''}`}
+                        onClick={() => handleToggleStore(storeName)}
+                        style={{
+                          background: isEnabled ? meta.color : 'transparent',
+                          color: isEnabled ? '#fff' : 'inherit',
+                          minWidth: 42,
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {isEnabled ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="rs-flex rs-justify-end">
+              <button 
+                type="button"
+                className="rs-btn-primary" 
+                onClick={() => setShowStoreSettingsModal(false)}
+              >
+                DONE
+              </button>
             </div>
           </div>
         </div>

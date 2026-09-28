@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '@context/AuthContext.jsx'
 import BarcodeScanner from '@components/BarcodeScanner.jsx'
 import AddRecipeModal from '@components/AddRecipeModal.jsx'
@@ -457,6 +457,8 @@ export default function CulinaryPage({ setAction }) {
   const [error, setError] = useState(null)
   
   const [scannerMode, setScannerMode] = useState(null)
+  const [scanFeedback, setScanFeedback] = useState(null)
+  const feedbackTimeoutRef = useRef(null)
   const [showAddRecipe, setShowAddRecipe] = useState(false)
   const [recipes, setRecipes] = useState([])
   const [stock, setStock] = useState([])
@@ -1065,10 +1067,13 @@ export default function CulinaryPage({ setAction }) {
 
         <button
           className="gh-glance-action"
-          onClick={() => setScannerMode('deplete')}
+          onClick={() => {
+            setScannerMode('add')
+            setScanFeedback(null)
+          }}
         >
           <span className="material-symbols-rounded">barcode_scanner</span>
-          <span>Scan Barcode</span>
+          <span>Scan Ingredients</span>
         </button>
       </div>
 
@@ -1157,22 +1162,48 @@ export default function CulinaryPage({ setAction }) {
 
       {scannerMode && (
         <BarcodeScanner 
+           continuous={true}
+           headerRight={
+             <button
+               type="button"
+               className={`barcode-scanner-mode-pill is-${scannerMode}`}
+               onClick={() => {
+                 setScannerMode(prev => prev === 'add' ? 'deplete' : 'add')
+               }}
+               title="Tap to switch mode"
+             >
+               <span className="material-symbols-rounded">
+                 {scannerMode === 'add' ? 'add_circle' : 'remove_circle'}
+               </span>
+               <span>{scannerMode === 'add' ? '+ ADD' : '- DEPLETE'}</span>
+             </button>
+           }
+           feedback={scanFeedback}
            onDetected={async (code) => {
              const mode = scannerMode;
-             setScannerMode(null);
-             if (mode === 'deplete') {
-               try {
-                 await api.post('/stockroom/deplete', { barcode: code });
-                 const stockRes = await api.get('/stockroom');
-                 setStock(stockRes);
-               } catch(e) {
-                 alert('Deplete failed: ' + e.message);
+             try {
+               if (mode === 'add') {
+                 const res = await api.post('/stockroom/scan', { barcode: code, quantity: 1.0 });
+                 const itemName = res?.name || (res?.barcode ? `UPC: ${res.barcode}` : code);
+                 setScanFeedback({ message: `Added: ${itemName}`, type: 'success' });
+               } else {
+                 const res = await api.post('/stockroom/deplete', { barcode: code, quantity: 1.0 });
+                 const itemName = res?.name || (res?.barcode ? `UPC: ${res.barcode}` : code);
+                 setScanFeedback({ message: `Depleted: ${itemName}`, type: 'deplete' });
                }
-             } else {
-               setSearch(code);
+               const stockRes = await api.get('/stockroom');
+               setStock(stockRes);
+             } catch(e) {
+               setScanFeedback({ message: `Scan error: ${e.message}`, type: 'error' });
              }
+             if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+             feedbackTimeoutRef.current = setTimeout(() => setScanFeedback(null), 2500);
            }} 
-           onClose={() => setScannerMode(null)} 
+           onClose={() => {
+             setScannerMode(null);
+             setScanFeedback(null);
+             if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+           }} 
         />
       )}
 

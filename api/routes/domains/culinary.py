@@ -2350,6 +2350,8 @@ def _normalize_store_name(store: Optional[str]) -> str:
     s = store.strip().lower()
     if "walmart" in s:
         return "walmart"
+    if "sam" in s:
+        return "sams_club"
     if "amazon" in s:
         return "amazon"
     if "target" in s:
@@ -2377,6 +2379,7 @@ def _normalize_store_name(store: Optional[str]) -> str:
 # and the normalized key "trader_joes" as "Trader_Joes".
 _STORE_DISPLAY_NAMES: Dict[str, str] = {
     "walmart": "Walmart",
+    "sams_club": "Sam's Club",
     "amazon": "Amazon",
     "target": "Target",
     "costco": "Costco",
@@ -2433,6 +2436,14 @@ def _extract_store_item_id(store: str, raw_id_or_url: str) -> str:
         if re.match(r"^A-?(\d+)$", val, re.IGNORECASE):
             return re.sub(r"^A-?", "", val, flags=re.IGNORECASE)
         return ""
+    elif norm_store == "sams_club":
+        if "samsclub.com" in val:
+            match = re.search(r"/(?:prod|item|p)/[^/]+/([A-Za-z0-9]+)", val)
+            if match:
+                return match.group(1)
+            match = re.search(r"/([A-Za-z0-9]+)(?:\?|$)", val)
+            return match.group(1) if match else val
+        return val
     return val
 
 
@@ -2610,6 +2621,8 @@ async def store_export(
         encoded_name = urllib.parse.quote_plus(ing.get("name", name_key))
         if norm_store == "walmart":
             search_url = f"https://www.walmart.com/search?q={encoded_name}"
+        elif norm_store == "sams_club":
+            search_url = f"https://www.samsclub.com/b/search?q={encoded_name}"
         elif norm_store == "amazon":
             search_url = f"https://www.amazon.com/s?k={encoded_name}"
         elif norm_store == "target":
