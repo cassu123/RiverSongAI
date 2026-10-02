@@ -54,7 +54,7 @@ boto3==1.43.64                   # Amazon Bedrock (and AWS SDK)
 # TTS — Multi-engine (Piper + Kokoro + ElevenLabs)
 # Note: elevenlabs SDK not needed — provider calls REST API directly via httpx
 # -----------------------------------------------------------------------------
-apprise==1.12.0
+apprise==2.0.0
 pywebpush>=2.5.0                # Web Push notifications (push.py route)
 
 # Wake word — "Hey River" (openWakeWord)
