@@ -31,7 +31,7 @@ python-dotenv==1.2.2            # .env file support
 # STT — Faster-Whisper (CTranslate2 backend)
 # Audio capture happens in the browser; server receives WAV bytes over WebSocket
 # -----------------------------------------------------------------------------
-faster-whisper>=1.0.3
+faster-whisper>=1.2.1
 torch>=2.13.0                    # security floor: multiple CVEs in older versions
 numpy>=2.1.0                    # 2.x required for Python 3.13+
 scipy>=1.18.1                   # Resampling browser audio to 16 kHz for Whisper
